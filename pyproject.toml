@@ -1,0 +1,33 @@
+[project]
+name = "diyims"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Douglas R Fix", email = "douglasrfix@prairieobserver.com" }
+]
+requires-python = ">=3.9.13"
+dependencies = [
+    "aiosql>=13.4",
+    "apscheduler>=3.11.0",
+    "psutil>=7.0.0",
+    "python-dateutil>=2.9.0.post0",
+    "requests>=2.32.3",
+    "typer>=0.15.2",
+]
+
+[project.scripts]
+diyims = "diyims:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "pytest-xdist>=3.6.1",
+    "ruff>=0.11.5",
+]

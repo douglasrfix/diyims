@@ -24,11 +24,13 @@ def test_linux_install(environ_m):
 
 
 # @pytest.mark.skip(reason="native")
-# @pytest.mark.setup
+@pytest.mark.setup
 def test_windows_install():
-    """testing install into 'real path' not temporary test path process (--force option due to test environment being windows 11)
-    and unspecified drive letter"""
-    command_string = "install-utils --force-install"
+    """testing install into 'real path' not temporary test path process
+      (--force option due to test environment being windows 11)
+    and unspecified drive letter
+    """
+    command_string = "install-utils install --force-install"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0
@@ -45,7 +47,7 @@ def test_create_schema():
 
 
 # @pytest.mark.setup
-@pytest.mark.skip(reason="native")
+# @pytest.mark.skip(reason="native")
 def test_init_db():
     """testing  initializing database with no previous initialization"""
     command_string = "install-utils init-database"

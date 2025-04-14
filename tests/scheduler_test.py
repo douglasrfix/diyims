@@ -11,7 +11,7 @@ runner = CliRunner()
 # @pytest.mark.skip(reason="p")
 def test_scheduler():
     """testing  initializing database with previous initialization"""
-    command_string = "run-scheduler --roaming='ProdRoaming'"
+    command_string = "run-scheduler --roaming='Roaming'"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0

@@ -16,8 +16,6 @@ Given the lack of a convenient method of detecting the version of windows,
 the choice between %AppData% and %LocalAppData% was in favor %AppData% for
 legacy versions support.
 
-MS store python behaves badly.. Avoiding well known MS names.
-
 All of the files are placed in user spaces to minimize permission issues.
 """
 
@@ -104,10 +102,10 @@ def get_win32_template_dict():
     except KeyError:
         Roaming = "Roaming"
 
-    xdg_data_home = Path(xdg_home).joinpath("MSAppData", Roaming, "diyims", "Data")
-    xdg_config_home = Path(xdg_home).joinpath("MSAppData", Roaming, "diyims", "Config")
-    xdg_cache_home = Path(xdg_home).joinpath("MSAppData", Roaming, "diyims", "Cache")
-    xdg_state_home = Path(xdg_home).joinpath("MSAppData", Roaming, "diyims", "State")
+    xdg_data_home = Path(xdg_home).joinpath("AppData", Roaming, "diyims", "Data")
+    xdg_config_home = Path(xdg_home).joinpath("AppData", Roaming, "diyims", "Config")
+    xdg_cache_home = Path(xdg_home).joinpath("AppData", Roaming, "diyims", "Cache")
+    xdg_state_home = Path(xdg_home).joinpath("AppData", Roaming, "diyims", "State")
 
     template_path_dict = {}
     template_path_dict["config_path"] = xdg_config_home

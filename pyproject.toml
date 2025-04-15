@@ -1,6 +1,7 @@
 [project]
 name = "diyims"
 version = "0.0.0a54"
+#general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"
 authors = [
@@ -90,9 +91,6 @@ indent-width = 4
 target-version = "py39"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
 select = ["E4", "E7", "E9", "F"]
 ignore = []
 

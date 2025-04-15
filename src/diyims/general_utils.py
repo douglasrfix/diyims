@@ -132,7 +132,7 @@ def select_local_peer_and_update_metrics():
     IPFS_agent = test_ipfs_version()
     os_platform = test_os_platform()
     python_version = get_python_version()
-    agent = "0.0.0a51"
+    agent = "0.0.0a54"
     changed_metrics = False
 
     if peer_table_entry["execution_platform"] != os_platform:

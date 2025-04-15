@@ -59,8 +59,8 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
         name_publish_arg = {
             "arg": ipfs_path,
             "resolve": "false",
-            "lifetime": "1sec",
-            "ttl": "1sec",
+            "lifetime": "1s",
+            "ttl": "1s",
             "key": "self",
             "ipns-base": "base36",
         }

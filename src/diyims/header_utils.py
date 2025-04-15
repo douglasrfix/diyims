@@ -55,14 +55,22 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
         header_CID = json_dict["Hash"]
 
     ipfs_path = "/ipfs/" + header_CID
-
-    name_publish_arg = {
-        "arg": ipfs_path,
-        "resolve": "false",
-        "lifetime": "24h",
-        "key": "self",
-        "ipns-base": "base36",
-    }
+    if object_CID == "null":
+        name_publish_arg = {
+            "arg": ipfs_path,
+            "resolve": "false",
+            "lifetime": "1sec",
+            "ttl": "1sec",
+            "key": "self",
+            "ipns-base": "base36",
+        }
+    else:
+        name_publish_arg = {
+            "arg": ipfs_path,
+            "resolve": "true",
+            "key": "self",
+            "ipns-base": "base36",
+        }
 
     with requests.post(
         url_dict["name_publish"], params=name_publish_arg, stream=False

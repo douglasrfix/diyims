@@ -20,7 +20,7 @@ from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
 from diyims.peer_capture import capture_peer_main
 from diyims.capture_want_lists import capture_peer_want_lists
-from diyims.test import filter_wantlist
+from diyims.test import test_sign_verify
 
 
 app = typer.Typer(
@@ -125,4 +125,4 @@ def run_test(
 ):
     os.environ["ROAMING"] = roaming
 
-    filter_wantlist()
+    test_sign_verify()

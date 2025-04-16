@@ -19,6 +19,8 @@ def get_url_dict():
     url_dict["get"] = "http://127.0.0.1:5001/api/v0/get"
     url_dict["cat"] = "http://127.0.0.1:5001/api/v0/cat"
     url_dict["id"] = "http://127.0.0.1:5001/api/v0/id"
+    url_dict["sign"] = "http://127.0.0.1:5001/api/v0/key/sign"
+    url_dict["verify"] = "http://127.0.0.1:5001/api/v0/key/verify"
     url_dict["dag_import"] = "http://127.0.0.1:5001/api/v0/dag/import"
     url_dict["name_publish"] = "http://127.0.0.1:5001/api/v0/name/publish"
     url_dict["find_providers"] = "http://127.0.0.1:5001/api/v0/routing/findprovs"

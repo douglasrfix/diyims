@@ -132,7 +132,7 @@ def select_local_peer_and_update_metrics():
     IPFS_agent = test_ipfs_version()
     os_platform = test_os_platform()
     python_version = get_python_version()
-    agent = "0.0.0a54"
+    agent = "0.0.0a55"  # NOTE: How to extract at run time
     changed_metrics = False
 
     if peer_table_entry["execution_platform"] != os_platform:
@@ -161,6 +161,7 @@ def select_local_peer_and_update_metrics():
 
     if changed_metrics:
         peer_table_dict["origin_update_DTS"] = DTS
+
         update_peer_table_metrics(conn, queries, peer_table_dict)
         conn.commit()
 

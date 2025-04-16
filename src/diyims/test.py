@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 # from pathlib import Path
 from rich import print
 import json
+import requests
 
 from diyims.config_utils import get_want_list_config_dict
 
@@ -17,6 +18,7 @@ from diyims.requests_utils import execute_request
 from diyims.general_utils import get_DTS
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.ipfs_utils import get_url_dict, test_ipfs_version
+from diyims.path_utils import get_path_dict
 
 
 def filter_wantlist():
@@ -221,5 +223,64 @@ def select_local_peer_and_update_metrics():
     return
 
 
+def test_sign_verify():
+    from diyims.logger_utils import get_logger
+
+    url_dict = get_url_dict()
+    path_dict = get_path_dict()
+    sign_dict = {}
+    sign_file = path_dict["sign_file"]
+    want_list_config_dict = get_want_list_config_dict()
+    logger = get_logger(
+        want_list_config_dict["log_file"],
+        "none",
+    )
+
+    with requests.post(url_dict["id"], stream=False) as r:
+        r.raise_for_status()
+        json_dict = json.loads(r.text)
+
+    sign_dict["peer_ID"] = json_dict["ID"]
+
+    with open(sign_file, "w") as write_file:
+        json.dump(sign_dict, write_file, indent=4)
+
+    sign_files = {"file": open(sign_file, "rb")}
+    sign_params = {}
+
+    response, status_code = execute_request(
+        url_key="sign",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=want_list_config_dict,
+        file=sign_files,
+        param=sign_params,
+    )
+
+    json_dict = json.loads(response.text)
+    print(json_dict["Key"]["Id"])
+    print(json_dict["Signature"])
+
+    id = json_dict["Key"]["Id"]
+    signature = json_dict["Signature"]
+
+    verify_files = {"file": open(sign_file, "rb")}
+    verify_params = {"key": id, "signature": signature}
+
+    response, status_code = execute_request(
+        url_key="verify",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=want_list_config_dict,
+        file=verify_files,
+        param=verify_params,
+    )
+
+    json_dict = json.loads(response.text)
+    print(json_dict)
+
+    return
+
+
 if __name__ == "__main__":
-    select_local_peer_and_update_metrics()
+    test_sign_verify()

@@ -26,7 +26,7 @@ from multiprocessing.managers import BaseManager
 from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
     insert_peer_row,
-    refresh_peer_table_dict,
+    refresh_peer_row_from_template,
     select_peer_table_entry_by_key,
     update_peer_table_peer_type_status,
     set_up_sql_operations,
@@ -156,7 +156,7 @@ def capture_peers(
     if peer_type == "PP":
         # url_key = "find_providers"
 
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key="find_providers",
             logger=logger,
             url_dict=url_dict,
@@ -176,7 +176,7 @@ def capture_peers(
 
     elif peer_type == "BP":
         # url_key = "bitswap_stat"
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key="bitswap_stat",
             logger=logger,
             url_dict=url_dict,
@@ -194,7 +194,7 @@ def capture_peers(
 
     elif peer_type == "SP":
         # url_key = "swarm_peers"
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key="swarm_peers",
             logger=logger,
             url_dict=url_dict,
@@ -263,7 +263,7 @@ def decode_findprovs_structure(
                 found += 1
 
                 if address_available:
-                    peer_table_dict = refresh_peer_table_dict()
+                    peer_table_dict = refresh_peer_row_from_template()
                     DTS = str(datetime.now(timezone.utc))
                     peer_table_dict["peer_ID"] = responses_dict["ID"]
                     peer_table_dict["local_update_DTS"] = DTS
@@ -424,7 +424,7 @@ def decode_bitswap_stat_structure(
     json_dict = json.loads(r.text)
     peer_list = json_dict["Peers"]
     for peer in peer_list:
-        peer_table_dict = refresh_peer_table_dict()
+        peer_table_dict = refresh_peer_row_from_template()
         DTS = str(datetime.now(timezone.utc))
         peer_table_dict["peer_ID"] = peer
         peer_table_dict["local_update_DTS"] = DTS
@@ -483,7 +483,7 @@ def decode_swarm_structure(
     p = psutil.Process()
     pid = p.pid
     for peer_dict in level_one_list:
-        peer_table_dict = refresh_peer_table_dict()
+        peer_table_dict = refresh_peer_row_from_template()
         DTS = str(datetime.now(timezone.utc))
         peer_table_dict["peer_ID"] = peer_dict["Peer"]
         peer_table_dict["local_update_DTS"] = DTS

@@ -220,7 +220,7 @@ def refresh_network_name():
 
     logger.debug(f"refreshing {network_name}.")
     try:
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key="pin_remove",
             logger=logger,
             url_dict=url_dict,

@@ -23,7 +23,7 @@ def test_linux_install(environ_m):
     assert result.exit_code == 0
 
 
-# @pytest.mark.skip(reason="native")
+@pytest.mark.skip(reason="native")
 @pytest.mark.setup
 def test_windows_install():
     """testing install into 'real path' not temporary test path process

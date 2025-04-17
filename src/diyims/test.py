@@ -10,7 +10,7 @@ from diyims.config_utils import get_want_list_config_dict
 # from diyims.path_utils import get_path_dict
 from diyims.database_utils import (
     set_up_sql_operations,
-    refresh_peer_table_dict,
+    refresh_peer_row_from_template,
     select_peer_table_local_peer_entry,
     update_peer_table_metrics,
 )
@@ -58,7 +58,7 @@ def filter_wantlist():
         url_key = "get"
         # config_dict = want_list_config_dict
         # file = "none"
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key,
             url_dict=url_dict,
             config_dict=want_list_config_dict,
@@ -90,7 +90,7 @@ def filter_wantlist():
                         # print(json_dict["IPNS_name"])
 
                         DTS = get_DTS()
-                        peer_table_dict = refresh_peer_table_dict()
+                        peer_table_dict = refresh_peer_row_from_template()
                         # Read here for current status
                         # Uconn, queries = set_up_sql_operations(want_list_config_dict)
                         peer_table_dict["IPNS_name"] = IPNS_name
@@ -177,7 +177,7 @@ def select_local_peer_and_update_metrics():
 
     DTS = get_DTS()
     conn, queries = set_up_sql_operations(want_list_config_dict)
-    peer_table_dict = refresh_peer_table_dict()
+    peer_table_dict = refresh_peer_row_from_template()
     peer_table_entry = select_peer_table_local_peer_entry(
         conn, queries, peer_table_dict
     )
@@ -248,7 +248,7 @@ def test_sign_verify():
     sign_files = {"file": open(sign_file, "rb")}
     sign_params = {}
 
-    response, status_code = execute_request(
+    response, status_code, response_dict = execute_request(
         url_key="sign",
         logger=logger,
         url_dict=url_dict,
@@ -267,7 +267,7 @@ def test_sign_verify():
     verify_files = {"file": open(sign_file, "rb")}
     verify_params = {"key": id, "signature": signature}
 
-    response, status_code = execute_request(
+    response, status_code, response_dict = execute_request(
         url_key="verify",
         logger=logger,
         url_dict=url_dict,

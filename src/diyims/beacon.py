@@ -91,10 +91,10 @@ def create_beacon_CID(logger, beacon_config_dict):
     path_dict = get_path_dict()
 
     conn, queries = set_up_sql_operations(beacon_config_dict)
-    header_row = queries.select_last_peer_table_entry_pointer(conn)
+    header_row = queries.select_first_peer_table_entry_pointer(conn)
 
     want_item_dict = refresh_want_item_dict()
-    want_item_dict["IPNS_name"] = header_row["object_CID"]
+    want_item_dict["peer_entry_CID"] = header_row["object_CID"]
     want_item_dict["DTS"] = get_DTS()
 
     conn.close()
@@ -114,7 +114,7 @@ def create_beacon_CID(logger, beacon_config_dict):
     else:
         param = {"only-hash": "true", "pin": "false", "cid-version": 1}
 
-    response, status_code = execute_request(
+    response, status_code, response_dict = execute_request(
         url_key="add",
         logger=logger,
         url_dict=url_dict,

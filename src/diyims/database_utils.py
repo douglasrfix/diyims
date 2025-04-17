@@ -55,6 +55,8 @@ def insert_peer_row(conn, queries, peer_table_dict):
         conn,
         peer_ID=peer_table_dict["peer_ID"],
         IPNS_name=peer_table_dict["IPNS_name"],
+        signature=peer_table_dict["signature"],
+        signature_valid=peer_table_dict["signature_valid"],
         peer_type=peer_table_dict["peer_type"],
         origin_update_DTS=peer_table_dict["origin_update_DTS"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
@@ -157,26 +159,23 @@ def update_peer_table_metrics(conn, queries, peer_table_dict):
     return
 
 
-def refresh_peer_table_dict():
-    peer_table_dict = {}
-    peer_table_dict["peer_ID"] = "null"
-    peer_table_dict["IPNS_name"] = "null"
-    peer_table_dict["peer_type"] = "null"
-    peer_table_dict["origin_update_DTS"] = "null"
-    peer_table_dict["local_update_DTS"] = "null"
-    peer_table_dict["wanted_found"] = "0"
-    peer_table_dict["wanted_added"] = "0"
-    peer_table_dict["wanted_updated"] = "0"
-    peer_table_dict["zero_cid_samples"] = "0"
-    peer_table_dict["connection_retry_iteration"] = "null"
-    peer_table_dict["execution_platform"] = "null"
-    peer_table_dict["python_version"] = "null"
-    peer_table_dict["IPFS_agent"] = "null"
-    peer_table_dict["processing_status"] = "null"
-    peer_table_dict["agent"] = "null"
-    peer_table_dict["version"] = "0"
+def refresh_peer_row_from_template():
+    peer_row_dict = {}
+    peer_row_dict["peer_ID"] = "null"
+    peer_row_dict["IPNS_name"] = "null"
+    peer_row_dict["signature"] = "null"
+    peer_row_dict["signature_valid"] = "null"
+    peer_row_dict["peer_type"] = "null"
+    peer_row_dict["origin_update_DTS"] = "null"
+    peer_row_dict["local_update_DTS"] = "null"
+    peer_row_dict["execution_platform"] = "null"
+    peer_row_dict["python_version"] = "null"
+    peer_row_dict["IPFS_agent"] = "null"
+    peer_row_dict["processing_status"] = "null"
+    peer_row_dict["agent"] = "null"
+    peer_row_dict["version"] = "0"
 
-    return peer_table_dict
+    return peer_row_dict
 
 
 def insert_network_row(conn, queries, network_table_dict):

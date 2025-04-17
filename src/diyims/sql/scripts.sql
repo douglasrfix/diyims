@@ -12,6 +12,8 @@ CREATE TABLE "header_table" (
 CREATE TABLE "peer_table" (
 	"peer_ID"	TEXT,
 	"IPNS_name"	TEXT,
+	"signature" TEXT,
+	"signature_valid" TEXT,
 	"peer_type" TEXT,
 	"origin_update_DTS"	TEXT,
 	"local_update_DTS" TEXT,
@@ -106,9 +108,9 @@ insert into log (DTS, process, pid, peer_type, msg)
 values (:DTS, :process, :pid, :peer_type, :msg);
 
 -- name: insert_peer_row!
-insert into peer_table (peer_ID, IPNS_name, peer_type, origin_update_DTS, local_update_DTS, execution_platform, python_version,
+insert into peer_table (peer_ID, IPNS_name, signature, signature_valid, peer_type, origin_update_DTS, local_update_DTS, execution_platform, python_version,
 		IPFS_agent, processing_status, agent, version)
-values (:peer_ID, :IPNS_name, :peer_type, :origin_update_DTS, :local_update_DTS,
+values (:peer_ID, :IPNS_name, :signature, :signature_valid, :peer_type, :origin_update_DTS, :local_update_DTS,
 		:execution_platform, :python_version, :IPFS_agent, :processing_status,
 		:agent, :version);
 
@@ -249,7 +251,7 @@ ORDER BY
 	insert_DTS DESC
 ;
 
--- name: select_last_peer_table_entry_pointer^
+-- name: select_first_peer_table_entry_pointer^
 SELECT
  	version,
    	object_CID,
@@ -261,11 +263,11 @@ SELECT
 FROM
    header_table
 
-WHERE object_type = "IPNS_name"
+WHERE object_type = "peer_table_entry"
 
 ORDER BY
 
-	insert_DTS DESC
+	insert_DTS ASC
 ;
 
 -- name: select_all_headers

@@ -838,3 +838,44 @@ def get_queue_config_dict():
         queue_config_dict["log_file"] = parser["Queue_Server"]["log_file"]
 
     return queue_config_dict
+
+
+def get_db_init_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        db_init_config_dict = {}
+        db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
+        db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
+            "connect_retry_delay"
+        ]
+        db_init_config_dict["log_file"] = parser["DB_Init"]["log_file"]
+
+    except KeyError:
+        parser["DB_Init"] = {}
+        parser["DB_Init"]["connect_retries"] = "30"
+        parser["DB_Init"]["connect_retry_delay"] = "10"
+        parser["DB_Init"]["log_file"] = "db_init.log"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        db_init_config_dict = {}
+        db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
+        db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
+            "connect_retry_delay"
+        ]
+
+        db_init_config_dict["log_file"] = parser["DB_Init"]["log_file"]
+
+    return db_init_config_dict

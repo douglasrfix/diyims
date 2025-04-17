@@ -1,4 +1,5 @@
 from time import sleep
+import json
 import requests
 from requests.exceptions import ConnectionError, HTTPError, ConnectTimeout, ReadTimeout
 
@@ -84,5 +85,6 @@ def execute_request(url_key, **kwargs):
         r = 600
     else:
         status_code = r.status_code
+        response_dict = json.loads(r.text)
 
-    return r, status_code
+    return r, status_code, response_dict

@@ -225,11 +225,13 @@ def select_local_peer_and_update_metrics():
 
 def test_sign_verify():
     from diyims.logger_utils import get_logger
+    from diyims.security_utils import sign_file, verify_file
 
     url_dict = get_url_dict()
     path_dict = get_path_dict()
     sign_dict = {}
-    sign_file = path_dict["sign_file"]
+    signing_dict = {}
+    file_to_sign = path_dict["sign_file"]
     want_list_config_dict = get_want_list_config_dict()
     logger = get_logger(
         want_list_config_dict["log_file"],
@@ -240,45 +242,23 @@ def test_sign_verify():
         r.raise_for_status()
         json_dict = json.loads(r.text)
 
-    sign_dict["peer_ID"] = json_dict["ID"]
+    signing_dict["peer_ID"] = json_dict["ID"]
 
-    with open(sign_file, "w") as write_file:
-        json.dump(sign_dict, write_file, indent=4)
+    sign_dict["file_to_sign"] = file_to_sign
 
-    sign_files = {"file": open(sign_file, "rb")}
-    sign_params = {}
+    with open(file_to_sign, "w") as write_file:
+        json.dump(signing_dict, write_file, indent=4)
 
-    response, status_code, response_dict = execute_request(
-        url_key="sign",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=want_list_config_dict,
-        file=sign_files,
-        param=sign_params,
-    )
+    id, signature = sign_file(sign_dict, logger, want_list_config_dict)
 
-    json_dict = json.loads(response.text)
-    print(json_dict["Key"]["Id"])
-    print(json_dict["Signature"])
+    verify_dict = {}
+    verify_dict["signed_file"] = file_to_sign
+    verify_dict["id"] = id
+    verify_dict["signature"] = signature
 
-    id = json_dict["Key"]["Id"]
-    signature = json_dict["Signature"]
-
-    verify_files = {"file": open(sign_file, "rb")}
-    verify_params = {"key": id, "signature": signature}
-
-    response, status_code, response_dict = execute_request(
-        url_key="verify",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=want_list_config_dict,
-        file=verify_files,
-        param=verify_params,
-    )
-
-    json_dict = json.loads(response.text)
-    print(json_dict)
-
+    signature_valid = verify_file(verify_dict, logger, want_list_config_dict)
+    if signature_valid:
+        print(signature_valid)
     return
 
 

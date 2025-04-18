@@ -26,6 +26,7 @@ from diyims.py_version_dep import get_car_path, get_sql_str
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
+from diyims.security_utils import sign_file
 
 
 def create():
@@ -110,28 +111,17 @@ def init():  # NOTE: add wait on ipfs
 
     peer_ID = response_dict["ID"]
 
+    signing_dict = {}
+    signing_dict["peer_ID"] = peer_ID
+
+    file_to_sign = path_dict["sign_file"]  # NOTE: generate unique name
+    with open(file_to_sign, "w") as write_file:
+        json.dump(signing_dict, write_file, indent=4)
+
     sign_dict = {}
-    sign_dict["peer_ID"] = peer_ID
+    sign_dict["file_to_sign"] = file_to_sign
 
-    sign_file = path_dict["sign_file"]  # NOTE: generate unique name
-    with open(sign_file, "w") as write_file:
-        json.dump(sign_dict, write_file, indent=4)
-
-    sign_files = {"file": open(sign_file, "rb")}
-    sign_params = {}
-
-    # NOTE: condition on ipfs agent
-    response, status_code, response_dict = execute_request(
-        url_key="sign",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=db_init_config_dict,
-        file=sign_files,
-        param=sign_params,
-    )
-
-    id = response_dict["Key"]["Id"]  # also IPNS name
-    signature = response_dict["Signature"]
+    id, signature = sign_file(sign_dict, logger, db_init_config_dict)
 
     """
     Create the initial peer table entry for this peer.

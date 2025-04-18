@@ -26,7 +26,7 @@ from diyims.py_version_dep import get_car_path, get_sql_str
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
-from diyims.security_utils import sign_file
+from diyims.security_utils import sign_file, verify_file
 
 
 def create():
@@ -123,6 +123,13 @@ def init():  # NOTE: add wait on ipfs
 
     id, signature = sign_file(sign_dict, logger, db_init_config_dict)
 
+    verify_dict = {}
+    verify_dict["signed_file"] = file_to_sign
+    verify_dict["id"] = id
+    verify_dict["signature"] = signature
+
+    signature_valid = verify_file(verify_dict, logger, db_init_config_dict)
+
     """
     Create the initial peer table entry for this peer.
     """
@@ -134,7 +141,7 @@ def init():  # NOTE: add wait on ipfs
     peer_row_dict["peer_ID"] = peer_ID
     peer_row_dict["IPNS_name"] = id
     peer_row_dict["signature"] = signature
-    peer_row_dict["signature_valid"] = "true"
+    peer_row_dict["signature_valid"] = signature_valid
     peer_row_dict["peer_type"] = "LP"  # local provider peer
     peer_row_dict["origin_update_DTS"] = DTS
     peer_row_dict["local_update_DTS"] = DTS

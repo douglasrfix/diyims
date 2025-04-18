@@ -37,7 +37,7 @@ def test_windows_install():
 
 
 # @pytest.mark.setup
-@pytest.mark.skip(reason="native")
+# @pytest.mark.skip(reason="native")
 def test_create_schema():
     """testing  create schema with no existing schema"""
     command_string = "install-utils create-schema"

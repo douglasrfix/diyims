@@ -61,8 +61,8 @@ def create():
     return
 
 
-def init():  # NOTE: add wait on ipfs
-    # NOTE: change header to pointer
+def init():  # TODO: add wait on ipfs
+    # TODO: change header to pointer
     try:
         path_dict = get_path_dict()
 
@@ -114,7 +114,9 @@ def init():  # NOTE: add wait on ipfs
     signing_dict = {}
     signing_dict["peer_ID"] = peer_ID
 
-    file_to_sign = path_dict["sign_file"]  # NOTE: generate unique name
+    file_to_sign = path_dict[
+        "sign_file"
+    ]  # TODO: generate unique name or better yet a sign file function
     with open(file_to_sign, "w") as write_file:
         json.dump(signing_dict, write_file, indent=4)
 
@@ -139,7 +141,9 @@ def init():  # NOTE: add wait on ipfs
     peer_row_dict = refresh_peer_row_from_template()
 
     peer_row_dict["peer_ID"] = peer_ID
-    peer_row_dict["IPNS_name"] = id
+    peer_row_dict["IPNS_name"] = (
+        id  # NOTE: may not be true until experimental is removed. probably should add another data element
+    )
     peer_row_dict["signature"] = signature
     peer_row_dict["signature_valid"] = signature_valid
     peer_row_dict["peer_type"] = "LP"  # local provider peer
@@ -156,8 +160,9 @@ def init():  # NOTE: add wait on ipfs
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
     with open(peer_file, "w") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
-    add_files = {"file": open(peer_file, "rb")}
 
+    f = open(peer_file, "rb")
+    add_files = {"file": f}
     response, status_code, response_dict = execute_request(
         url_key="add",
         logger=logger,
@@ -166,26 +171,24 @@ def init():  # NOTE: add wait on ipfs
         file=add_files,
         param=add_params,
     )
+    f.close()
 
     object_CID = response_dict["Hash"]
-    object_type = (
-        "peer_row_entry"  # NOTE: distinguish between local and remote entries in table
-    )
+    object_type = "peer_row_entry"
     header_CID, IPNS_name = ipfs_header_create(DTS, object_CID, object_type)
 
-    print(f"Header for the peer_row CID '{header_CID}'")
+    print(f"Header containing the peer_row CID '{header_CID}'")
 
-    # print(f"First network peer entry CID '{object_CID}'")
-    network_table_dict = refresh_network_table_dict()
+    network_table_dict = (
+        refresh_network_table_dict()
+    )  # TODO: rename function to template
     network_table_dict["network_name"] = import_car()
     network_name = network_table_dict["network_name"]
-    print(f"Network_name : '{network_name}'")  # NOTE: use logging
-
-    object_CID = network_table_dict[
-        "network_name"
-    ]  # NOTE: Replace the need for this transaction by looking in the peer_table
+    object_CID = network_table_dict["network_name"]
     object_type = "network_name"
-    header_CID, IPNS_name = ipfs_header_create(DTS, object_CID, object_type)
+    header_CID, IPNS_name = ipfs_header_create(
+        DTS, object_CID, object_type
+    )  # NOTE: may have to reorganize this if they change the meaning of id
 
     insert_peer_row(conn, queries, peer_row_dict)
     conn.commit()
@@ -208,7 +211,7 @@ def import_car():
     car_path = get_car_path()
     dag_import_files = {"file": car_path}
     dag_import_params = {
-        "pin-roots": "true",  # http status 500 if false but true does not pin given not in off-line mode
+        "pin-roots": "true",  # http status 500 if false but true does not pin if not in off-line mode
         "silent": "false",
         "stats": "false",
         "allow-big-block": "false",

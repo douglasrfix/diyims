@@ -114,6 +114,14 @@ values (:peer_ID, :IPNS_name, :signature, :signature_valid, :peer_type, :origin_
 		:execution_platform, :python_version, :IPFS_agent, :processing_status,
 		:agent, :version);
 
+-- name: update_peer_row_by_key!
+update peer_table set (peer_ID = :peer_ID, IPNS_name = :IPNS_name, signature = :signature,
+	signature_valid = :signature_valid, peer_type = :peer_type, origin_update_DTS = :origin_update_DTS,
+	local_update_DTS = :local_update_DTS, execution_platform = :execution_platform, python_version = :python_version,
+		IPFS_agent = :IPFS_agent, processing_status = :processing_status, agent = :agent, version = :version)
+
+where peer_ID = :peer_ID
+
 -- name: update_peer_table_peer_type_status!
 update peer_table set peer_type = :peer_type, processing_status = :processing_status,
 local_update_DTS = :local_update_DTS
@@ -198,6 +206,8 @@ where peer_ID = :peer_ID
 SELECT
 	peer_ID,
 	IPNS_name,
+	signature,
+	signature_valid,
 	peer_type,
    	origin_update_DTS,
 	local_update_DTS,
@@ -251,7 +261,7 @@ ORDER BY
 	insert_DTS DESC
 ;
 
--- name: select_first_peer_table_entry_pointer^
+-- name: select_first_peer_row_entry_pointer^
 SELECT
  	version,
    	object_CID,
@@ -263,7 +273,7 @@ SELECT
 FROM
    header_table
 
-WHERE object_type = "peer_table_entry"
+WHERE object_type = "peer_row_entry"
 
 ORDER BY
 

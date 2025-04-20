@@ -42,7 +42,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a55"  # NOTE: How to extract at run time
+    agent = "0.0.0a58"  # NOTE: How to extract at run time
 
     return agent
 
@@ -171,7 +171,7 @@ def select_local_peer_and_update_metrics():
         update_peer_table_metrics(conn, queries, peer_table_dict)
         conn.commit()
 
-    conn.close
+    conn.close()
 
     return
 

@@ -251,6 +251,7 @@ def refresh_network_name():
         file=file,
     )
     logger.debug("refresh network name completed.")
+    conn.close()
 
     """
     json_dict = json.loads(r.text)
@@ -266,6 +267,24 @@ def refresh_network_name():
     print("add pin")
     """
     return
+
+
+def unpack_peer_row_from_cid(peer_row_CID, config_dict):
+    url_dict = get_url_dict()
+    param = {
+        "arg": peer_row_CID,
+    }
+    url_key = "cat"
+
+    response, status_code, response_dict = execute_request(
+        url_key,
+        url_dict=url_dict,
+        config_dict=config_dict,
+        param=param,
+        timeout=(3.05, 27),
+    )
+
+    return response_dict
 
 
 if __name__ == "__main__":

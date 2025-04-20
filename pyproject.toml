@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a55"
+version = "0.0.0a58"
 #general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"

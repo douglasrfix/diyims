@@ -47,12 +47,13 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
     with open(header_json_file, "w") as write_file:
         json.dump(header_dict, write_file, indent=4)
 
-    add_files = {"file": open(header_json_file, "rb")}
-
+    f = open(header_json_file, "rb")
+    add_files = {"file": f}
     with requests.post(url=url_dict["add"], params=add_params, files=add_files) as r:
         r.raise_for_status()
         json_dict = json.loads(r.text)
         header_CID = json_dict["Hash"]
+    f.close()
 
     ipfs_path = "/ipfs/" + header_CID
     if object_CID == "null":

@@ -1,7 +1,7 @@
 # from os import close
 
 
-def set_up_sql_operations(config_dict):  # BUG: row v s cursor set up ?
+def set_up_sql_operations(config_dict):  # TODO: row v s cursor set up ?
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
     import aiosql
@@ -11,7 +11,8 @@ def set_up_sql_operations(config_dict):  # BUG: row v s cursor set up ?
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
     return conn, queries
 
@@ -26,23 +27,25 @@ def set_up_sql_operations_cursor(config_dict):
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     return conn, queries
 
 
 def reset_peer_table_status():
-    from diyims.config_utils import get_want_list_config_dict
+    # from diyims.config_utils import get_want_list_config_dict
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
     import aiosql
     import sqlite3
 
-    config_dict = get_want_list_config_dict()
+    # config_dict = get_want_list_config_dict()
     path_dict = get_path_dict()
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
 
     queries.reset_peer_table_status(
@@ -73,14 +76,13 @@ def insert_peer_row(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_row_by_key(conn, queries, peer_row_dict):
-    queries.update_peer_row_by_key(
+def update_peer_row_by_key_status(conn, queries, peer_row_dict):
+    queries.update_peer_row_by_key_status(
         conn,
-        peer_ID=peer_row_dict["peer_ID"],
         IPNS_name=peer_row_dict["IPNS_name"],
         signature=peer_row_dict["signature"],
         signature_valid=peer_row_dict["signature_valid"],
-        peer_type=peer_row_dict["peer_type"],
+        peer_type="PP",
         origin_update_DTS=peer_row_dict["origin_update_DTS"],
         local_update_DTS=peer_row_dict["local_update_DTS"],
         execution_platform=peer_row_dict["execution_platform"],
@@ -89,7 +91,7 @@ def update_peer_row_by_key(conn, queries, peer_row_dict):
         processing_status=peer_row_dict["processing_status"],
         agent=peer_row_dict["agent"],
         version=peer_row_dict["version"],
-        key=peer_row_dict["peer_ID"],
+        peer_ID=peer_row_dict["peer_ID"],
     )
     return
 

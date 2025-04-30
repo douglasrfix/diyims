@@ -140,10 +140,50 @@ def init():  # TODO: add wait on ipfs
 
     peer_row_dict = refresh_peer_row_from_template()
 
-    peer_row_dict["peer_ID"] = peer_ID
-    peer_row_dict["IPNS_name"] = (
-        id  # NOTE: may not be true until experimental is removed. probably should add another data element
+    peer_file = path_dict["peer_file"]
+
+    add_params = {"cid-version": 1, "only-hash": "false", "pin": "false"}
+    with open(peer_file, "w") as write_file:
+        json.dump(peer_row_dict, write_file, indent=4)
+
+    f = open(peer_file, "rb")
+    add_files = {"file": f}
+    response, status_code, response_dict = execute_request(
+        url_key="add",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=db_init_config_dict,
+        file=add_files,
+        param=add_params,
     )
+    f.close()
+
+    object_CID = response_dict["Hash"]
+
+    ipfs_path = "/ipfs/" + object_CID
+
+    name_publish_arg = {
+        "arg": ipfs_path,
+        "resolve": "false",
+        "lifetime": "1s",
+        "ttl": "1s",
+        "key": "self",
+        "ipns-base": "base36",
+    }
+
+    response, status_code, response_dict = execute_request(
+        url_key="name_publish",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=db_init_config_dict,
+        param=name_publish_arg,
+    )
+
+    IPNS_name = response_dict["Name"]
+
+    peer_row_dict["peer_ID"] = peer_ID
+    peer_row_dict["IPNS_name"] = IPNS_name
+    peer_row_dict["id"] = id
     peer_row_dict["signature"] = signature
     peer_row_dict["signature_valid"] = signature_valid
     peer_row_dict["peer_type"] = "LP"  # local provider peer

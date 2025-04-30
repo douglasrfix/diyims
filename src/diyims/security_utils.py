@@ -69,7 +69,7 @@ def verify_peer_row_from_cid(peer_row_CID, logger, config_dict):
 
     verify_dict = {}
     verify_dict["signed_file"] = file_to_verify
-    verify_dict["id"] = peer_row_dict["IPNS_name"]
+    verify_dict["id"] = peer_row_dict["id"]
     verify_dict["signature"] = peer_row_dict["signature"]
 
     signature_verified = verify_file(verify_dict, logger, config_dict)

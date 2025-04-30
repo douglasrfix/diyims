@@ -61,6 +61,7 @@ def insert_peer_row(conn, queries, peer_table_dict):
         conn,
         peer_ID=peer_table_dict["peer_ID"],
         IPNS_name=peer_table_dict["IPNS_name"],
+        id=peer_table_dict["id"],
         signature=peer_table_dict["signature"],
         signature_valid=peer_table_dict["signature_valid"],
         peer_type=peer_table_dict["peer_type"],
@@ -80,6 +81,7 @@ def update_peer_row_by_key_status(conn, queries, peer_row_dict):
     queries.update_peer_row_by_key_status(
         conn,
         IPNS_name=peer_row_dict["IPNS_name"],
+        id=peer_row_dict["id"],
         signature=peer_row_dict["signature"],
         signature_valid=peer_row_dict["signature_valid"],
         peer_type="PP",
@@ -162,10 +164,9 @@ def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_IPNS_name_status_NPC(conn, queries, peer_table_dict):
-    queries.update_peer_table_IPNS_name_status_NPC(
+def update_peer_table_status_NPC(conn, queries, peer_table_dict):
+    queries.update_peer_table_status_NPC(
         conn,
-        IPNS_name=peer_table_dict["IPNS_name"],
         processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
         peer_ID=peer_table_dict["peer_ID"],
@@ -189,6 +190,7 @@ def refresh_peer_row_from_template():
     peer_row_dict = {}
     peer_row_dict["peer_ID"] = "null"
     peer_row_dict["IPNS_name"] = "null"
+    peer_row_dict["id"] = "null"
     peer_row_dict["signature"] = "null"
     peer_row_dict["signature_valid"] = "null"
     peer_row_dict["peer_type"] = "null"
@@ -214,6 +216,7 @@ def export_local_peer_row(config_dict):
     peer_row_dict = {}
     peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]
     peer_row_dict["IPNS_name"] = peer_table_entry["IPNS_name"]
+    peer_row_dict["id"] = peer_table_entry["id"]
     peer_row_dict["signature"] = peer_table_entry["signature"]
     peer_row_dict["signature_valid"] = peer_table_entry["signature_valid"]
     peer_row_dict["peer_type"] = peer_table_entry["peer_type"]

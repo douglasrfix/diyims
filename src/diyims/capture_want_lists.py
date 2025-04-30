@@ -586,8 +586,8 @@ def filter_wantlist(
     # iconn, iqueries = set_up_sql_operations(config_dict)
 
     current_DT = datetime.now(timezone.utc)
-    start_off_set = timedelta(hours=2)
-    window_duration = timedelta(hours=1)
+    start_off_set = timedelta(hours=100)
+    window_duration = timedelta(hours=100)
     start_dts = current_DT - start_off_set
     end_dts = start_dts + window_duration
     query_start_dts = datetime.isoformat(start_dts)

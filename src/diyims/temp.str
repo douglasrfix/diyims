@@ -1,0 +1,180 @@
+# SuperFastPython.com
+# example of hashing a word list in parallel with a process pool
+# from math import ceil
+from hashlib import sha512
+from multiprocessing import Pool
+
+
+# hash one word using the SHA algorithm
+def hash_word(word):
+    # create the hash object
+    hash_object = sha512()
+    # convert the string to bytes
+    byte_data = word.encode("utf-8")
+    # hash the word
+    hash_object.update(byte_data)
+    # get the hex hash of the word
+    return hash_object.hexdigest()
+
+
+# load a file of words
+def load_words(path):
+    # open the file
+    with open(path) as file:
+        # read all data as lines
+        return file.readlines()
+
+
+# entry point
+def main():
+    # load a file of words
+    path = "1m_words.txt"
+    words = load_words(path)
+    print(f"Loaded {len(words)} words from {path}")
+    # create the process pool
+    with Pool(4) as pool:
+        # create a set of word hashes
+        known_words = set(pool.map(hash_word, words))
+    print(f"Done, with {len(known_words)} hashes")
+
+
+       """
+        param = {"arg": peer_ID}
+
+        response, status_code, response_dict = execute_request(
+            url_key="find_peer",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+
+        if status_code == 200:
+            peer_ip_address_list = decode_findpeer_structure(response)
+            for peer_ip_address in peer_ip_address_list:
+                param = {"arg": peer_ip_address + "/p2p/" + peer_ID}
+
+                log_string = f"{peer_ip_address}"
+
+                log_dict = refresh_log_dict()
+                log_dict["DTS"] = get_DTS()
+                log_dict["process"] = "peer_want_capture_task-peer-address"
+                log_dict["pid"] = pid
+                log_dict["peer_type"] = peer_type
+                log_dict["msg"] = log_string
+                insert_log_row(conn, queries, log_dict)
+                conn.commit()
+
+
+
+        #param = {"arg": peer_address + "/p2p/" + responses_dict["ID"]}
+        response, status_code = execute_request(
+            url_key="connect",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+        response, status_code = execute_request(
+            url_key="peering_add",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+        """
+
+          """
+    if peer_type == "PP":
+
+        response, status_code = execute_request(
+            url_key="dis_connect",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+        response, status_code = execute_request(
+            url_key="peering_remove",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+    """
+
+     """
+            param = {"arg": peer_table_dict["peer_ID"]}
+            execute_request(
+                url_key="find_peer",
+                logger=logger,
+                url_dict=url_dict,
+                config_dict=capture_peer_config_dict,
+                param=param,
+            )
+
+            status, peer_address = decode_find_peer_structure(
+                response,
+            )
+
+            if status:
+
+                param = {"arg": peer_address + "/p2p/" + responses_dict["ID"]}
+                execute_request(
+                    url_key="peering_rm",
+                    logger=logger,
+                    url_dict=url_dict,
+                    config_dict=capture_peer_config_dict,
+                    param=param,
+                )
+                execute_request(
+                    url_key="disconnect",
+                    logger=logger,
+                    url_dict=url_dict,
+                    config_dict=capture_peer_config_dict,
+                    param=param,
+                )"""
+"""
+                    if connect_flag is True:
+                        param = {"arg": peer_address + "/p2p/" + responses_dict["ID"]}
+                        execute_request(
+                            url_key="connect",
+                            logger=logger,
+                            url_dict=url_dict,
+                            config_dict=capture_peer_config_dict,
+                            param=param,
+                        )
+                        execute_request(
+                            url_key="peering_add",
+                            logger=logger,
+                            url_dict=url_dict,
+                            config_dict=capture_peer_config_dict,
+                            param=param,
+                        )
+                    """
+
+def decode_findpeer_structure(
+    response,
+):
+    # json_dict = json.loads(response.text)
+    # print(json_dict)
+    peer_ip_address_list = {"null"}
+    for line in response.iter_lines():
+        if line:
+            decoded_line = line.decode("utf-8")
+            line_dict = json.loads(decoded_line)
+            if line_dict["Type"] == 4:
+                responses_string = str(line_dict["Responses"])
+                responses_string_len = len(responses_string)
+                trimmed_responses_string = responses_string[
+                    1 : responses_string_len - 1
+                ]
+                responses_dict = json.loads(trimmed_responses_string.replace("'", '"'))
+                peer_ip_address_list = responses_dict["Addrs"]
+
+    return peer_ip_address_list
+
+
+
+if __name__ == "__main__":
+    main()

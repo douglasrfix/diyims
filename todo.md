@@ -59,7 +59,7 @@
 
 # [x]: evaluate pin roots value true false for real effect.  It doesn't seem to pin if true and it false to produce a response if its false. using ipfs help for each command that is used to detect when something changed
 
-# [x]: split the issue into multiple steps to facilitate testing on multiple platforms to give me some peers to deal with.
+# [x]: split the issue into multiple steps to facilitate testing on multiple platforms to give me some peers to deal with
 
 # [x]: need a python version override to remove the --force for this test
 
@@ -105,7 +105,7 @@
 
 # [ ]: support in-place db schema changes
 
-# [x]: add diyims agent to identify who/what created an artifact for the network.
+# [x]: add diyims agent to identify who/what created an artifact for the network
 
 # [x]: Set PYTHONDEVMODE to 1 for running tests
 
@@ -115,7 +115,7 @@
 
 # [x]: combine sql_table_dict with db utils rename db_operations
 
-# [x]: apt requires support is > 9.0
+# [x]: apt requires support is > 9_0
 
 # [x]: create config entry for want item.json
 

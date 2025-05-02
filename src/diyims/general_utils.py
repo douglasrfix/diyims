@@ -41,6 +41,12 @@ def get_DTS():
     return DTS
 
 
+def get_agent():
+    agent = "0.0.0a59"  # NOTE: How to extract at run time
+
+    return agent
+
+
 def get_shutdown_target(config_dict):
     current_date = datetime.today()
     shutdown_time = config_dict["shutdown_time"]
@@ -92,7 +98,7 @@ def clean_up():
         }
 
         if beacon_pin_enabled:
-            response, status_code = execute_request(
+            response, status_code, response_dict = execute_request(
                 url_key="pin_remove",
                 logger=logger,
                 url_dict=url_dict,
@@ -114,7 +120,7 @@ def select_local_peer_and_update_metrics():
     from diyims.config_utils import get_want_list_config_dict
     from diyims.database_utils import (
         set_up_sql_operations,
-        refresh_peer_table_dict,
+        refresh_peer_row_from_template,
         select_peer_table_local_peer_entry,
         update_peer_table_metrics,
     )
@@ -124,7 +130,7 @@ def select_local_peer_and_update_metrics():
 
     DTS = get_DTS()
     conn, queries = set_up_sql_operations(want_list_config_dict)
-    peer_table_dict = refresh_peer_table_dict()
+    peer_table_dict = refresh_peer_row_from_template()
     peer_table_entry = select_peer_table_local_peer_entry(
         conn, queries, peer_table_dict
     )
@@ -132,7 +138,7 @@ def select_local_peer_and_update_metrics():
     IPFS_agent = test_ipfs_version()
     os_platform = test_os_platform()
     python_version = get_python_version()
-    agent = "0.0.0a54"
+    agent = get_agent()
     changed_metrics = False
 
     if peer_table_entry["execution_platform"] != os_platform:
@@ -161,10 +167,11 @@ def select_local_peer_and_update_metrics():
 
     if changed_metrics:
         peer_table_dict["origin_update_DTS"] = DTS
+
         update_peer_table_metrics(conn, queries, peer_table_dict)
         conn.commit()
 
-    conn.close
+    conn.close()
 
     return
 

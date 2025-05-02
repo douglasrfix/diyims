@@ -22,11 +22,8 @@
 # [x]: create 3.8.1 dev environment for flake8 support
 
 # [x]: 0.0.0a0 test 3.8 and 3.9 for import lib behavior
-
 # [ ]: 0.0.0a0 Verify installation behavior on a different platform (Linux). need install logic
-
 # [x]: run full test suite against v22/3.8.1
-
 # [x]: explore single function testing
 
 # [x]: fix references to cartest .car file
@@ -96,7 +93,7 @@
 # [x]: standardize db name capitalization
 
 # [ ]: need a db reset to previous condition function
-
+# [ ]: rename header to announce
 # [ ]: CLI utility to create and get non-existent CIDs for negotiation testing both static CIDs and dynamic
 
 # [x]: add to the peer table for announcing python version platform and ipfs agent
@@ -114,9 +111,7 @@
 # [x]: add peer type to peer table
 
 # [x]: combine sql_table_dict with db utils rename db_operations
-
-# [x]: apt requires support is > 9_0
-
+# [x]: apt requires support is > 9.0
 # [x]: create config entry for want item.json
 
 # [x]: make unique file name

@@ -6,12 +6,16 @@ CREATE TABLE "header_table" (
 	"object_type"	TEXT,
 	"insert_DTS"	TEXT,
 	"prior_header_CID"	TEXT,
-	'header_CID' TEXT
+	'header_CID' TEXT,
+	"peer_ID" TEXT
 );
 
 CREATE TABLE "peer_table" (
 	"peer_ID"	TEXT,
 	"IPNS_name"	TEXT,
+	"id" TEXT,
+	"signature" TEXT,
+	"signature_valid" TEXT,
 	"peer_type" TEXT,
 	"origin_update_DTS"	TEXT,
 	"local_update_DTS" TEXT,
@@ -106,11 +110,20 @@ insert into log (DTS, process, pid, peer_type, msg)
 values (:DTS, :process, :pid, :peer_type, :msg);
 
 -- name: insert_peer_row!
-insert into peer_table (peer_ID, IPNS_name, peer_type, origin_update_DTS, local_update_DTS, execution_platform, python_version,
+insert into peer_table (peer_ID, IPNS_name, id, signature, signature_valid, peer_type,
+	 origin_update_DTS, local_update_DTS, execution_platform, python_version,
 		IPFS_agent, processing_status, agent, version)
-values (:peer_ID, :IPNS_name, :peer_type, :origin_update_DTS, :local_update_DTS,
+values (:peer_ID, :IPNS_name, :id, :signature, :signature_valid, :peer_type, :origin_update_DTS, :local_update_DTS,
 		:execution_platform, :python_version, :IPFS_agent, :processing_status,
 		:agent, :version);
+
+-- name: update_peer_row_by_key_status!
+update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
+	signature_valid = :signature_valid, peer_type = :peer_type, origin_update_DTS = :origin_update_DTS,
+	local_update_DTS = :local_update_DTS, execution_platform = :execution_platform, python_version = :python_version,
+		IPFS_agent = :IPFS_agent, processing_status = :processing_status, agent = :agent, version = :version
+
+where peer_ID = :peer_ID and processing_status = "WLX"
 
 -- name: update_peer_table_peer_type_status!
 update peer_table set peer_type = :peer_type, processing_status = :processing_status,
@@ -141,8 +154,8 @@ update peer_table set processing_status = :processing_status, local_update_DTS =
 where peer_ID = :peer_ID and  processing_status = "WLX"
 
 
--- name: update_peer_table_IPNS_name_status_NPC!
-update peer_table set IPNS_name = :IPNS_name, processing_status = :processing_status, local_update_DTS = :local_update_DTS
+-- name: update_peer_table_status_NPC!
+update peer_table set processing_status = :processing_status, local_update_DTS = :local_update_DTS
 where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "WLP" or
 	processing_status = "WLX" or processing_status = "WLZ")
 
@@ -151,7 +164,8 @@ where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "
 update peer_table set processing_status = "WLR"
 where processing_status  = "WLX" or processing_status = "WLP"
 
--- name: select_peers_by_peer_type_status^
+-- name: select_peers_by_peer_type_status
+-- returns all rows
 SELECT
 	peer_ID,
 	IPNS_name,
@@ -196,6 +210,9 @@ where peer_ID = :peer_ID
 SELECT
 	peer_ID,
 	IPNS_name,
+	id,
+	signature,
+	signature_valid,
 	peer_type,
    	origin_update_DTS,
 	local_update_DTS,
@@ -213,8 +230,8 @@ where peer_type = "LP"
 
 -- name: insert_header_row!
 insert into header_table (version, object_CID, object_type, insert_DTS,
-	 prior_header_CID, header_CID)
-values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID);
+	 prior_header_CID, header_CID, peer_ID)
+values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID, :peer_ID);
 
 -- name: insert_want_list_row!
 insert into want_list_table (peer_ID, object_CID, insert_DTS, last_update_DTS, insert_update_delta, source_peer_type)
@@ -239,43 +256,49 @@ SELECT
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table
+
+where peer_ID = :peer_ID
 
 ORDER BY
 
 	insert_DTS DESC
 ;
 
--- name: select_last_peer_table_entry_pointer^
+-- name: select_first_peer_row_entry_pointer^
 SELECT
  	version,
    	object_CID,
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table
 
-WHERE object_type = "IPNS_name"
+WHERE object_type = "peer_row_entry"
 
 ORDER BY
 
-	insert_DTS DESC
+	insert_DTS ASC
 ;
 
 -- name: select_all_headers
+-- all rows
 SELECT
  	version,
    	object_CID,
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table
@@ -298,8 +321,9 @@ where peer_ID = :peer_ID and object_CID = :object_CID
 ;
 
 -- name: select_filter_want_list_by_start_stop
+-- all rows
 select peer_ID, object_CID, insert_DTS, last_update_DTS, insert_update_delta, source_peer_type
 from want_list_table
 where last_update_DTS >= :query_start_dts and last_update_DTS <= :query_stop_dts
-	and (insert_update_delta < 294 and insert_update_delta > 285)
+	and (insert_update_delta <= :largest_delta and insert_update_delta >= :smallest_delta)
 ;

@@ -23,7 +23,7 @@ def test_linux_install(environ_m):
     assert result.exit_code == 0
 
 
-# @pytest.mark.skip(reason="native")
+@pytest.mark.skip(reason="native")
 @pytest.mark.setup
 def test_windows_install():
     """testing install into 'real path' not temporary test path process
@@ -37,7 +37,7 @@ def test_windows_install():
 
 
 # @pytest.mark.setup
-@pytest.mark.skip(reason="native")
+# @pytest.mark.skip(reason="native")
 def test_create_schema():
     """testing  create schema with no existing schema"""
     command_string = "install-utils create-schema"

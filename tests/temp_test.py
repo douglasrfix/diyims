@@ -10,7 +10,7 @@ runner = CliRunner()
 
 def test_run_test():
     """testing  general install 'real path'process for linux and unspecified drive letter"""
-    command_string = "run-test --roaming='ProdRoaming'"
+    command_string = "run-test --roaming='Roaming'"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0

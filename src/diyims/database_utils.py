@@ -1,4 +1,7 @@
-def set_up_sql_operations(config_dict):
+# from os import close
+
+
+def set_up_sql_operations(config_dict):  # TODO: row v s cursor set up ?
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
     import aiosql
@@ -8,7 +11,8 @@ def set_up_sql_operations(config_dict):
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
     return conn, queries
 
@@ -23,23 +27,25 @@ def set_up_sql_operations_cursor(config_dict):
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     return conn, queries
 
 
 def reset_peer_table_status():
-    from diyims.config_utils import get_want_list_config_dict
+    # from diyims.config_utils import get_want_list_config_dict
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
     import aiosql
     import sqlite3
 
-    config_dict = get_want_list_config_dict()
+    # config_dict = get_want_list_config_dict()
     path_dict = get_path_dict()
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
 
     queries.reset_peer_table_status(
@@ -55,6 +61,9 @@ def insert_peer_row(conn, queries, peer_table_dict):
         conn,
         peer_ID=peer_table_dict["peer_ID"],
         IPNS_name=peer_table_dict["IPNS_name"],
+        id=peer_table_dict["id"],
+        signature=peer_table_dict["signature"],
+        signature_valid=peer_table_dict["signature_valid"],
         peer_type=peer_table_dict["peer_type"],
         origin_update_DTS=peer_table_dict["origin_update_DTS"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
@@ -64,6 +73,27 @@ def insert_peer_row(conn, queries, peer_table_dict):
         processing_status=peer_table_dict["processing_status"],
         agent=peer_table_dict["agent"],
         version=peer_table_dict["version"],
+    )
+    return
+
+
+def update_peer_row_by_key_status(conn, queries, peer_row_dict):
+    queries.update_peer_row_by_key_status(
+        conn,
+        IPNS_name=peer_row_dict["IPNS_name"],
+        id=peer_row_dict["id"],
+        signature=peer_row_dict["signature"],
+        signature_valid=peer_row_dict["signature_valid"],
+        peer_type="PP",
+        origin_update_DTS=peer_row_dict["origin_update_DTS"],
+        local_update_DTS=peer_row_dict["local_update_DTS"],
+        execution_platform=peer_row_dict["execution_platform"],
+        python_version=peer_row_dict["python_version"],
+        IPFS_agent=peer_row_dict["IPFS_agent"],
+        processing_status=peer_row_dict["processing_status"],
+        agent=peer_row_dict["agent"],
+        version=peer_row_dict["version"],
+        peer_ID=peer_row_dict["peer_ID"],
     )
     return
 
@@ -134,10 +164,9 @@ def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_IPNS_name_status_NPC(conn, queries, peer_table_dict):
-    queries.update_peer_table_IPNS_name_status_NPC(
+def update_peer_table_status_NPC(conn, queries, peer_table_dict):
+    queries.update_peer_table_status_NPC(
         conn,
-        IPNS_name=peer_table_dict["IPNS_name"],
         processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
         peer_ID=peer_table_dict["peer_ID"],
@@ -157,26 +186,52 @@ def update_peer_table_metrics(conn, queries, peer_table_dict):
     return
 
 
-def refresh_peer_table_dict():
-    peer_table_dict = {}
-    peer_table_dict["peer_ID"] = "null"
-    peer_table_dict["IPNS_name"] = "null"
-    peer_table_dict["peer_type"] = "null"
-    peer_table_dict["origin_update_DTS"] = "null"
-    peer_table_dict["local_update_DTS"] = "null"
-    peer_table_dict["wanted_found"] = "0"
-    peer_table_dict["wanted_added"] = "0"
-    peer_table_dict["wanted_updated"] = "0"
-    peer_table_dict["zero_cid_samples"] = "0"
-    peer_table_dict["connection_retry_iteration"] = "null"
-    peer_table_dict["execution_platform"] = "null"
-    peer_table_dict["python_version"] = "null"
-    peer_table_dict["IPFS_agent"] = "null"
-    peer_table_dict["processing_status"] = "null"
-    peer_table_dict["agent"] = "null"
-    peer_table_dict["version"] = "0"
+def refresh_peer_row_from_template():
+    peer_row_dict = {}
+    peer_row_dict["peer_ID"] = "null"
+    peer_row_dict["IPNS_name"] = "null"
+    peer_row_dict["id"] = "null"
+    peer_row_dict["signature"] = "null"
+    peer_row_dict["signature_valid"] = "null"
+    peer_row_dict["peer_type"] = "null"
+    peer_row_dict["origin_update_DTS"] = "null"
+    peer_row_dict["local_update_DTS"] = "null"
+    peer_row_dict["execution_platform"] = "null"
+    peer_row_dict["python_version"] = "null"
+    peer_row_dict["IPFS_agent"] = "null"
+    peer_row_dict["processing_status"] = "null"
+    peer_row_dict["agent"] = "null"
+    peer_row_dict["version"] = "0"
 
-    return peer_table_dict
+    return peer_row_dict
+
+
+def export_local_peer_row(config_dict):
+    conn, queries = set_up_sql_operations(config_dict)
+    peer_table_dict = {}
+    peer_table_entry = select_peer_table_local_peer_entry(
+        conn, queries, peer_table_dict
+    )
+
+    peer_row_dict = {}
+    peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]
+    peer_row_dict["IPNS_name"] = peer_table_entry["IPNS_name"]
+    peer_row_dict["id"] = peer_table_entry["id"]
+    peer_row_dict["signature"] = peer_table_entry["signature"]
+    peer_row_dict["signature_valid"] = peer_table_entry["signature_valid"]
+    peer_row_dict["peer_type"] = peer_table_entry["peer_type"]
+    peer_row_dict["origin_update_DTS"] = peer_table_entry["origin_update_DTS"]
+    peer_row_dict["local_update_DTS"] = peer_table_entry["local_update_DTS"]
+    peer_row_dict["execution_platform"] = peer_table_entry["execution_platform"]
+    peer_row_dict["python_version"] = peer_table_entry["python_version"]
+    peer_row_dict["IPFS_agent"] = peer_table_entry["IPFS_agent"]
+    peer_row_dict["processing_status"] = peer_table_entry["processing_status"]
+    peer_row_dict["agent"] = peer_table_entry["agent"]
+    peer_row_dict["version"] = peer_table_entry["version"]
+
+    conn.close()
+
+    return peer_row_dict
 
 
 def insert_network_row(conn, queries, network_table_dict):
@@ -262,6 +317,7 @@ def get_header_table_dict():
     header_table_dict["insert_DTS"] = "null"
     header_table_dict["prior_header_CID"] = "null"
     header_table_dict["header_CID"] = "null"
+    header_table_dict["peer_ID"] = "null"
     return header_table_dict
 
 

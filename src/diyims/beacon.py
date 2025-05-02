@@ -5,7 +5,7 @@ The stats captured will also be used to create timing information (3)
     will be used to load test the system as well as test for beacon distortion.
 """
 
-import psutil
+# import psutil
 import json
 from diyims.requests_utils import execute_request
 from datetime import datetime
@@ -25,8 +25,10 @@ from diyims.database_utils import (
 
 
 def beacon_main():
+    import psutil
+
     p = psutil.Process()
-    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+    p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
     beacon_config_dict = get_beacon_config_dict()
     logger = get_logger(
         beacon_config_dict["log_file"],
@@ -89,23 +91,20 @@ def beacon_main():
 def create_beacon_CID(logger, beacon_config_dict):
     url_dict = get_url_dict()
     path_dict = get_path_dict()
-
+    # +1
     conn, queries = set_up_sql_operations(beacon_config_dict)
-    header_row = queries.select_last_peer_table_entry_pointer(conn)
+    header_row = queries.select_first_peer_row_entry_pointer(
+        conn
+    )  # TODO: drop the pointer
 
-    want_item_dict = refresh_want_item_dict()
-    want_item_dict["IPNS_name"] = header_row["object_CID"]
+    want_item_dict = refresh_want_item_dict()  # TODO: rename to template
+    want_item_dict["peer_row_CID"] = header_row["object_CID"]
     want_item_dict["DTS"] = get_DTS()
-
+    # -1
     conn.close()
     want_item_path = path_dict["want_item_path"]
     proto_item_file = path_dict["want_item_file"]
     want_item_file = get_unique_item_file(want_item_path, proto_item_file)
-
-    with open(want_item_file, "w") as write_file:
-        json.dump(want_item_dict, write_file, indent=4)
-
-    file = {"file": open(want_item_file, "rb")}
 
     beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
 
@@ -114,7 +113,12 @@ def create_beacon_CID(logger, beacon_config_dict):
     else:
         param = {"only-hash": "true", "pin": "false", "cid-version": 1}
 
-    response, status_code = execute_request(
+    with open(want_item_file, "w") as write_file:
+        json.dump(want_item_dict, write_file, indent=4)
+
+    f = open(want_item_file, "rb")
+    file = {"file": f}
+    response, status_code, response_dict = execute_request(
         url_key="add",
         logger=logger,
         url_dict=url_dict,
@@ -122,20 +126,21 @@ def create_beacon_CID(logger, beacon_config_dict):
         param=param,
         file=file,
     )
+    f.close()
 
-    json_dict = json.loads(response.text)
-    last_peer_table_entry_CID = json_dict["Hash"]
-    beacon_CID = last_peer_table_entry_CID
+    # json_dict = json.loads(response.text)
+    first_peer_table_entry_CID = response_dict["Hash"]
+    beacon_CID = first_peer_table_entry_CID
     logger.debug(f"Create {beacon_CID}")
-
+    # +1
     conn, queries = set_up_sql_operations(beacon_config_dict)
-    clean_up_dict = refresh_clean_up_dict()
+    clean_up_dict = refresh_clean_up_dict()  # TODO: rename template``
     clean_up_dict["DTS"] = get_DTS()
     clean_up_dict["want_item_file"] = str(want_item_file)
     clean_up_dict["beacon_CID"] = beacon_CID
     insert_clean_up_row(conn, queries, clean_up_dict)
     conn.commit()
-    conn.close()
+    conn.close()  # -1
     return beacon_CID, want_item_file
 
     return
@@ -159,6 +164,8 @@ def flash_beacon(logger, beacon_config_dict, beacon_CID):
 
 
 def satisfy_main():
+    import psutil
+
     p = psutil.Process()
     p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
     satisfy_config_dict = get_satisfy_config_dict()
@@ -196,8 +203,11 @@ def satisfy_main():
 
 def satisfy_beacon(logger, satisfy_config_dict, want_item_file):
     url_dict = get_url_dict()
-    file = {"file": open(want_item_file, "rb")}
+
     param = {"only-hash": "false", "pin": "false", "cid-version": 1}
+
+    f = open(want_item_file, "rb")
+    file = {"file": f}
     execute_request(
         url_key="add",
         logger=logger,
@@ -206,6 +216,8 @@ def satisfy_beacon(logger, satisfy_config_dict, want_item_file):
         param=param,
         file=file,
     )
+    f.close()
+
     logger.debug(f"Satisfy {want_item_file}")
 
     return

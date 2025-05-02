@@ -64,7 +64,8 @@ def get_path_dict():
     path_dict["peer_file"] = Path(parser["Files"]["peer_file"])
     path_dict["want_item_path"] = Path(parser["Paths"]["want_item_path"])
     path_dict["want_item_file"] = Path(parser["Files"]["want_item_file"])
-
+    path_dict["sign_path"] = Path(parser["Paths"]["sign_path"])
+    path_dict["sign_file"] = Path(parser["Files"]["sign_file"])
     return path_dict
 
 
@@ -87,6 +88,7 @@ def get_linux_template_dict():
     template_path_dict["header_path"] = xdg_cache_home
     template_path_dict["peer_path"] = xdg_cache_home
     template_path_dict["want_item_path"] = xdg_cache_home
+    template_path_dict["sign_path"] = xdg_cache_home
 
     return template_path_dict
 
@@ -114,6 +116,7 @@ def get_win32_template_dict():
     template_path_dict["header_path"] = xdg_cache_home
     template_path_dict["peer_path"] = xdg_cache_home
     template_path_dict["want_item_path"] = xdg_cache_home
+    template_path_dict["sign_path"] = xdg_cache_home
 
     return template_path_dict
 

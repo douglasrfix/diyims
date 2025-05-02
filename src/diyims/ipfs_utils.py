@@ -19,6 +19,8 @@ def get_url_dict():
     url_dict["get"] = "http://127.0.0.1:5001/api/v0/get"
     url_dict["cat"] = "http://127.0.0.1:5001/api/v0/cat"
     url_dict["id"] = "http://127.0.0.1:5001/api/v0/id"
+    url_dict["sign"] = "http://127.0.0.1:5001/api/v0/key/sign"
+    url_dict["verify"] = "http://127.0.0.1:5001/api/v0/key/verify"
     url_dict["dag_import"] = "http://127.0.0.1:5001/api/v0/dag/import"
     url_dict["name_publish"] = "http://127.0.0.1:5001/api/v0/name/publish"
     url_dict["find_providers"] = "http://127.0.0.1:5001/api/v0/routing/findprovs"
@@ -218,7 +220,7 @@ def refresh_network_name():
 
     logger.debug(f"refreshing {network_name}.")
     try:
-        response, status_code = execute_request(
+        response, status_code, response_dict = execute_request(
             url_key="pin_remove",
             logger=logger,
             url_dict=url_dict,
@@ -249,6 +251,7 @@ def refresh_network_name():
         file=file,
     )
     logger.debug("refresh network name completed.")
+    conn.close()
 
     """
     json_dict = json.loads(r.text)
@@ -264,6 +267,24 @@ def refresh_network_name():
     print("add pin")
     """
     return
+
+
+def unpack_peer_row_from_cid(peer_row_CID, config_dict):
+    url_dict = get_url_dict()
+    param = {
+        "arg": peer_row_CID,
+    }
+    url_key = "cat"
+
+    response, status_code, response_dict = execute_request(
+        url_key,
+        url_dict=url_dict,
+        config_dict=config_dict,
+        param=param,
+        timeout=(3.05, 27),
+    )
+
+    return response_dict
 
 
 if __name__ == "__main__":

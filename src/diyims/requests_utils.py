@@ -77,7 +77,7 @@ def execute_request(url_key, **kwargs):
             break
         except ConnectionError:
             if logger:
-                logger.exception(status_code=603)
+                logger.exception(status_code=603)  # BUG: #5 remove characters
             sleep(connect_retry_delay)
             retry += 1
     # print(timeout_tuple)

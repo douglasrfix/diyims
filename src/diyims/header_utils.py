@@ -9,7 +9,7 @@ from diyims.path_utils import get_path_dict
 from diyims.py_version_dep import get_sql_str
 
 
-def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to pointer
+def ipfs_header_create(DTS, object_CID, object_type, peer_ID):
     path_dict = get_path_dict()
     url_dict = get_url_dict()
 
@@ -19,7 +19,7 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
     conn = sqlite3.connect(connect_path)
     conn.row_factory = sqlite3.Row
     queries = aiosql.from_str(sql_str, "sqlite3")
-    query_row = queries.select_last_header(conn)
+    query_row = queries.select_last_header(conn, peer_ID=peer_ID)
 
     if query_row is None:
         header_dict = {}
@@ -28,6 +28,7 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
         header_dict["object_type"] = object_type
         header_dict["insert_DTS"] = DTS
         header_dict["prior_header_CID"] = "null"
+        header_dict["peer_ID"] = peer_ID
 
         header_CID = "null"
 
@@ -38,6 +39,7 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
         header_dict["object_type"] = object_type
         header_dict["insert_DTS"] = DTS
         header_dict["prior_header_CID"] = query_row["header_CID"]
+        header_dict["peer_ID"] = peer_ID
 
         header_CID = "null"
 
@@ -88,6 +90,7 @@ def ipfs_header_create(DTS, object_CID, object_type):  # NOTE: Change name to po
         insert_DTS=header_dict["insert_DTS"],
         prior_header_CID=header_dict["prior_header_CID"],
         header_CID=header_CID,
+        peer_ID=header_dict["peer_ID"],
     )
     conn.commit()
 
@@ -118,5 +121,6 @@ def refresh_header_dict():
     header_dict["object_type"] = "null"
     header_dict["insert_DTS"] = "null"
     header_dict["prior_header_CID"] = "null"
+    header_dict["peer_ID"] = "null"
 
     return header_dict

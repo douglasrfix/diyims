@@ -6,7 +6,8 @@ CREATE TABLE "header_table" (
 	"object_type"	TEXT,
 	"insert_DTS"	TEXT,
 	"prior_header_CID"	TEXT,
-	'header_CID' TEXT
+	'header_CID' TEXT,
+	"peer_ID" TEXT
 );
 
 CREATE TABLE "peer_table" (
@@ -229,8 +230,8 @@ where peer_type = "LP"
 
 -- name: insert_header_row!
 insert into header_table (version, object_CID, object_type, insert_DTS,
-	 prior_header_CID, header_CID)
-values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID);
+	 prior_header_CID, header_CID, peer_ID)
+values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID, :peer_ID);
 
 -- name: insert_want_list_row!
 insert into want_list_table (peer_ID, object_CID, insert_DTS, last_update_DTS, insert_update_delta, source_peer_type)
@@ -255,10 +256,13 @@ SELECT
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table
+
+where peer_ID = :peer_ID
 
 ORDER BY
 
@@ -272,7 +276,8 @@ SELECT
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table
@@ -292,7 +297,8 @@ SELECT
    	object_type,
    	insert_DTS,
    	prior_header_CID,
-   	header_CID
+   	header_CID,
+	peer_ID
 
 FROM
    header_table

@@ -215,7 +215,12 @@ def init():  # TODO: add wait on ipfs
 
     object_CID = response_dict["Hash"]
     object_type = "peer_row_entry"
-    header_CID, IPNS_name = ipfs_header_create(DTS, object_CID, object_type)
+    header_CID, IPNS_name = ipfs_header_create(
+        DTS,
+        object_CID,
+        object_type,
+        peer_ID,
+    )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
 
@@ -227,8 +232,11 @@ def init():  # TODO: add wait on ipfs
     object_CID = network_table_dict["network_name"]
     object_type = "network_name"
     header_CID, IPNS_name = ipfs_header_create(
-        DTS, object_CID, object_type
-    )  # NOTE: may have to reorganize this if they change the meaning of id
+        DTS,
+        object_CID,
+        object_type,
+        peer_ID,
+    )
 
     insert_peer_row(conn, queries, peer_row_dict)
     conn.commit()

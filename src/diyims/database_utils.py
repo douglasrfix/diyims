@@ -317,6 +317,7 @@ def get_header_table_dict():
     header_table_dict["insert_DTS"] = "null"
     header_table_dict["prior_header_CID"] = "null"
     header_table_dict["header_CID"] = "null"
+    header_table_dict["peer_ID"] = "null"
     return header_table_dict
 
 

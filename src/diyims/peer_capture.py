@@ -54,15 +54,15 @@ def capture_peer_main(peer_type):
     logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
     sleep(wait_seconds)
     if peer_type == "PP":
-        # p.nice(psutil.NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Startup of Provider Capture.")
     elif peer_type == "BP":
-        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Startup of Bitswap Capture.")
     elif peer_type == "SP":
-        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Startup of Swarm Capture.")
     interval_length = int(capture_peer_config_dict["capture_interval_delay"])

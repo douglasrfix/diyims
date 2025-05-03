@@ -5,7 +5,7 @@ The stats captured will also be used to create timing information (3)
     will be used to load test the system as well as test for beacon distortion.
 """
 
-# import psutil
+import psutil
 import json
 from diyims.requests_utils import execute_request
 from datetime import datetime
@@ -25,7 +25,7 @@ from diyims.database_utils import (
 
 
 def beacon_main():
-    import psutil
+    # import psutil
 
     p = psutil.Process()
     p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
@@ -164,7 +164,7 @@ def flash_beacon(logger, beacon_config_dict, beacon_CID):
 
 
 def satisfy_main():
-    import psutil
+    # import psutil
 
     p = psutil.Process()
     p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)

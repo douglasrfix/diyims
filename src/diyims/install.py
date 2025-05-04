@@ -16,6 +16,8 @@ from diyims.path_utils import get_install_template_dict
 from diyims.platform_utils import test_os_platform
 from diyims.config_utils import config_install
 
+# TODO: #12 test ipfs agent at install time
+
 
 def install_main(drive_letter, force_install):
     try:

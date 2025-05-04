@@ -204,7 +204,7 @@ def satisfy_main():
 def satisfy_beacon(logger, satisfy_config_dict, want_item_file):
     url_dict = get_url_dict()
 
-    param = {"only-hash": "false", "pin": "false", "cid-version": 1}
+    param = {"only-hash": "false", "pin": "true", "cid-version": 1}
 
     f = open(want_item_file, "rb")
     file = {"file": f}

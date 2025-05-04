@@ -191,10 +191,10 @@ def get_scheduler_config_dict():
         parser["Scheduler"] = {}
         parser["Scheduler"]["beacon_enable"] = "True"
         parser["Scheduler"]["provider_enable"] = "True"
-        parser["Scheduler"]["bitswap_enable"] = "True"
-        parser["Scheduler"]["swarm_enable"] = "True"
+        parser["Scheduler"]["bitswap_enable"] = "False"
+        parser["Scheduler"]["swarm_enable"] = "False"
         parser["Scheduler"]["submit_delay"] = "0"
-        parser["Scheduler"]["worker_pool"] = "9"
+        parser["Scheduler"]["worker_pool"] = "4"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
         parser["Scheduler"]["log_file"] = "scheduler.log"
@@ -557,14 +557,14 @@ def get_want_list_config_dict():
         parser["Want_List"] = {}
         parser["Want_List"]["wait_for_new_peer_minutes"] = "10"
         parser["Want_List"]["provider_zero_sample_count"] = "9999"
-        parser["Want_List"]["provider_pool_workers"] = "3"
-        parser["Want_List"]["provider_maxtasks"] = "1"
+        parser["Want_List"]["provider_pool_workers"] = "4"
+        parser["Want_List"]["provider_maxtasks"] = "100"
         parser["Want_List"]["bitswap_zero_sample_count"] = "5"
         parser["Want_List"]["bitswap_pool_workers"] = "3"
-        parser["Want_List"]["bitswap_maxtasks"] = "1"
+        parser["Want_List"]["bitswap_maxtasks"] = "100"
         parser["Want_List"]["swarm_zero_sample_count"] = "5"
-        parser["Want_List"]["swarm_pool_workers"] = "20"
-        parser["Want_List"]["swarm_maxtasks"] = "1"
+        parser["Want_List"]["swarm_pool_workers"] = "3"
+        parser["Want_List"]["swarm_maxtasks"] = "100"
         parser["Want_List"]["samples_per_minute"] = "6"
         parser["Want_List"]["number_of_samples_per_interval"] = "60"
         parser["Want_List"]["sql_timeout"] = "60"
@@ -634,166 +634,6 @@ def get_want_list_config_dict():
         ]
 
     return want_list_config_dict
-
-
-"""
-def get_capture_bitswap_config_dict():
-    install_dict = get_install_template_dict()
-
-    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
-    parser = configparser.ConfigParser()
-
-    try:
-        with open(config_file, "r") as configfile:
-            parser.read_file(configfile)
-
-    except FileNotFoundError:
-        raise ApplicationNotInstalledError(" ")
-
-    try:
-        capture_bitswap_config_dict = {}
-        capture_bitswap_config_dict["capture_interval_delay"] = parser[
-            "Capture_Bitswap"
-        ]["capture_interval_delay"]
-        capture_bitswap_config_dict["sql_timeout"] = parser["Capture_Bitswap"][
-            "sql_timeout"
-        ]
-        capture_bitswap_config_dict["wait_before_startup"] = parser["Capture_Bitswap"][
-            "wait_before_startup"
-        ]
-        capture_bitswap_config_dict["max_intervals"] = parser["Capture_Bitswap"][
-            "max_intervals"
-        ]
-        capture_bitswap_config_dict["shutdown_time"] = parser["Capture_Bitswap"][
-            "shutdown_time"
-        ]
-        capture_bitswap_config_dict["log_file"] = parser["Capture_Bitswap"]["log_file"]
-        capture_bitswap_config_dict["connect_retries"] = parser["Capture_Bitswap"][
-            "connect_retries"
-        ]
-        capture_bitswap_config_dict["connect_retry_delay"] = parser["Capture_Bitswap"][
-            "connect_retry_delay"
-        ]
-
-    except KeyError:
-        parser["Capture_Bitswap"] = {}
-        parser["Capture_Bitswap"]["capture_interval_delay"] = "600"
-        parser["Capture_Bitswap"]["sql_timeout"] = "60"
-        parser["Capture_Bitswap"]["wait_before_startup"] = "60"
-        parser["Capture_Bitswap"]["max_intervals"] = "1440"
-        parser["Capture_Bitswap"]["shutdown_time"] = "22:0:0"
-        parser["Capture_Bitswap"]["log_file"] = "capture_bitswap.log"
-        parser["Capture_Bitswap"]["connect_retries"] = "30"
-        parser["Capture_Bitswap"]["connect_retry_delay"] = "30"
-
-        with open(config_file, "w") as configfile:
-            parser.write(configfile)
-
-        capture_bitswap_config_dict = {}
-        capture_bitswap_config_dict["capture_interval_delay"] = parser[
-            "Capture_Bitswap"
-        ]["capture_interval_delay"]
-        capture_bitswap_config_dict["sql_timeout"] = parser["Capture_Bitswap"][
-            "sql_timeout"
-        ]
-        capture_bitswap_config_dict["wait_before_startup"] = parser["Capture_Bitswap"][
-            "wait_before_startup"
-        ]
-        capture_bitswap_config_dict["max_intervals"] = parser["Capture_Bitswap"][
-            "max_intervals"
-        ]
-        capture_bitswap_config_dict["shutdown_time"] = parser["Capture_Bitswap"][
-            "shutdown_time"
-        ]
-        capture_bitswap_config_dict["log_file"] = parser["Capture_Bitswap"]["log_file"]
-        capture_bitswap_config_dict["connect_retries"] = parser["Capture_Bitswap"][
-            "connect_retries"
-        ]
-        capture_bitswap_config_dict["connect_retry_delay"] = parser["Capture_Bitswap"][
-            "connect_retry_delay"
-        ]
-
-    return capture_bitswap_config_dict
-
-
-def get_capture_swarm_config_dict():
-    install_dict = get_install_template_dict()
-
-    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
-    parser = configparser.ConfigParser()
-
-    try:
-        with open(config_file, "r") as configfile:
-            parser.read_file(configfile)
-
-    except FileNotFoundError:
-        raise ApplicationNotInstalledError(" ")
-
-    try:
-        capture_swarm_config_dict = {}
-        capture_swarm_config_dict["capture_interval_delay"] = parser["Capture_Swarm"][
-            "capture_interval_delay"
-        ]
-        capture_swarm_config_dict["sql_timeout"] = parser["Capture_Swarm"][
-            "sql_timeout"
-        ]
-        capture_swarm_config_dict["wait_before_startup"] = parser["Capture_Swarm"][
-            "wait_before_startup"
-        ]
-        capture_swarm_config_dict["max_intervals"] = parser["Capture_Swarm"][
-            "max_intervals"
-        ]
-        capture_swarm_config_dict["shutdown_time"] = parser["Capture_Swarm"][
-            "shutdown_time"
-        ]
-        capture_swarm_config_dict["log_file"] = parser["Capture_Swarm"]["log_file"]
-        capture_swarm_config_dict["connect_retries"] = parser["Capture_Swarm"][
-            "connect_retries"
-        ]
-        capture_swarm_config_dict["connect_retry_delay"] = parser["Capture_Swarm"][
-            "connect_retry_delay"
-        ]
-
-    except KeyError:
-        parser["Capture_Swarm"] = {}
-        parser["Capture_Swarm"]["capture_interval_delay"] = "600"
-        parser["Capture_Swarm"]["sql_timeout"] = "60"
-        parser["Capture_Swarm"]["wait_before_startup"] = "60"
-        parser["Capture_Swarm"]["max_intervals"] = "1440"
-        parser["Capture_Swarm"]["shutdown_time"] = "22:0:0"
-        parser["Capture_Swarm"]["log_file"] = "capture_swarm.log"
-        parser["Capture_Swarm"]["connect_retries"] = "30"
-        parser["Capture_Swarm"]["connect_retry_delay"] = "30"
-
-        with open(config_file, "w") as configfile:
-            parser.write(configfile)
-
-        capture_swarm_config_dict = {}
-        capture_swarm_config_dict["capture_interval_delay"] = parser["Capture_Swarm"][
-            "capture_interval_delay"
-        ]
-        capture_swarm_config_dict["sql_timeout"] = parser["Capture_Swarm"][
-            "sql_timeout"
-        ]
-        capture_swarm_config_dict["wait_before_startup"] = parser["Capture_Swarm"][
-            "wait_before_startup"
-        ]
-        capture_swarm_config_dict["max_intervals"] = parser["Capture_Swarm"][
-            "max_intervals"
-        ]
-        capture_swarm_config_dict["shutdown_time"] = parser["Capture_Swarm"][
-            "shutdown_time"
-        ]
-        capture_swarm_config_dict["log_file"] = parser["Capture_Swarm"]["log_file"]
-        capture_swarm_config_dict["connect_retries"] = parser["Capture_Swarm"][
-            "connect_retries"
-        ]
-        capture_swarm_config_dict["connect_retry_delay"] = parser["Capture_Swarm"][
-            "connect_retry_delay"
-        ]
-
-    return capture_swarm_config_dict
-    """
 
 
 def get_queue_config_dict():

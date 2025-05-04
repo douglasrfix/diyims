@@ -223,6 +223,7 @@ def init():  # TODO: add wait on ipfs
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
+    DTS = get_DTS()
 
     network_table_dict = (
         refresh_network_table_dict()

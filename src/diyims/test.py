@@ -417,7 +417,7 @@ def test_verify_peer():
         want_list_config_dict["log_file"],
         "none",
     )
-    peer_row_CID = "bafkreidh4lajlubmsbz42r5kqpopumotx6kvdgj3puvmdvoxuqby67i6gm"
+    peer_row_CID = ""
 
     peer_verified, peer_row_dict = verify_peer_row_from_cid(
         peer_row_CID, logger, want_list_config_dict
@@ -431,7 +431,7 @@ def test_verify_peer():
 def unpack_peer_row_from_cid():
     want_list_config_dict = get_want_list_config_dict()
     url_dict = get_url_dict()
-    peer_row_CID = "bafkreidh4lajlubmsbz42r5kqpopumotx6kvdgj3puvmdvoxuqby67i6gm"
+    peer_row_CID = ""
     param = {
         "arg": peer_row_CID,
     }

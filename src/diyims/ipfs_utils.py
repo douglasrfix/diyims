@@ -117,16 +117,6 @@ def test_ipfs_version():
         json_dict = json.loads(r.text)
 
         supported_agents = [
-            "kubo/0.22.0/",
-            "kubo/0.23.0/",
-            "kubo/0.24.0/",
-            "kubo/0.25.0/",
-            "kubo/0.26.0/",
-            "kubo/0.27.0/",
-            "kubo/0.28.0/",
-            "kubo/0.29.0/",
-            "kubo/0.32.1/",
-            "kubo/0.33.2/",
             "kubo/0.34.1/",
         ]
         match_count = 0

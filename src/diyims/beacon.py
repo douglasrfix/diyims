@@ -5,7 +5,7 @@ The stats captured will also be used to create timing information (3)
     will be used to load test the system as well as test for beacon distortion.
 """
 
-# import psutil
+import psutil
 import json
 from diyims.requests_utils import execute_request
 from datetime import datetime
@@ -14,7 +14,7 @@ from multiprocessing.managers import BaseManager
 from diyims.ipfs_utils import get_url_dict
 from diyims.general_utils import get_DTS, get_shutdown_target
 from diyims.want_item_utils import refresh_want_item_dict
-from diyims.path_utils import get_path_dict, get_unique_item_file
+from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.config_utils import get_beacon_config_dict, get_satisfy_config_dict
 from diyims.logger_utils import get_logger
 from diyims.database_utils import (
@@ -25,7 +25,7 @@ from diyims.database_utils import (
 
 
 def beacon_main():
-    import psutil
+    # import psutil
 
     p = psutil.Process()
     p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
@@ -104,7 +104,7 @@ def create_beacon_CID(logger, beacon_config_dict):
     conn.close()
     want_item_path = path_dict["want_item_path"]
     proto_item_file = path_dict["want_item_file"]
-    want_item_file = get_unique_item_file(want_item_path, proto_item_file)
+    want_item_file = get_unique_file(want_item_path, proto_item_file)
 
     beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
 
@@ -164,7 +164,7 @@ def flash_beacon(logger, beacon_config_dict, beacon_CID):
 
 
 def satisfy_main():
-    import psutil
+    # import psutil
 
     p = psutil.Process()
     p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
@@ -204,7 +204,7 @@ def satisfy_main():
 def satisfy_beacon(logger, satisfy_config_dict, want_item_file):
     url_dict = get_url_dict()
 
-    param = {"only-hash": "false", "pin": "false", "cid-version": 1}
+    param = {"only-hash": "false", "pin": "true", "cid-version": 1}
 
     f = open(want_item_file, "rb")
     file = {"file": f}

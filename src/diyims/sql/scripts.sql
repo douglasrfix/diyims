@@ -7,7 +7,8 @@ CREATE TABLE "header_table" (
 	"insert_DTS"	TEXT,
 	"prior_header_CID"	TEXT,
 	'header_CID' TEXT,
-	"peer_ID" TEXT
+	"peer_ID" TEXT,
+	"processing_status" TEXT
 );
 
 CREATE TABLE "peer_table" (
@@ -187,6 +188,8 @@ ORDER BY
 
 	local_update_DTS ASC
 
+
+
 -- name: select_peer_table_entry_by_key^
 SELECT
 	peer_ID,
@@ -205,6 +208,7 @@ FROM
    peer_table
 
 where peer_ID = :peer_ID
+
 
 -- name: select_peer_table_local_peer_entry^
 SELECT
@@ -228,10 +232,36 @@ FROM
 
 where peer_type = "LP"
 
+
+
+-- name: select_peer_table_signature_valid
+SELECT
+	peer_ID,
+	IPNS_name,
+	id,
+	signature,
+	signature_valid,
+	peer_type,
+   	origin_update_DTS,
+	local_update_DTS,
+   	execution_platform,
+	python_version,
+   	IPFS_agent,
+	processing_status,
+	agent,
+ 	version
+
+FROM
+   peer_table
+
+where signature_valid = "1"
+
+
+
 -- name: insert_header_row!
 insert into header_table (version, object_CID, object_type, insert_DTS,
-	 prior_header_CID, header_CID, peer_ID)
-values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID, :peer_ID);
+	 prior_header_CID, header_CID, peer_ID, processing_status,)
+values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID, :peer_ID, :processing_status);
 
 -- name: insert_want_list_row!
 insert into want_list_table (peer_ID, object_CID, insert_DTS, last_update_DTS, insert_update_delta, source_peer_type)
@@ -257,7 +287,8 @@ SELECT
    	insert_DTS,
    	prior_header_CID,
    	header_CID,
-	peer_ID
+	peer_ID,
+	processing_status
 
 FROM
    header_table
@@ -277,7 +308,8 @@ SELECT
    	insert_DTS,
    	prior_header_CID,
    	header_CID,
-	peer_ID
+	peer_ID,
+	processing_status
 
 FROM
    header_table
@@ -298,7 +330,8 @@ SELECT
    	insert_DTS,
    	prior_header_CID,
    	header_CID,
-	peer_ID
+	peer_ID,
+	processing_status
 
 FROM
    header_table

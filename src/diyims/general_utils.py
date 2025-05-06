@@ -42,7 +42,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a59"  # NOTE: How to extract at run time
+    agent = "0.0.0a60"  # NOTE: How to extract at run time
 
     return agent
 
@@ -115,6 +115,7 @@ def clean_up():
 
 
 def select_local_peer_and_update_metrics():
+    import json
     from diyims.platform_utils import get_python_version, test_os_platform
     from diyims.ipfs_utils import test_ipfs_version
     from diyims.config_utils import get_want_list_config_dict
@@ -123,13 +124,26 @@ def select_local_peer_and_update_metrics():
         refresh_peer_row_from_template,
         select_peer_table_local_peer_entry,
         update_peer_table_metrics,
+        export_local_peer_row,
     )
     from diyims.general_utils import get_DTS
+    from diyims.path_utils import get_path_dict, get_unique_file
+    from diyims.logger_utils import (
+        get_logger,
+    )  # TODO: pass in config_dict perhaps a generic config dictionary
+    from diyims.ipfs_utils import get_url_dict
+    from diyims.header_utils import ipfs_header_add
 
-    want_list_config_dict = get_want_list_config_dict()
+    config_dict = get_want_list_config_dict()
+    logger = get_logger(
+        config_dict["log_file"],
+        "none",
+    )
+    url_dict = get_url_dict()
+    path_dict = get_path_dict()
 
-    DTS = get_DTS()
-    conn, queries = set_up_sql_operations(want_list_config_dict)
+    conn, queries = set_up_sql_operations(config_dict)
+
     peer_table_dict = refresh_peer_row_from_template()
     peer_table_entry = select_peer_table_local_peer_entry(
         conn, queries, peer_table_dict
@@ -139,6 +153,7 @@ def select_local_peer_and_update_metrics():
     os_platform = test_os_platform()
     python_version = get_python_version()
     agent = get_agent()
+
     changed_metrics = False
 
     if peer_table_entry["execution_platform"] != os_platform:
@@ -166,10 +181,46 @@ def select_local_peer_and_update_metrics():
         peer_table_dict["agent"] = agent
 
     if changed_metrics:
+        DTS = get_DTS()
         peer_table_dict["origin_update_DTS"] = DTS
 
         update_peer_table_metrics(conn, queries, peer_table_dict)
         conn.commit()
+
+        peer_row_dict = export_local_peer_row(config_dict)
+
+        proto_path = path_dict["peer_path"]
+        proto_file = path_dict["peer_file"]
+        proto_file_path = get_unique_file(proto_path, proto_file)
+
+        param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
+        with open(proto_file_path, "w") as write_file:
+            json.dump(peer_row_dict, write_file, indent=4)
+
+        f = open(proto_file_path, "rb")
+        add_file = {"file": f}
+        response, status_code, response_dict = execute_request(
+            url_key="add",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=config_dict,
+            file=add_file,
+            param=param,
+        )
+        f.close()
+
+        peer_ID = peer_row_dict["peer_ID"]
+        object_CID = response_dict["Hash"]
+        object_type = "peer_row_entry"
+
+        ipfs_header_add(
+            DTS,
+            object_CID,
+            object_type,
+            peer_ID,
+            config_dict,
+            logger,
+        )
 
     conn.close()
 
@@ -177,4 +228,4 @@ def select_local_peer_and_update_metrics():
 
 
 if __name__ == "__main__":
-    clean_up()
+    select_local_peer_and_update_metrics()

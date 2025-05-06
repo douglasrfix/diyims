@@ -1,4 +1,4 @@
-# import psutil
+import psutil
 from multiprocessing.managers import BaseManager
 from queue import Queue
 from time import sleep
@@ -8,8 +8,8 @@ from diyims.config_utils import get_queue_config_dict
 
 
 def queue_main():
-    # p = psutil.Process()
-    # p.nice(psutil.HIGH_PRIORITY_CLASS)  # TODO: put in config
+    p = psutil.Process()
+    p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
     queue_config_dict = get_queue_config_dict()
     logger = get_logger(queue_config_dict["log_file"], "none")
     wait_seconds = int(queue_config_dict["wait_before_startup"])
@@ -29,13 +29,18 @@ def queue_main():
     swarm_server_queue = Queue()
     beacon_queue = Queue()
     satisfy_queue = Queue()
+    publish_queue = Queue()
+    peer_maint_queue = Queue()
     manager.register("get_beacon_queue", callable=lambda: beacon_queue)
     manager.register("get_satisfy_queue", callable=lambda: satisfy_queue)
+    manager.register("get_publish_queue", callable=lambda: publish_queue)
+    manager.register("get_peer_maint_queue", callable=lambda: peer_maint_queue)
     manager.register("get_provider_queue", callable=lambda: provider_queue)
     manager.register("get_bitswap_queue", callable=lambda: bitswap_queue)
     manager.register("get_swarm_queue", callable=lambda: swarm_queue)
     manager.register(
-        "get_provider_server_queue", callable=lambda: provider_server_queue
+        "get_provider_server_queue",
+        callable=lambda: provider_server_queue,  # used for logger
     )
     manager.register("get_bitswap_server_queue", callable=lambda: bitswap_server_queue)
     manager.register("get_swarm_server_queue", callable=lambda: swarm_server_queue)

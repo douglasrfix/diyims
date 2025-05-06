@@ -10,7 +10,7 @@ from diyims.config_utils import get_logger_config_dict, get_logger_server_config
 
 
 def get_logger(file, peer_type):
-    # TODO: handle keywords and bring file management as a default
+    # TODO: #14 handle keywords and bring file management as a default in logger
     logger_config_dict = get_logger_config_dict()
     path_dict = get_path_dict()
     file_str = peer_type + file

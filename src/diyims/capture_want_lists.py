@@ -92,7 +92,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     q_server_port = int(want_list_config_dict["q_server_port"])
     queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
     if peer_type == "PP":
-        # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
         queue_server.register("get_provider_queue")
         queue_server.connect()
@@ -210,7 +210,7 @@ def capture_want_lists_for_peers(want_list_config_dict, peer_type, pool, conn, q
     rows_of_peers = Rqueries.select_peers_by_peer_type_status(
         Rconn, peer_type=peer_type
     )
-    for peer_row in rows_of_peers:
+    for peer_row in rows_of_peers:  # TODO: need a better throttle
         peer_table_dict = refresh_peer_row_from_template()
         peer_table_dict["peer_ID"] = peer_row["peer_ID"]
         peer_table_dict["peer_type"] = peer_row["peer_type"]
@@ -285,8 +285,11 @@ def submitted_capture_peer_want_list_by_id(
     # Uconn.close
 
     queue_server = BaseManager(address=("127.0.0.1", 50000), authkey=b"abc")
+    queue_server.register("get_peer_maint_queue")
+    queue_server.connect()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
     if peer_type == "PP":
-        # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
         queue_server.register("get_provider_queue")
         queue_server.connect()
@@ -398,6 +401,7 @@ def submitted_capture_peer_want_list_by_id(
             Uqueries,
             Rconn,
             Rqueries,
+            peer_maint_queue,
         )
 
     if zero_sample_count < max_zero_sample_count:  # sampling interval completed
@@ -535,7 +539,7 @@ def decode_want_list_structure(
         peer_type = peer_table_dict["peer_type"]
 
         try:
-            insert_want_list_row(conn, Uqueries, want_list_table_dict)
+            insert_want_list_row(conn, queries, want_list_table_dict)
             conn.commit()
             added += 1
             log_string = "new want item row"
@@ -558,7 +562,7 @@ def decode_want_list_structure(
             delta = update_dt - insert_dt
             want_list_table_dict["insert_update_delta"] = int(delta.total_seconds())
 
-            update_last_update_DTS(conn, Uqueries, want_list_table_dict)
+            update_last_update_DTS(conn, queries, want_list_table_dict)
             conn.commit()
             updated += 1
 
@@ -581,7 +585,16 @@ def decode_want_list_structure(
 
 
 def filter_wantlist(
-    pid, logger, config_dict, conn, queries, Uconn, Uqueries, Rconn, Rqueries
+    pid,
+    logger,
+    config_dict,
+    conn,
+    queries,
+    Uconn,
+    Uqueries,
+    Rconn,
+    Rqueries,
+    peer_maint_queue,
 ):
     # iconn, iqueries = set_up_sql_operations(config_dict)
 
@@ -681,6 +694,7 @@ def filter_wantlist(
                             Uqueries,
                             Rconn,
                             Rqueries,
+                            peer_maint_queue,
                         )
 
                     else:
@@ -766,6 +780,7 @@ def verify_peer_and_update(
     Uqueries,
     Rconn,
     Rqueries,
+    peer_maint_queue,
 ):
     from diyims.security_utils import verify_peer_row_from_cid
 
@@ -781,7 +796,7 @@ def verify_peer_and_update(
         # peer_row_dict["peer_ID"] = want_list_item["peer_ID"]
         # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
 
-        update_peer_row_by_key_status(conn, Uqueries, peer_row_dict)
+        update_peer_row_by_key_status(conn, queries, peer_row_dict)
         conn.commit()
         # Uconn.close()
 
@@ -796,6 +811,7 @@ def verify_peer_and_update(
         log_dict["msg"] = log_string
         insert_log_row(conn, queries, log_dict)
         conn.commit()
+        peer_maint_queue.put_nowait("new peer validated")
 
     else:
         log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."

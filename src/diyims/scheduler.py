@@ -26,6 +26,11 @@ def scheduler_main():
     logger.info("Startup of Scheduler.")
     logger.info("Shutdown is dependent upon the shutdown of the scheduled tasks")
 
+    queue_server_main_process = Process(target=queue_main)  # 1
+    sleep(int(scheduler_config_dict["submit_delay"]))
+    queue_server_main_process.start()
+    logger.debug("queue_server_main started.")
+
     reset_peer_table_status_process = Process(target=reset_peer_table_status)
     sleep(int(scheduler_config_dict["submit_delay"]))
     reset_peer_table_status_process.start()
@@ -42,20 +47,15 @@ def scheduler_main():
     select_local_peer_and_update_metrics_process.join()
     logger.debug("update metrics completed.")
 
-    queue_server_main_process = Process(target=queue_main)
-    sleep(int(scheduler_config_dict["submit_delay"]))
-    queue_server_main_process.start()
-    logger.debug("queue_server_main started.")
-
     if scheduler_config_dict["beacon_enable"] == "True":
-        beacon_main_process = Process(
+        beacon_main_process = Process(  # 2
             target=beacon_main,
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         beacon_main_process.start()
         logger.debug("beacon_main started.")
 
-        satisfy_main_process = Process(
+        satisfy_main_process = Process(  # 3
             target=satisfy_main,
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
@@ -63,19 +63,19 @@ def scheduler_main():
         logger.debug("satisfy_main started.")
 
     if scheduler_config_dict["provider_enable"] == "True":
-        logger_server_provider_process = Process(
+        logger_server_provider_process = Process(  # 4
             target=logger_server_main, args=("PP",)
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         logger_server_provider_process.start()
         logger.debug("logger_server_provider started.")
-        capture_provider_want_lists_process = Process(
+        capture_provider_want_lists_process = Process(  # 5
             target=capture_peer_want_lists, args=("PP",)
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_provider_want_lists_process.start()
         logger.debug("capture_provider_want_lists started.")
-        capture_provider_process = Process(target=capture_peer_main, args=("PP",))
+        capture_provider_process = Process(target=capture_peer_main, args=("PP",))  # 6
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_provider_process.start()
         logger.debug("capture_provider_main started.")

@@ -318,7 +318,37 @@ def get_header_table_dict():
     header_table_dict["prior_header_CID"] = "null"
     header_table_dict["header_CID"] = "null"
     header_table_dict["peer_ID"] = "null"
+    header_table_dict["processing_status"] = "null"
     return header_table_dict
+
+
+def refresh_header_dict_from_template():
+    header_dict = {}
+    header_dict["version"] = "0"
+    header_dict["object_CID"] = "null"
+    header_dict["object_type"] = "null"
+    header_dict["insert_DTS"] = "null"
+    header_dict["prior_header_CID"] = "null"
+    header_dict["header_CID"] = "null"
+    header_dict["peer_ID"] = "null"
+    header_dict["processing_status"] = "null"
+
+    return header_dict
+
+
+def insert_header_row(conn, queries, header_dict):
+    queries.insert_header_row(
+        conn,
+        version=header_dict["version"],
+        object_CID=header_dict["object_CID"],
+        object_type=header_dict["object_type"],
+        insert_DTS=header_dict["insert_DTS"],
+        prior_header_CID=header_dict["prior_header_CID"],
+        header_CID=header_dict["header_CID"],
+        peer_ID=header_dict["peer_ID"],
+        processing_status=header_dict["processing_status"],
+    )
+    conn.commit()
 
 
 def insert_log_row(conn, queries, log_dict):

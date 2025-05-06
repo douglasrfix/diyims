@@ -14,7 +14,7 @@ from multiprocessing.managers import BaseManager
 from diyims.ipfs_utils import get_url_dict
 from diyims.general_utils import get_DTS, get_shutdown_target
 from diyims.want_item_utils import refresh_want_item_dict
-from diyims.path_utils import get_path_dict, get_unique_item_file
+from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.config_utils import get_beacon_config_dict, get_satisfy_config_dict
 from diyims.logger_utils import get_logger
 from diyims.database_utils import (
@@ -104,7 +104,7 @@ def create_beacon_CID(logger, beacon_config_dict):
     conn.close()
     want_item_path = path_dict["want_item_path"]
     proto_item_file = path_dict["want_item_file"]
-    want_item_file = get_unique_item_file(want_item_path, proto_item_file)
+    want_item_file = get_unique_file(want_item_path, proto_item_file)
 
     beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
 

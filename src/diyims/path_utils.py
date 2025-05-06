@@ -121,11 +121,11 @@ def get_win32_template_dict():
     return template_path_dict
 
 
-def get_unique_item_file(want_item_path, proto_item_file):
-    proto_item_pattern = proto_item_file.stem + "{:05d}" + proto_item_file.suffix
+def get_unique_file(proto_path, proto_file):
+    proto_pattern = proto_file.stem + "{:05d}" + proto_file.suffix
     counter = 0
     while True:
         counter += 1
-        file_path = Path(want_item_path).joinpath(proto_item_pattern.format(counter))
+        file_path = Path(proto_path).joinpath(proto_pattern.format(counter))
         if not file_path.exists():
             return file_path

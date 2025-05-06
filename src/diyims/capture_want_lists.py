@@ -285,6 +285,9 @@ def submitted_capture_peer_want_list_by_id(
     # Uconn.close
 
     queue_server = BaseManager(address=("127.0.0.1", 50000), authkey=b"abc")
+    queue_server.register("get_peer_maint_queue")
+    queue_server.connect()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
     if peer_type == "PP":
         p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
@@ -398,6 +401,7 @@ def submitted_capture_peer_want_list_by_id(
             Uqueries,
             Rconn,
             Rqueries,
+            peer_maint_queue,
         )
 
     if zero_sample_count < max_zero_sample_count:  # sampling interval completed
@@ -581,7 +585,16 @@ def decode_want_list_structure(
 
 
 def filter_wantlist(
-    pid, logger, config_dict, conn, queries, Uconn, Uqueries, Rconn, Rqueries
+    pid,
+    logger,
+    config_dict,
+    conn,
+    queries,
+    Uconn,
+    Uqueries,
+    Rconn,
+    Rqueries,
+    peer_maint_queue,
 ):
     # iconn, iqueries = set_up_sql_operations(config_dict)
 
@@ -681,6 +694,7 @@ def filter_wantlist(
                             Uqueries,
                             Rconn,
                             Rqueries,
+                            peer_maint_queue,
                         )
 
                     else:
@@ -766,6 +780,7 @@ def verify_peer_and_update(
     Uqueries,
     Rconn,
     Rqueries,
+    peer_maint_queue,
 ):
     from diyims.security_utils import verify_peer_row_from_cid
 
@@ -796,6 +811,7 @@ def verify_peer_and_update(
         log_dict["msg"] = log_string
         insert_log_row(conn, queries, log_dict)
         conn.commit()
+        peer_maint_queue.put_nowait("new peer validated")
 
     else:
         log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."

@@ -9,8 +9,9 @@ from rich import print
 from diyims.database_utils import (
     insert_network_row,
     insert_peer_row,
-    refresh_network_table_dict,
+    refresh_network_table_from_template,
     refresh_peer_row_from_template,
+    set_up_sql_operations,
 )
 from diyims.error_classes import (
     ApplicationNotInstalledError,
@@ -18,9 +19,9 @@ from diyims.error_classes import (
     PreExistingInstallationError,
 )
 from diyims.general_utils import get_DTS, get_agent
-from diyims.header_utils import ipfs_header_create
-from diyims.ipfs_utils import get_url_dict, test_ipfs_version
-from diyims.path_utils import get_path_dict
+from diyims.header_utils import ipfs_header_add
+from diyims.ipfs_utils import get_url_dict, test_ipfs_version, wait_on_ipfs
+from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.py_version_dep import get_car_path, get_sql_str
 from diyims.requests_utils import execute_request
@@ -61,8 +62,7 @@ def create():
     return
 
 
-def init():  # TODO: add wait on ipfs
-    # TODO: change header to pointer
+def init():
     try:
         path_dict = get_path_dict()
 
@@ -70,15 +70,16 @@ def init():  # TODO: add wait on ipfs
         raise
 
     url_dict = get_url_dict()
-    sql_str = get_sql_str()
-    db_init_config_dict = get_db_init_config_dict()
+
+    config_dict = get_db_init_config_dict()
     logger = get_logger(
-        db_init_config_dict["log_file"],
+        config_dict["log_file"],
         "none",
     )
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    connect_path = path_dict["db_file"]
-    conn = sqlite3.connect(connect_path)
+    wait_on_ipfs(logger)
+
+    conn, queries = set_up_sql_operations(config_dict)
+
     network_name = queries.select_network_name(conn)
 
     if network_name is not None:
@@ -106,7 +107,7 @@ def init():  # TODO: add wait on ipfs
         url_key="id",
         logger=logger,
         url_dict=url_dict,
-        config_dict=db_init_config_dict,
+        config_dict=config_dict,
     )
 
     peer_ID = response_dict["ID"]
@@ -114,23 +115,24 @@ def init():  # TODO: add wait on ipfs
     signing_dict = {}
     signing_dict["peer_ID"] = peer_ID
 
-    file_to_sign = path_dict[
-        "sign_file"
-    ]  # TODO: generate unique name or better yet a sign file function
-    with open(file_to_sign, "w") as write_file:
+    proto_path = path_dict["sign_path"]
+    proto_file = path_dict["sign_file"]
+    proto_file_path = get_unique_file(proto_path, proto_file)
+
+    with open(proto_file_path, "w") as write_file:
         json.dump(signing_dict, write_file, indent=4)
 
     sign_dict = {}
-    sign_dict["file_to_sign"] = file_to_sign
+    sign_dict["file_to_sign"] = proto_file_path
 
-    id, signature = sign_file(sign_dict, logger, db_init_config_dict)
+    id, signature = sign_file(sign_dict, logger, config_dict)
 
     verify_dict = {}
-    verify_dict["signed_file"] = file_to_sign
+    verify_dict["signed_file"] = proto_file_path
     verify_dict["id"] = id
     verify_dict["signature"] = signature
 
-    signature_valid = verify_file(verify_dict, logger, db_init_config_dict)
+    signature_valid = verify_file(verify_dict, logger, config_dict)
 
     """
     Create the initial peer table entry for this peer.
@@ -140,7 +142,11 @@ def init():  # TODO: add wait on ipfs
 
     peer_row_dict = refresh_peer_row_from_template()
 
-    peer_file = path_dict["peer_file"]
+    proto_path = path_dict["peer_path"]
+    proto_file = path_dict["peer_file"]
+    proto_file_path = get_unique_file(proto_path, proto_file)
+
+    peer_file = proto_file_path
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "false"}
     with open(peer_file, "w") as write_file:
@@ -148,13 +154,15 @@ def init():  # TODO: add wait on ipfs
 
     f = open(peer_file, "rb")
     add_files = {"file": f}
-    response, status_code, response_dict = execute_request(
-        url_key="add",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=db_init_config_dict,
-        file=add_files,
-        param=add_params,
+    response, status_code, response_dict = (
+        execute_request(  # to have something to publish to capture IPNS_name
+            url_key="add",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=config_dict,
+            file=add_files,
+            param=add_params,
+        )
     )
     f.close()
 
@@ -171,18 +179,18 @@ def init():  # TODO: add wait on ipfs
         "ipns-base": "base36",
     }
 
-    response, status_code, response_dict = execute_request(
+    response, status_code, response_dict = execute_request(  # publish to get ipns name
         url_key="name_publish",
         logger=logger,
         url_dict=url_dict,
-        config_dict=db_init_config_dict,
+        config_dict=config_dict,
         param=name_publish_arg,
     )
 
     IPNS_name = response_dict["Name"]
 
     peer_row_dict["peer_ID"] = peer_ID
-    peer_row_dict["IPNS_name"] = IPNS_name
+    peer_row_dict["IPNS_name"] = IPNS_name  # capture ipns_name
     peer_row_dict["id"] = id
     peer_row_dict["signature"] = signature
     peer_row_dict["signature_valid"] = signature_valid
@@ -195,55 +203,53 @@ def init():  # TODO: add wait on ipfs
     peer_row_dict["agent"] = agent
     peer_row_dict["processing_status"] = "NPC"  # Normal peer processing complete
 
-    peer_file = path_dict["peer_file"]
-
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
     with open(peer_file, "w") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
 
     f = open(peer_file, "rb")
     add_files = {"file": f}
-    response, status_code, response_dict = execute_request(
-        url_key="add",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=db_init_config_dict,
-        file=add_files,
-        param=add_params,
+    response, status_code, response_dict = (
+        execute_request(  # this is the true peer table row but not yet published
+            url_key="add",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=config_dict,
+            file=add_files,
+            param=add_params,
+        )
     )
     f.close()
 
+    insert_peer_row(conn, queries, peer_row_dict)
+    conn.commit()
+
     object_CID = response_dict["Hash"]
     object_type = "peer_row_entry"
-    header_CID, IPNS_name = ipfs_header_create(
-        DTS,
-        object_CID,
-        object_type,
-        peer_ID,
+
+    mode = "init"
+
+    header_CID = ipfs_header_add(
+        DTS, object_CID, object_type, peer_ID, config_dict, logger, mode, conn, queries
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
     DTS = get_DTS()
 
-    network_table_dict = (
-        refresh_network_table_dict()
-    )  # TODO: rename function to template
-    network_table_dict["network_name"] = import_car()
-    network_name = network_table_dict["network_name"]
-    object_CID = network_table_dict["network_name"]
-    object_type = "network_name"
-    header_CID, IPNS_name = ipfs_header_create(
-        DTS,
-        object_CID,
-        object_type,
-        peer_ID,
-    )
+    network_table_dict = refresh_network_table_from_template()
+    network_table_dict["network_name"] = import_car()  # 3
 
-    insert_peer_row(conn, queries, peer_row_dict)
-    conn.commit()
-
+    network_name = network_table_dict["network_name"]  # abused table dict entry
     insert_network_row(conn, queries, network_table_dict)
     conn.commit()
+
+    object_CID = network_table_dict["network_name"]
+    object_type = "network_name"
+    mode = "init"
+
+    header_CID = ipfs_header_add(  # header for network name
+        DTS, object_CID, object_type, peer_ID, config_dict, logger, mode, conn, queries
+    )
 
     conn.close()
     return

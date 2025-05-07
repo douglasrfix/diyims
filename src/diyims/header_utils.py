@@ -12,14 +12,13 @@ from diyims.requests_utils import execute_request
 
 from diyims.database_utils import (
     set_up_sql_operations,
+    insert_header_row,
 )
 
 
-def ipfs_header_create(DTS, object_CID, object_type, peer_ID):
+def ipfs_header_create(DTS, object_CID, object_type, peer_ID, config_dict, logger):
     path_dict = get_path_dict()
     url_dict = get_url_dict()
-    config_dict = get_want_list_config_dict()
-
     conn, queries = set_up_sql_operations(config_dict)
 
     # sql_str = get_sql_str()
@@ -39,8 +38,6 @@ def ipfs_header_create(DTS, object_CID, object_type, peer_ID):
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = "null"
 
-    header_CID = "null"
-
     header_json_file = path_dict["header_file"]
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
 
@@ -49,64 +46,46 @@ def ipfs_header_create(DTS, object_CID, object_type, peer_ID):
 
     f = open(header_json_file, "rb")
     add_files = {"file": f}
-    with requests.post(url=url_dict["add"], params=add_params, files=add_files) as r:
+    with requests.post(
+        url=url_dict["add"], params=add_params, files=add_files
+    ) as r:  # 2 this is the first header entry
         r.raise_for_status()
         json_dict = json.loads(r.text)
         header_CID = json_dict["Hash"]
     f.close()
 
-    ipfs_path = "/ipfs/" + header_CID
+    insert_header_row(conn, queries, header_dict, header_CID)
 
-    name_publish_arg = {
-        "arg": ipfs_path,
-        "resolve": "false",
-        "lifetime": "1s",
-        "ttl": "1s",
-        "key": "self",
-        "ipns-base": "base36",
-    }
-
-    with requests.post(
-        url_dict["name_publish"],
-        params=name_publish_arg,
-        stream=False,  # TODO: #13 move name_publish to a separate task
-    ) as r:
-        r.raise_for_status()
-        json_dict = json.loads(r.text)
-        IPNS_name = json_dict["Name"]
-
-    queries.insert_header_row(
-        conn,
-        version=header_dict["version"],
-        object_CID=header_dict["object_CID"],
-        object_type=header_dict["object_type"],
-        insert_DTS=header_dict["insert_DTS"],
-        prior_header_CID=header_dict["prior_header_CID"],
-        header_CID=header_CID,
-        peer_ID=header_dict["peer_ID"],
-        processing_status=header_dict["processing_status"],
-    )
     conn.commit()
 
     conn.close()
 
-    return (header_CID, IPNS_name)
+    return header_CID
 
 
-def ipfs_header_add(DTS, object_CID, object_type, peer_ID, config_dict, logger):
+def ipfs_header_add(
+    DTS,
+    object_CID,
+    object_type,
+    peer_ID,
+    config_dict,
+    logger,
+    mode,
+    conn,
+    queries,
+):
     from diyims.database_utils import insert_header_row
     from multiprocessing.managers import BaseManager
 
     path_dict = get_path_dict()
     url_dict = get_url_dict()
 
-    q_server_port = int(config_dict["q_server_port"])
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    queue_server.register("get_publish_queue")
-    queue_server.connect()
-    publish_queue = queue_server.get_publish_queue()
-
-    conn, queries = set_up_sql_operations(config_dict)
+    if mode != "init":
+        q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+        queue_server.register("get_publish_queue")
+        queue_server.connect()
+        publish_queue = queue_server.get_publish_queue()
 
     query_row = queries.select_last_header(conn, peer_ID=peer_ID)
 
@@ -115,7 +94,10 @@ def ipfs_header_add(DTS, object_CID, object_type, peer_ID, config_dict, logger):
     header_dict["object_CID"] = object_CID
     header_dict["object_type"] = object_type
     header_dict["insert_DTS"] = DTS
-    header_dict["prior_header_CID"] = query_row["header_CID"]
+    if query_row is None:
+        header_dict["prior_header_CID"] = "null"
+    else:
+        header_dict["prior_header_CID"] = query_row["header_CID"]
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = "null"
 
@@ -140,15 +122,15 @@ def ipfs_header_add(DTS, object_CID, object_type, peer_ID, config_dict, logger):
     )
     f.close()
 
-    header_dict["header_CID"] = response_dict["Hash"]
+    header_CID = response_dict["Hash"]
 
-    insert_header_row(conn, queries, header_dict)
+    insert_header_row(conn, queries, header_dict, header_CID)
     conn.commit()
 
-    publish_queue.put_nowait("publish request")
-    conn.close()
+    if mode != "init":
+        publish_queue.put_nowait("publish request")
 
-    return ()
+    return header_CID
 
 
 def publish():

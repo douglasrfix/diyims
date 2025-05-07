@@ -23,8 +23,10 @@ def test_linux_install(environ_m):
     assert result.exit_code == 0
 
 
-@pytest.mark.skip(reason="native")
-@pytest.mark.setup
+pytest.mark.skip(reason="native")
+
+
+# @pytest.mark.setup
 def test_windows_install():
     """testing install into 'real path' not temporary test path process
       (--force option due to test environment being windows 11)
@@ -74,7 +76,7 @@ def test_refresh_name():
     assert result.exit_code == 0
 
 
-@pytest.mark.skip(reason="danger")
+# @pytest.mark.skip(reason="danger")
 # @pytest.mark.setup
 def test_cli_l2_c_danger():
     """testing install into 'real path' not temporary test path process (--force option due to test environment being windows 11)

@@ -260,7 +260,7 @@ where signature_valid = "1"
 
 -- name: insert_header_row!
 insert into header_table (version, object_CID, object_type, insert_DTS,
-	 prior_header_CID, header_CID, peer_ID, processing_status,)
+	 prior_header_CID, header_CID, peer_ID, processing_status)
 values (:version, :object_CID, :object_type, :insert_DTS, :prior_header_CID, :header_CID, :peer_ID, :processing_status);
 
 -- name: insert_want_list_row!

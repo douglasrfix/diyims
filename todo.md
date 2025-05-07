@@ -148,3 +148,5 @@
 # NOTE: task to clean up beacon CIDs
 
 # [x]: #7 support for peer table revision ABANDONED
+
+# TODO: #17 up grade db-init process to use new header functions

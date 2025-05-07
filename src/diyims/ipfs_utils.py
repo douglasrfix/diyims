@@ -8,7 +8,10 @@ from requests.exceptions import HTTPError
 from diyims.requests_utils import execute_request
 from diyims.error_classes import UnSupportedIPFSVersionError
 from diyims.py_version_dep import get_car_path
-from diyims.database_utils import refresh_network_table_dict, select_network_name
+from diyims.database_utils import (
+    refresh_network_table_from_template,
+    select_network_name,
+)
 
 from diyims.database_utils import set_up_sql_operations
 
@@ -203,7 +206,7 @@ def refresh_network_name():
     conn, queries = set_up_sql_operations(ipfs_config_dict)
 
     url_dict = get_url_dict()
-    network_table_dict = refresh_network_table_dict()
+    network_table_dict = refresh_network_table_from_template()
     network_table_dict = select_network_name(conn, queries, network_table_dict)
     network_name = network_table_dict["network_name"]
     param = {"arg": network_name}

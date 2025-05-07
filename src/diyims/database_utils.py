@@ -249,7 +249,7 @@ def select_network_name(conn, queries, network_table_dict):
     return network_table_dict
 
 
-def refresh_network_table_dict():
+def refresh_network_table_from_template():
     network_table_dict = {}
     network_table_dict["version"] = "0"
     network_table_dict["network_name"] = "null"
@@ -336,7 +336,7 @@ def refresh_header_dict_from_template():
     return header_dict
 
 
-def insert_header_row(conn, queries, header_dict):
+def insert_header_row(conn, queries, header_dict, header_CID):
     queries.insert_header_row(
         conn,
         version=header_dict["version"],
@@ -344,11 +344,10 @@ def insert_header_row(conn, queries, header_dict):
         object_type=header_dict["object_type"],
         insert_DTS=header_dict["insert_DTS"],
         prior_header_CID=header_dict["prior_header_CID"],
-        header_CID=header_dict["header_CID"],
+        header_CID=header_CID,
         peer_ID=header_dict["peer_ID"],
         processing_status=header_dict["processing_status"],
     )
-    conn.commit()
 
 
 def insert_log_row(conn, queries, log_dict):

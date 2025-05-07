@@ -112,5 +112,10 @@ def select_local_peer_and_update_metrics():
     return
 
 
-if __name__ == "__main__":
+def test():
     select_local_peer_and_update_metrics()
+    return
+
+
+if __name__ == "__main__":
+    test()

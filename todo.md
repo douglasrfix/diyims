@@ -157,4 +157,4 @@
 
 # TODO: #22 create a process to periodically query a peer ipns name
 
-# TODO: #24 create a process to respond to peer table changes
+# [x]: #27 Beacon fails at 101

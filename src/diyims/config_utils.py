@@ -706,6 +706,7 @@ def get_db_init_config_dict():
 
     try:
         db_init_config_dict = {}
+        db_init_config_dict["sql_timeout"] = parser["DB_Init"]["sql_timeout"]
         db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
@@ -715,6 +716,7 @@ def get_db_init_config_dict():
 
     except KeyError:
         parser["DB_Init"] = {}
+        parser["DB_Init"]["sql_timeout"] = "60"
         parser["DB_Init"]["q_server_port"] = "50000"
         parser["DB_Init"]["connect_retries"] = "30"
         parser["DB_Init"]["connect_retry_delay"] = "10"
@@ -724,6 +726,7 @@ def get_db_init_config_dict():
             parser.write(configfile)
 
         db_init_config_dict = {}
+        db_init_config_dict["sql_timeout"] = parser["DB_Init"]["sql_timeout"]
         db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][

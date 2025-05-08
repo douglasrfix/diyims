@@ -23,6 +23,7 @@ def config_install():
     get_logger_server_config_dict()
     get_ipfs_config_dict()
     get_clean_up_config_dict()
+    get_metrics_config_dict()
 
     return
 
@@ -779,3 +780,47 @@ def get_publish_config_dict():
         publish_config_dict["log_file"] = parser["Publish"]["log_file"]
 
     return publish_config_dict
+
+
+def get_metrics_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        metrics_config_dict = {}
+        metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
+        metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
+        metrics_config_dict["connect_retry_delay"] = parser["Metrics"][
+            "connect_retry_delay"
+        ]
+        metrics_config_dict["log_file"] = parser["Metrics"]["log_file"]
+
+    except KeyError:
+        parser["Metrics"] = {}
+        parser["Metrics"]["q_server_port"] = "50000"
+        parser["Metrics"]["connect_retries"] = "30"
+        parser["Metrics"]["connect_retry_delay"] = "10"
+        parser["Metrics"]["log_file"] = "metrics.log"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        metrics_config_dict = {}
+        metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
+        metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
+        metrics_config_dict["connect_retry_delay"] = parser["Metrics"][
+            "connect_retry_delay"
+        ]
+
+        metrics_config_dict["log_file"] = parser["Metrics"]["log_file"]
+
+    return metrics_config_dict

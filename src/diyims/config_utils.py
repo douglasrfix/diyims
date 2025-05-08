@@ -13,6 +13,7 @@ from diyims.path_utils import (
 
 def config_install():
     get_scheduler_config_dict()
+    get_publish_config_dict()
     get_beacon_config_dict()
     get_satisfy_config_dict()
     get_capture_peer_config_dict()
@@ -173,6 +174,9 @@ def get_scheduler_config_dict():
 
     try:
         scheduler_config_dict = {}
+        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
+        scheduler_config_dict["reset_enable"] = parser["Scheduler"]["reset_enable"]
+        scheduler_config_dict["metrics_enable"] = parser["Scheduler"]["metrics_enable"]
         scheduler_config_dict["beacon_enable"] = parser["Scheduler"]["beacon_enable"]
         scheduler_config_dict["provider_enable"] = parser["Scheduler"][
             "provider_enable"
@@ -189,12 +193,15 @@ def get_scheduler_config_dict():
 
     except KeyError:
         parser["Scheduler"] = {}
+        parser["Scheduler"]["publish_enable"] = "True"
+        parser["Scheduler"]["reset_enable"] = "True"
+        parser["Scheduler"]["metrics_enable"] = "True"
         parser["Scheduler"]["beacon_enable"] = "True"
         parser["Scheduler"]["provider_enable"] = "True"
         parser["Scheduler"]["bitswap_enable"] = "False"
         parser["Scheduler"]["swarm_enable"] = "False"
         parser["Scheduler"]["submit_delay"] = "0"
-        parser["Scheduler"]["worker_pool"] = "4"
+        parser["Scheduler"]["worker_pool"] = "6"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
         parser["Scheduler"]["log_file"] = "scheduler.log"
@@ -203,6 +210,9 @@ def get_scheduler_config_dict():
             parser.write(configfile)
 
         scheduler_config_dict = {}
+        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
+        scheduler_config_dict["reset_enable"] = parser["Scheduler"]["reset_enable"]
+        scheduler_config_dict["metrics_enable"] = parser["Scheduler"]["metrics_enable"]
         scheduler_config_dict["beacon_enable"] = parser["Scheduler"]["beacon_enable"]
         scheduler_config_dict["provider_enable"] = parser["Scheduler"][
             "provider_enable"
@@ -695,6 +705,7 @@ def get_db_init_config_dict():
 
     try:
         db_init_config_dict = {}
+        db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
             "connect_retry_delay"
@@ -703,6 +714,7 @@ def get_db_init_config_dict():
 
     except KeyError:
         parser["DB_Init"] = {}
+        parser["DB_Init"]["q_server_port"] = 50000
         parser["DB_Init"]["connect_retries"] = "30"
         parser["DB_Init"]["connect_retry_delay"] = "10"
         parser["DB_Init"]["log_file"] = "db_init.log"
@@ -711,6 +723,7 @@ def get_db_init_config_dict():
             parser.write(configfile)
 
         db_init_config_dict = {}
+        db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
             "connect_retry_delay"
@@ -719,3 +732,50 @@ def get_db_init_config_dict():
         db_init_config_dict["log_file"] = parser["DB_Init"]["log_file"]
 
     return db_init_config_dict
+
+
+def get_publish_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        publish_config_dict = {}
+        publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
+        publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
+        publish_config_dict["connect_retry_delay"] = parser["Publish"][
+            "connect_retry_delay"
+        ]
+        publish_config_dict["log_file"] = parser["Publish"]["log_file"]
+
+    except KeyError:
+        parser["Publish"] = {}
+        parser["Publish"]["wait_time"] = "300"
+        parser["Publish"]["q_server_port"] = "50000"
+        parser["Publish"]["connect_retries"] = "30"
+        parser["Publish"]["connect_retry_delay"] = "10"
+        parser["Publish"]["log_file"] = "db_init.log"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        publish_config_dict = {}
+        publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
+        publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
+        publish_config_dict["connect_retry_delay"] = parser["Publish"][
+            "connect_retry_delay"
+        ]
+
+        publish_config_dict["log_file"] = parser["Publish"]["log_file"]
+
+    return publish_config_dict

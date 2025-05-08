@@ -3,64 +3,17 @@ import json
 
 import requests
 
-from diyims.logger_utils import get_logger
+# from diyims.logger_utils import get_logger
 from diyims.ipfs_utils import get_url_dict
 from diyims.path_utils import get_path_dict, get_unique_file
 
-from diyims.config_utils import get_want_list_config_dict
+# from diyims.config_utils import get_want_list_config_dict
 from diyims.requests_utils import execute_request
 
-from diyims.database_utils import (
-    set_up_sql_operations,
-    insert_header_row,
-)
-
-
-def ipfs_header_create(DTS, object_CID, object_type, peer_ID, config_dict, logger):
-    path_dict = get_path_dict()
-    url_dict = get_url_dict()
-    conn, queries = set_up_sql_operations(config_dict)
-
-    # sql_str = get_sql_str()
-
-    # connect_path = path_dict["db_file"]
-    # conn = sqlite3.connect(connect_path)
-    # conn.row_factory = sqlite3.Row
-    # queries = aiosql.from_str(sql_str, "sqlite3")
-    # query_row = queries.select_last_header(conn, peer_ID=peer_ID)
-
-    header_dict = {}
-    header_dict["version"] = "0"
-    header_dict["object_CID"] = object_CID
-    header_dict["object_type"] = object_type
-    header_dict["insert_DTS"] = DTS
-    header_dict["prior_header_CID"] = "null"
-    header_dict["peer_ID"] = peer_ID
-    header_dict["processing_status"] = "null"
-
-    header_json_file = path_dict["header_file"]
-    add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-
-    with open(header_json_file, "w") as write_file:
-        json.dump(header_dict, write_file, indent=4)
-
-    f = open(header_json_file, "rb")
-    add_files = {"file": f}
-    with requests.post(
-        url=url_dict["add"], params=add_params, files=add_files
-    ) as r:  # 2 this is the first header entry
-        r.raise_for_status()
-        json_dict = json.loads(r.text)
-        header_CID = json_dict["Hash"]
-    f.close()
-
-    insert_header_row(conn, queries, header_dict, header_CID)
-
-    conn.commit()
-
-    conn.close()
-
-    return header_CID
+# from diyims.database_utils import (
+#    set_up_sql_operations,
+#    insert_header_row,
+# )
 
 
 def ipfs_header_add(
@@ -129,66 +82,9 @@ def ipfs_header_add(
 
     if mode != "init":
         publish_queue.put_nowait("publish request")
+        # publish_main(mode)
 
     return header_CID
-
-
-def publish():
-    from diyims.requests_utils import execute_request
-    from multiprocessing.managers import BaseManager
-
-    url_dict = get_url_dict()
-
-    config_dict = get_want_list_config_dict()
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
-
-    q_server_port = int(config_dict["q_server_port"])
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    queue_server.register("get_publish_queue")
-    queue_server.connect()
-    publish_queue = queue_server.get_publish_queue()
-
-    response, status_code, response_dict = execute_request(
-        url_key="id",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
-    )
-
-    peer_ID = response_dict["ID"]
-
-    conn, queries = set_up_sql_operations(config_dict)
-
-    while True:
-        query_row = queries.select_last_header(conn, peer_ID=peer_ID)
-        # TODO: #15 add most recent publish
-        header_CID = query_row["header_CID"]
-
-        ipfs_path = "/ipfs/" + header_CID
-
-        name_publish_arg = {
-            "arg": ipfs_path,
-            "resolve": "true",
-            "key": "self",
-            "ipns-base": "base36",
-        }
-
-        # TODO: #13 move name_publish to a separate task
-
-        response, status_code, response_dict = execute_request(
-            url_key="name_publish",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=config_dict,
-            param=name_publish_arg,
-        )
-
-        publish_queue.get()
-
-    return
 
 
 def test_header_by_IPNS_name(IPNS_name):

@@ -45,6 +45,101 @@ def get_url_dict():
     return url_dict
 
 
+def publish_main(mode):
+    """
+    a)  add support for scheduler to only run q server
+    )  create config_dict for publish process
+    )  test to be sure it works
+    2)  create new process under scheduler to communicate with it
+    3)  add q server entries
+    4)  move to ipfs_utils
+    5)  update users of name publish
+
+    """
+    from multiprocessing.managers import BaseManager
+    from queue import Empty
+    from diyims.logger_utils import get_logger
+    from diyims.requests_utils import execute_request
+    from diyims.config_utils import get_publish_config_dict
+
+    url_dict = get_url_dict()
+
+    config_dict = get_publish_config_dict()
+    logger = get_logger(
+        config_dict["log_file"],
+        "none",
+    )
+
+    last_insert_DTS = "null"
+
+    logger.info("Startup of Publish.")
+
+    if mode != "init":
+        q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+        queue_server.register("get_publish_queue")
+        queue_server.connect()
+        publish_queue = queue_server.get_publish_queue()
+
+    response, status_code, response_dict = execute_request(
+        url_key="id",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=config_dict,
+    )
+
+    peer_ID = response_dict["ID"]
+
+    conn, queries = set_up_sql_operations(config_dict)
+    test = "True"
+    while test == "True":
+        query_row = queries.select_last_header(
+            conn, peer_ID=peer_ID
+        )  # find the header CID of the last header
+
+        # TODO: #15 add most recent publish
+
+        if query_row is not None:
+            if last_insert_DTS != query_row["insert_DTS"]:
+                last_insert_DTS = query_row["insert_DTS"]
+
+                header_CID = query_row["header_CID"]
+
+                ipfs_path = "/ipfs/" + header_CID
+
+                name_publish_arg = {
+                    "arg": ipfs_path,
+                    "resolve": "true",
+                    "key": "self",
+                    "ipns-base": "base36",
+                }
+
+                response, status_code, response_dict = execute_request(
+                    url_key="name_publish",
+                    logger=logger,
+                    url_dict=url_dict,
+                    config_dict=config_dict,
+                    param=name_publish_arg,
+                )
+
+                logger.info(f"{status_code}.")
+
+        if mode != "init":
+            wait_for_next_request_seconds = int(config_dict["wait_time"])
+
+            try:
+                logger.info("queue get.")
+                publish_queue.get(timeout=wait_for_next_request_seconds)
+                logger.info("get satisfied.")
+            except Empty:
+                logger.info(f"queue empty at {wait_for_next_request_seconds}.")
+                # test = "False"
+
+        logger.info("next cycle.")
+
+    return
+
+
 def purge():
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger

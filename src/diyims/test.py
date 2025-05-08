@@ -22,7 +22,7 @@ from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.ipfs_utils import get_url_dict, test_ipfs_version
 from diyims.path_utils import get_path_dict
 from diyims.logger_utils import get_logger
-from diyims.header_utils import ipfs_header_create
+from diyims.header_utils import ipfs_header_add
 
 
 def select_local_peer_and_update_metrics():
@@ -100,7 +100,7 @@ def select_local_peer_and_update_metrics():
         object_CID = response_dict["Hash"]
         object_type = "peer_row_entry"
 
-        header_CID, IPNS_name = ipfs_header_create(
+        header_CID, IPNS_name = ipfs_header_add(
             DTS,
             object_CID,
             object_type,

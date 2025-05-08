@@ -245,7 +245,8 @@ def init():
 
     object_CID = network_table_dict["network_name"]
     object_type = "network_name"
-    mode = "init"
+
+    mode = "Normal"
 
     header_CID = ipfs_header_add(  # header for network name
         DTS, object_CID, object_type, peer_ID, config_dict, logger, mode, conn, queries

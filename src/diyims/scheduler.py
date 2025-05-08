@@ -3,7 +3,7 @@ from time import sleep
 from diyims.beacon import beacon_main, satisfy_main
 from diyims.peer_capture import capture_peer_main
 from diyims.capture_want_lists import capture_peer_want_lists
-from diyims.ipfs_utils import wait_on_ipfs
+from diyims.ipfs_utils import wait_on_ipfs, publish_main
 from diyims.logger_utils import get_logger, logger_server_main
 from diyims.config_utils import get_scheduler_config_dict
 from diyims.queue_server import queue_main
@@ -31,21 +31,32 @@ def scheduler_main():
     queue_server_main_process.start()
     logger.debug("queue_server_main started.")
 
-    reset_peer_table_status_process = Process(target=reset_peer_table_status)
-    sleep(int(scheduler_config_dict["submit_delay"]))
-    reset_peer_table_status_process.start()
-    logger.debug("reset peer table status started.")
-    reset_peer_table_status_process.join()
-    logger.debug("reset peer table status completed.")
+    if (
+        scheduler_config_dict["publish_enable"] == "True"
+        or scheduler_config_dict["publish_enable"] == "Only"
+    ):
+        publish_main_process = Process(target=publish_main, args=("Normal",))  # 1
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        publish_main_process.start()
+        logger.debug("publish_main started.")
 
-    select_local_peer_and_update_metrics_process = Process(
-        target=select_local_peer_and_update_metrics
-    )
-    sleep(int(scheduler_config_dict["submit_delay"]))
-    select_local_peer_and_update_metrics_process.start()
-    logger.debug("update metrics started.")
-    select_local_peer_and_update_metrics_process.join()
-    logger.debug("update metrics completed.")
+    if scheduler_config_dict["reset_enable"] == "True":
+        reset_peer_table_status_process = Process(target=reset_peer_table_status)
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        reset_peer_table_status_process.start()
+        logger.debug("reset peer table status started.")
+        reset_peer_table_status_process.join()
+        logger.debug("reset peer table status completed.")
+
+    if scheduler_config_dict["metrics_enable"] == "True":
+        select_local_peer_and_update_metrics_process = Process(
+            target=select_local_peer_and_update_metrics
+        )
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        select_local_peer_and_update_metrics_process.start()
+        logger.debug("update metrics started.")
+        select_local_peer_and_update_metrics_process.join()
+        logger.debug("update metrics completed.")
 
     if scheduler_config_dict["beacon_enable"] == "True":
         beacon_main_process = Process(  # 2
@@ -112,6 +123,8 @@ def scheduler_main():
         capture_swarm_process.start()
         logger.debug("capture_swarm_main started.")
 
+    if scheduler_config_dict["publish_enable"] == "Only":
+        publish_main_process.join()
     if scheduler_config_dict["beacon_enable"] == "True":
         beacon_main_process.join()
         satisfy_main_process.join()
@@ -125,8 +138,9 @@ def scheduler_main():
         capture_swarm_process.join()
         capture_swarm_want_lists_process.join()
 
-    logger.info("issuing terminate of queue_server .")
-    queue_server_main_process.terminate()
+    if scheduler_config_dict["publish_enable"] == "True":
+        logger.info("issuing terminate of publish .")
+        publish_main_process.terminate()
 
     if scheduler_config_dict["provider_enable"] == "True":
         logger.info("issuing terminate of logger_server_provider .")
@@ -137,6 +151,10 @@ def scheduler_main():
     if scheduler_config_dict["swarm_enable"] == "True":
         logger.info("issuing terminate of logger_server_swarm .")
         logger_server_swarm_process.terminate()
+
+    logger.info("issuing terminate of queue_server .")
+    queue_server_main_process.terminate()
+
     logger.info("Normal shutdown of Scheduler.")
 
     return

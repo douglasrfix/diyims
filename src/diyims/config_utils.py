@@ -715,7 +715,7 @@ def get_db_init_config_dict():
 
     except KeyError:
         parser["DB_Init"] = {}
-        parser["DB_Init"]["q_server_port"] = 50000
+        parser["DB_Init"]["q_server_port"] = "50000"
         parser["DB_Init"]["connect_retries"] = "30"
         parser["DB_Init"]["connect_retry_delay"] = "10"
         parser["DB_Init"]["log_file"] = "db_init.log"

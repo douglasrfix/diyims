@@ -23,6 +23,7 @@ def config_install():
     get_logger_server_config_dict()
     get_ipfs_config_dict()
     get_clean_up_config_dict()
+    get_db_init_config_dict()
 
     return
 

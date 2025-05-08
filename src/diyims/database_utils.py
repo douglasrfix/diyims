@@ -11,13 +11,13 @@ def set_up_sql_operations(config_dict):  # TODO: row v s cursor set up ?
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
-    conn = sqlite3.connect(connect_path, timeout=int(600))
+    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
     return conn, queries
 
 
-def set_up_sql_operations_cursor(config_dict):
+def set_up_sql_operations_list(config_dict):
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
     import aiosql
@@ -27,8 +27,8 @@ def set_up_sql_operations_cursor(config_dict):
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
-    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
-    conn = sqlite3.connect(connect_path, timeout=int(600))
+    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(600))
     return conn, queries
 
 

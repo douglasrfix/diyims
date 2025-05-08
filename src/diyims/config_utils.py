@@ -751,6 +751,7 @@ def get_publish_config_dict():
     try:
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][
@@ -761,6 +762,7 @@ def get_publish_config_dict():
     except KeyError:
         parser["Publish"] = {}
         parser["Publish"]["wait_time"] = "300"
+        parser["Publish"]["sql_timeout"] = "60"
         parser["Publish"]["q_server_port"] = "50000"
         parser["Publish"]["connect_retries"] = "30"
         parser["Publish"]["connect_retry_delay"] = "10"
@@ -771,6 +773,7 @@ def get_publish_config_dict():
 
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][

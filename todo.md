@@ -153,6 +153,8 @@
 
 # TODO: #19 implement rapid shut down
 
-# TODO: #21 integrate metrics update into start up process
+# [x]: #21 integrate metrics update into start up process
 
 # TODO: #22 create a process to periodically query a peer ipns name
+
+# TODO: #24 create a process to respond to peer table changes

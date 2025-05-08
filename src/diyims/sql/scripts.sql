@@ -314,7 +314,7 @@ SELECT
 FROM
    header_table
 
-WHERE object_type = "peer_row_entry"
+WHERE object_type = "local_peer_row_entry"
 
 ORDER BY
 

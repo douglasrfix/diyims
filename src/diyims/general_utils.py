@@ -42,7 +42,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a60"  # NOTE: How to extract at run time
+    agent = "0.0.0a69"  # NOTE: How to extract at run time
 
     return agent
 
@@ -118,7 +118,7 @@ def select_local_peer_and_update_metrics():
     import json
     from diyims.platform_utils import get_python_version, test_os_platform
     from diyims.ipfs_utils import test_ipfs_version
-    from diyims.config_utils import get_want_list_config_dict
+    from diyims.config_utils import get_metrics_config_dict
     from diyims.database_utils import (
         set_up_sql_operations,
         refresh_peer_row_from_template,
@@ -130,11 +130,11 @@ def select_local_peer_and_update_metrics():
     from diyims.path_utils import get_path_dict, get_unique_file
     from diyims.logger_utils import (
         get_logger,
-    )  # TODO: pass in config_dict perhaps a generic config dictionary
+    )
     from diyims.ipfs_utils import get_url_dict
     from diyims.header_utils import ipfs_header_add
 
-    config_dict = get_want_list_config_dict()
+    config_dict = get_metrics_config_dict()
     logger = get_logger(
         config_dict["log_file"],
         "none",
@@ -181,6 +181,7 @@ def select_local_peer_and_update_metrics():
         peer_table_dict["agent"] = agent
 
     if changed_metrics:
+        logger.info("Metrics changed processed.")
         DTS = get_DTS()
         peer_table_dict["origin_update_DTS"] = DTS
 
@@ -211,7 +212,8 @@ def select_local_peer_and_update_metrics():
 
         peer_ID = peer_row_dict["peer_ID"]
         object_CID = response_dict["Hash"]
-        object_type = "peer_row_entry"
+        object_type = "local_peer_row_entry"
+        mode = "Normal"
 
         ipfs_header_add(
             DTS,
@@ -220,7 +222,12 @@ def select_local_peer_and_update_metrics():
             peer_ID,
             config_dict,
             logger,
+            mode,
+            conn,
+            queries,
         )
+
+        logger.info("Metrics changed processed.")
 
     conn.close()
 

@@ -225,7 +225,7 @@ def init():
     conn.commit()
 
     object_CID = response_dict["Hash"]
-    object_type = "peer_row_entry"
+    object_type = "local_peer_row_entry"
 
     mode = "init"
 

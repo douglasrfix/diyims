@@ -811,7 +811,7 @@ def verify_peer_and_update(
         log_dict["msg"] = log_string
         insert_log_row(conn, queries, log_dict)
         conn.commit()
-        peer_maint_queue.put_nowait("new peer validated")
+        # peer_maint_queue.put_nowait("new peer validated")
 
     else:
         log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."

@@ -16,7 +16,7 @@ from diyims.database_utils import (
     refresh_clean_up_dict,
     select_clean_up_rows_by_date,
     delete_clean_up_row_by_date,
-    set_up_sql_operations_cursor,
+    set_up_sql_operations_list,
     delete_log_rows_by_date,
 )
 from diyims.requests_utils import execute_request
@@ -70,7 +70,7 @@ def clean_up():
     days_to_delay = clean_up_config_dict["days_to_delay"]
     end_date = date.today() - timedelta(days=int(days_to_delay))
 
-    conn, queries = set_up_sql_operations_cursor(clean_up_config_dict)
+    conn, queries = set_up_sql_operations_list(clean_up_config_dict)
     clean_up_dict = refresh_clean_up_dict()
     clean_up_dict["DTS"] = end_date.isoformat()
     clean_up_tuples, key_dict = select_clean_up_rows_by_date(

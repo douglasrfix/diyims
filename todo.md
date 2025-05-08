@@ -152,3 +152,7 @@
 # [x]: #17 up grade db-init process to use new header functions
 
 # TODO: #19 implement rapid shut down
+
+# TODO: #21 integrate metrics update into start up process
+
+# TODO: #22 create a process to periodically query a peer ipns name

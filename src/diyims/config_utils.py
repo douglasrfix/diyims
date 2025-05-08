@@ -23,6 +23,7 @@ def config_install():
     get_logger_server_config_dict()
     get_ipfs_config_dict()
     get_clean_up_config_dict()
+    get_db_init_config_dict()
     get_metrics_config_dict()
 
     return
@@ -706,6 +707,7 @@ def get_db_init_config_dict():
 
     try:
         db_init_config_dict = {}
+        db_init_config_dict["sql_timeout"] = parser["DB_Init"]["sql_timeout"]
         db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
@@ -715,7 +717,8 @@ def get_db_init_config_dict():
 
     except KeyError:
         parser["DB_Init"] = {}
-        parser["DB_Init"]["q_server_port"] = 50000
+        parser["DB_Init"]["sql_timeout"] = "60"
+        parser["DB_Init"]["q_server_port"] = "50000"
         parser["DB_Init"]["connect_retries"] = "30"
         parser["DB_Init"]["connect_retry_delay"] = "10"
         parser["DB_Init"]["log_file"] = "db_init.log"
@@ -724,6 +727,7 @@ def get_db_init_config_dict():
             parser.write(configfile)
 
         db_init_config_dict = {}
+        db_init_config_dict["sql_timeout"] = parser["DB_Init"]["sql_timeout"]
         db_init_config_dict["q_server_port"] = parser["DB_Init"]["q_server_port"]
         db_init_config_dict["connect_retries"] = parser["DB_Init"]["connect_retries"]
         db_init_config_dict["connect_retry_delay"] = parser["DB_Init"][
@@ -751,6 +755,7 @@ def get_publish_config_dict():
     try:
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][
@@ -761,6 +766,7 @@ def get_publish_config_dict():
     except KeyError:
         parser["Publish"] = {}
         parser["Publish"]["wait_time"] = "300"
+        parser["Publish"]["sql_timeout"] = "60"
         parser["Publish"]["q_server_port"] = "50000"
         parser["Publish"]["connect_retries"] = "30"
         parser["Publish"]["connect_retry_delay"] = "10"
@@ -771,6 +777,7 @@ def get_publish_config_dict():
 
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
+        publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][
@@ -797,6 +804,7 @@ def get_metrics_config_dict():
 
     try:
         metrics_config_dict = {}
+        metrics_config_dict["sql_timeout"] = parser["Metrics"]["sql_timeout"]
         metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
         metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
         metrics_config_dict["connect_retry_delay"] = parser["Metrics"][
@@ -806,6 +814,7 @@ def get_metrics_config_dict():
 
     except KeyError:
         parser["Metrics"] = {}
+        parser["Metrics"]["sql_timeout"] = "60"
         parser["Metrics"]["q_server_port"] = "50000"
         parser["Metrics"]["connect_retries"] = "30"
         parser["Metrics"]["connect_retry_delay"] = "10"
@@ -815,6 +824,7 @@ def get_metrics_config_dict():
             parser.write(configfile)
 
         metrics_config_dict = {}
+        metrics_config_dict["sql_timeout"] = parser["Metrics"]["sql_timeout"]
         metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
         metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
         metrics_config_dict["connect_retry_delay"] = parser["Metrics"][

@@ -158,3 +158,5 @@
 # TODO: #22 create a process to periodically query a peer ipns name
 
 # [x]: #27 Beacon fails at 101
+
+# TODO: #29 remove excess logging in normal operations and remove requirement to change config

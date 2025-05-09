@@ -47,13 +47,7 @@ def get_url_dict():
 
 def publish_main(mode):
     """
-    a)  add support for scheduler to only run q server
-    )  create config_dict for publish process
-    )  test to be sure it works
-    2)  create new process under scheduler to communicate with it
-    3)  add q server entries
-    4)  move to ipfs_utils
-    5)  update users of name publish
+    Publish upon request
 
     """
     from multiprocessing.managers import BaseManager
@@ -122,20 +116,21 @@ def publish_main(mode):
                     param=name_publish_arg,
                 )
 
-                logger.info(f"{status_code}.")
+                # logger.info(f"{status_code}.")
 
         if mode != "init":
             wait_for_next_request_seconds = int(config_dict["wait_time"])
 
             try:
-                logger.info("queue get.")
+                # logger.info("queue get.")
                 publish_queue.get(timeout=wait_for_next_request_seconds)
-                logger.info("get satisfied.")
+                # logger.info("get satisfied.")
             except Empty:
-                logger.info(f"queue empty at {wait_for_next_request_seconds}.")
+                # logger.info(f"queue empty at {wait_for_next_request_seconds}.")
                 # test = "False"
+                pass
 
-        logger.info("next cycle.")
+        # logger.info("next cycle.")
 
     return
 

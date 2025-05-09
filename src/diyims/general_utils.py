@@ -7,7 +7,7 @@ from pathlib import Path
 
 from diyims.path_utils import get_path_dict
 from diyims.py_version_dep import get_sql_str
-from diyims.config_utils import get_clean_up_config_dict, get_beacon_config_dict
+from diyims.config_utils import get_clean_up_config_dict
 from diyims.logger_utils import get_logger
 from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
@@ -58,21 +58,20 @@ def get_shutdown_target(config_dict):
 
 
 def clean_up():
-    clean_up_config_dict = get_clean_up_config_dict()
-    beacon_config_dict = get_beacon_config_dict()
-    beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
+    config_dict = get_clean_up_config_dict()
+
     logger = get_logger(
-        clean_up_config_dict["log_file"],
+        config_dict["log_file"],
         "none",
     )
 
     url_dict = get_url_dict()
-    days_to_delay = clean_up_config_dict["days_to_delay"]
-    end_date = date.today() - timedelta(days=int(days_to_delay))
+    hours_to_delay = config_dict["hours_to_delay"]
+    end_time = date.today() - timedelta(hours=int(hours_to_delay))
 
-    conn, queries = set_up_sql_operations_list(clean_up_config_dict)
+    conn, queries = set_up_sql_operations_list(config_dict)
     clean_up_dict = refresh_clean_up_dict()
-    clean_up_dict["DTS"] = end_date.isoformat()
+    clean_up_dict["DTS"] = end_time.isoformat()
     clean_up_tuples, key_dict = select_clean_up_rows_by_date(
         conn, queries, clean_up_dict
     )
@@ -82,7 +81,7 @@ def clean_up():
     conn.commit()
 
     conn.close()
-    conn, queries = set_up_sql_operations(clean_up_config_dict)
+    conn, queries = set_up_sql_operations(config_dict)
 
     for inner_tuple in clean_up_tuples:
         DTS = inner_tuple[key_dict["DTS"]]
@@ -97,14 +96,13 @@ def clean_up():
             "arg": beacon_CID,
         }
 
-        if beacon_pin_enabled:
-            response, status_code, response_dict = execute_request(
-                url_key="pin_remove",
-                logger=logger,
-                url_dict=url_dict,
-                config_dict=clean_up_config_dict,
-                param=param,
-            )
+        response, status_code, response_dict = execute_request(
+            url_key="pin_remove",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=config_dict,
+            param=param,
+        )
 
         delete_clean_up_row_by_date(conn, queries, clean_up_dict)
 
@@ -235,4 +233,4 @@ def select_local_peer_and_update_metrics():
 
 
 if __name__ == "__main__":
-    select_local_peer_and_update_metrics()
+    clean_up()

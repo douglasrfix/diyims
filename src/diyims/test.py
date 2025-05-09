@@ -12,7 +12,7 @@ from diyims.database_utils import (
 )
 
 
-def package_peer_table():
+def package_peer_table_row_entries():
     """
     docstring
     """
@@ -29,13 +29,15 @@ def package_peer_table():
 
         # peer_table_dict["peer_ID"] = row["peer_ID"]
         peer_table_dict[row["peer_ID"]] = peer_dict
-        print(peer_table_dict)
         print(peer_dict)
+
+    print(peer_table_dict)
+
     return
 
 
 def test():
-    package_peer_table()
+    package_peer_table_row_entries()
     return
 
 

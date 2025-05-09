@@ -159,4 +159,4 @@
 
 # [x]: #27 Beacon fails at 101
 
-# TODO: #29 remove excess logging in normal operations and remove requirement to change config
+# [x]: #29 remove excess logging in normal operations and remove requirement to change config

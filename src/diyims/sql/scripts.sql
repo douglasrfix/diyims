@@ -72,7 +72,7 @@ SELECT
 FROM
    clean_up
 
-where DTS < :DTS
+where DTS <= :DTS
 
 -- name: insert_clean_up_row!
 insert into clean_up (DTS, want_item_file, beacon_CID)
@@ -84,7 +84,7 @@ DELETE
 FROM
    clean_up
 
-where DTS = :DTS
+where DTS <= :DTS
 
 
 -- name: delete_log_rows_by_date!
@@ -94,7 +94,7 @@ FROM
 
 	log
 
-where DTS < :DTS
+where DTS <= :DTS
 
 
 -- name: delete_want_list_table_rows_by_date!
@@ -104,7 +104,7 @@ FROM
 
 	want_list_table
 
-where last_update_DTS < :DTS1 or (insert_DTS < :DTS2 and last_update_DTS = "null")
+where last_update_DTS <= :DTS1 or (insert_DTS <= :DTS2 and last_update_DTS = "null")
 
 -- name: insert_log_row!
 insert into log (DTS, process, pid, peer_type, msg)

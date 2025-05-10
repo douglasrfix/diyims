@@ -247,7 +247,7 @@ def get_clean_up_config_dict():
 
     try:
         clean_up_config_dict = {}
-        clean_up_config_dict["days_to_delay"] = parser["Clean_Up"]["days_to_delay"]
+        clean_up_config_dict["hours_to_delay"] = parser["Clean_Up"]["hours_to_delay"]
         clean_up_config_dict["sql_timeout"] = parser["Clean_Up"]["sql_timeout"]
         clean_up_config_dict["log_file"] = parser["Clean_Up"]["log_file"]
         clean_up_config_dict["connect_retries"] = parser["Clean_Up"]["connect_retries"]
@@ -257,7 +257,7 @@ def get_clean_up_config_dict():
 
     except KeyError:
         parser["Clean_Up"] = {}
-        parser["Clean_Up"]["days_to_delay"] = "1"
+        parser["Clean_Up"]["hours_to_delay"] = "12"
         parser["Clean_Up"]["sql_timeout"] = "60"
         parser["Clean_Up"]["log_file"] = "clean_up.log"
         parser["Clean_Up"]["connect_retries"] = "30"
@@ -267,7 +267,7 @@ def get_clean_up_config_dict():
             parser.write(configfile)
 
         clean_up_config_dict = {}
-        clean_up_config_dict["days_to_delay"] = parser["Clean_Up"]["days_to_delay"]
+        clean_up_config_dict["hours_to_delay"] = parser["Clean_Up"]["hours_to_delay"]
         clean_up_config_dict["sql_timeout"] = parser["Clean_Up"]["sql_timeout"]
         clean_up_config_dict["log_file"] = parser["Clean_Up"]["log_file"]
         clean_up_config_dict["connect_retries"] = parser["Clean_Up"]["connect_retries"]

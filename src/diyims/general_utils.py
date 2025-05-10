@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone, timedelta, date
+from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse
 
 import aiosql
@@ -42,7 +42,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a71"  # NOTE: How to extract at run time
+    agent = "0.0.0a70"  # NOTE: How to extract at run time
 
     return agent
 
@@ -67,7 +67,7 @@ def clean_up():
 
     url_dict = get_url_dict()
     hours_to_delay = config_dict["hours_to_delay"]
-    end_time = date.today() - timedelta(hours=int(hours_to_delay))
+    end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
 
     conn, queries = set_up_sql_operations_list(config_dict)
     clean_up_dict = refresh_clean_up_dict()
@@ -131,6 +131,7 @@ def select_local_peer_and_update_metrics():
     )
     from diyims.ipfs_utils import get_url_dict
     from diyims.header_utils import ipfs_header_add
+    from diyims.test import export_peer_table
 
     config_dict = get_metrics_config_dict()
     logger = get_logger(
@@ -211,7 +212,7 @@ def select_local_peer_and_update_metrics():
         peer_ID = peer_row_dict["peer_ID"]
         object_CID = response_dict["Hash"]
         object_type = "local_peer_row_entry"
-        mode = "Normal"
+        mode = "init"
 
         ipfs_header_add(
             DTS,
@@ -226,6 +227,31 @@ def select_local_peer_and_update_metrics():
         )
 
         logger.info("Metrics changed processed.")
+
+        object_CID = export_peer_table(
+            conn,
+            queries,
+            url_dict,
+            path_dict,
+            config_dict,
+            logger,
+        )
+
+        DTS = get_DTS()
+        object_type = "peer_table_entry"
+        mode = "Normal"
+
+        ipfs_header_add(
+            DTS,
+            object_CID,
+            object_type,
+            peer_ID,
+            config_dict,
+            logger,
+            mode,
+            conn,
+            queries,
+        )
 
     conn.close()
 

@@ -210,7 +210,7 @@ wheels = [
 
 [[package]]
 name = "diyims"
-version = "0.0.0a71"
+version = "0.0.0a72"
 source = { editable = "." }
 dependencies = [
     { name = "aiosql" },

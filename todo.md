@@ -155,10 +155,10 @@
 
 # [x]: #21 integrate metrics update into start up process
 
-# TODO: #22 create a process to periodically query a peer ipns name
+# [x]: #22 create a process to periodically query a peer ipns name
 
 # [x]: #27 Beacon fails at 101
 
 # [x]: #29 remove excess logging in normal operations and remove requirement to change config
 
-# TODO: #31 expand range of cleanup scope and provide internal management of runtimes
+# [x]: #31 expand range of cleanup scope and provide internal management of runtimes

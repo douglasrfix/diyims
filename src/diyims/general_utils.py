@@ -58,21 +58,20 @@ def get_shutdown_target(config_dict):
 
 
 def clean_up():
-    clean_up_config_dict = get_clean_up_config_dict()
-    # beacon_config_dict = get_beacon_config_dict()
-    # beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
+    config_dict = get_clean_up_config_dict()
+
     logger = get_logger(
-        clean_up_config_dict["log_file"],
+        config_dict["log_file"],
         "none",
     )
 
     url_dict = get_url_dict()
-    hours_to_delay = clean_up_config_dict["hours_to_delay"]
-    end_date = datetime.today() - timedelta(hours=int(hours_to_delay))
+    hours_to_delay = config_dict["hours_to_delay"]
+    end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
 
-    conn, queries = set_up_sql_operations_list(clean_up_config_dict)
+    conn, queries = set_up_sql_operations_list(config_dict)
     clean_up_dict = refresh_clean_up_dict()
-    clean_up_dict["DTS"] = end_date.isoformat()
+    clean_up_dict["DTS"] = end_time.isoformat()
     clean_up_tuples, key_dict = select_clean_up_rows_by_date(
         conn, queries, clean_up_dict
     )
@@ -82,7 +81,7 @@ def clean_up():
     conn.commit()
 
     conn.close()
-    conn, queries = set_up_sql_operations(clean_up_config_dict)
+    conn, queries = set_up_sql_operations(config_dict)
 
     for inner_tuple in clean_up_tuples:
         DTS = inner_tuple[key_dict["DTS"]]
@@ -97,12 +96,11 @@ def clean_up():
             "arg": beacon_CID,
         }
 
-        # if beacon_pin_enabled:
         response, status_code, response_dict = execute_request(
             url_key="pin_remove",
             logger=logger,
             url_dict=url_dict,
-            config_dict=clean_up_config_dict,
+            config_dict=config_dict,
             param=param,
         )
 
@@ -261,4 +259,4 @@ def select_local_peer_and_update_metrics():
 
 
 if __name__ == "__main__":
-    select_local_peer_and_update_metrics()
+    clean_up()

@@ -162,3 +162,5 @@
 # [x]: #29 remove excess logging in normal operations and remove requirement to change config
 
 # [x]: #31 expand range of cleanup scope and provide internal management of runtimes
+
+# TODO: #35 add peer packaging to filter process

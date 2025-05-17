@@ -42,7 +42,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a73"  # NOTE: How to extract at run time
+    agent = "0.0.0a74"  # NOTE: How to extract at run time
 
     return agent
 
@@ -131,7 +131,7 @@ def select_local_peer_and_update_metrics():
     )
     from diyims.ipfs_utils import get_url_dict
     from diyims.header_utils import ipfs_header_add
-    from diyims.test import export_peer_table
+    from diyims.ipfs_utils import export_peer_table
 
     config_dict = get_metrics_config_dict()
     logger = get_logger(
@@ -209,7 +209,7 @@ def select_local_peer_and_update_metrics():
         )
         f.close()
 
-        peer_ID = peer_row_dict["peer_ID"]
+        peer_ID = peer_row_dict["peer_ID"]  # new entry to pint at updated peer row
         object_CID = response_dict["Hash"]
         object_type = "local_peer_row_entry"
         mode = "init"
@@ -241,7 +241,7 @@ def select_local_peer_and_update_metrics():
         object_type = "peer_table_entry"
         mode = "Normal"
 
-        ipfs_header_add(
+        ipfs_header_add(  # entry pointing to a new peer table rather than a updated row
             DTS,
             object_CID,
             object_type,
@@ -258,5 +258,18 @@ def select_local_peer_and_update_metrics():
     return
 
 
+def test():
+    from datetime import datetime
+    from time import sleep
+
+    start_DTS = get_DTS()
+    start = datetime.fromisoformat(start_DTS)
+    sleep(58)
+    stop_DTS = get_DTS()
+    stop = datetime.fromisoformat(stop_DTS)
+    duration = stop - start
+    print(duration)
+
+
 if __name__ == "__main__":
-    clean_up()
+    test()

@@ -86,7 +86,7 @@ def publish_main(mode):
 
     conn, queries = set_up_sql_operations(config_dict)
     test = "True"
-    while test == "True":
+    while test == "True":  # Change to for loo with break
         query_row = queries.select_last_header(
             conn, peer_ID=peer_ID
         )  # find the header CID of the last header
@@ -368,6 +368,57 @@ def unpack_peer_row_from_cid(peer_row_CID, config_dict):
     )
 
     return response_dict
+
+
+def export_peer_table(
+    conn,
+    queries,
+    url_dict,
+    path_dict,
+    config_dict,
+    logger,
+):
+    """
+    docstring
+    """
+    import json
+    from diyims.path_utils import get_unique_file
+    from diyims.requests_utils import execute_request
+
+    peer_table_rows = queries.select_peer_table_signature_valid(conn)
+    peer_table_dict = {}
+    for row in peer_table_rows:
+        row_key_list = row.keys()
+
+        peer_dict = {}
+        for key in row_key_list:
+            peer_dict[key] = row[key]
+
+        peer_table_dict[row["peer_ID"]] = peer_dict
+
+    proto_path = path_dict["peer_path"]
+    proto_file = path_dict["peer_file"]
+    proto_file_path = get_unique_file(proto_path, proto_file)
+
+    param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
+    with open(proto_file_path, "w") as write_file:
+        json.dump(peer_table_dict, write_file, indent=4)
+
+    f = open(proto_file_path, "rb")
+    add_file = {"file": f}
+    response, status_code, response_dict = execute_request(
+        url_key="add",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=config_dict,
+        file=add_file,
+        param=param,
+    )
+    f.close()
+
+    object_CID = response_dict["Hash"]
+
+    return object_CID
 
 
 if __name__ == "__main__":

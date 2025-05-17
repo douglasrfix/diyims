@@ -107,7 +107,7 @@ def capture_peer_main(peer_type):
             refresh_log_dict()
         )  # TODO: rename template  maybe create a function to condense this
         log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peer_capture_main=1"
+        log_dict["process"] = "peer_capture_main-1"
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = msg
@@ -140,8 +140,8 @@ def capture_peer_main(peer_type):
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = msg
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
+        # insert_log_row(conn, queries, log_dict)
+        # conn.commit()
 
         conn.close()  # -1
         Uconn.close()
@@ -173,6 +173,15 @@ def capture_peers(
 ):
     if peer_type == "PP":
         response, status_code, response_dict = execute_request(
+            url_key="id",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=capture_peer_config_dict,
+        )
+
+        self = response_dict["ID"]
+
+        response, status_code, response_dict = execute_request(
             url_key="find_providers",
             logger=logger,
             url_dict=url_dict,
@@ -192,6 +201,7 @@ def capture_peers(
             Uqueries,
             Rconn,
             Rqueries,
+            self,
         )
 
     elif peer_type == "BP":
@@ -249,154 +259,211 @@ def decode_findprovs_structure(
     Uqueries,
     Rconn,
     Rqueries,
+    self,
 ):
     found = 0
     added = 0
     promoted = 0
+    modified = 0
     p = psutil.Process()
     pid = p.pid
 
-    for line in response.iter_lines():  # TODO: make this return a list to be processed by a database function to reduce if else nesting
-        if line:
-            decoded_line = line.decode("utf-8")
-            line_dict = json.loads(decoded_line)
-            if line_dict["Type"] == 4:
-                responses_string = str(line_dict["Responses"])
-                responses_string_len = len(responses_string)
-                trimmed_responses_string = responses_string[
-                    1 : responses_string_len - 1
-                ]
-                responses_dict = json.loads(trimmed_responses_string.replace("'", '"'))
-                addrs_list = responses_dict["Addrs"]
-                try:
-                    peer_address = addrs_list[0]
-                    peer_address = peer_address
-                    # the source for this is dht which may be present with out an address
-                    address_available = True
+    line_list = []
+    for line in response.iter_lines():
+        line_list.append(line)
 
-                except IndexError:
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "peer_capture_decode_provider-1"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = "No Address 1"
-                    # insert_log_row(conn, queries, log_dict)
-                    # conn.commit()
-                    address_available = True
+    for line in line_list:
+        decoded_line = line.decode("utf-8")
+        line_dict = json.loads(decoded_line)
+        if line_dict["Type"] == 4:
+            found += 1
+            responses_list = line_dict["Responses"]
+            for response in responses_list:
+                address_available = False
+                list_of_peer_dict = str(response).replace(
+                    "'", '"'
+                )  # needed to use json
+                peer_dict = json.loads(str(list_of_peer_dict))
+                peer_ID = peer_dict["ID"]
+                if self != peer_ID:
+                    address_list = peer_dict["Addrs"]
+                    for address in address_list:
+                        if address[:5] == "/ip4/":
+                            if address[:7] != "/ip4/10":
+                                if address[:8] != "/ip4/192":  # 172.16 thru 172.31
+                                    if address[:8] != "/ip4/127":
+                                        index = address.lower().find("/tcp/")
+                                        port_start = index + 5
+                                        port = address[port_start:]
+                                        if port.isnumeric():
+                                            connect_address = (
+                                                address + "/p2p/" + peer_ID
+                                            )
+                                            address_available = True
+                                            break
 
-                found += 1
-
-                if address_available:
-                    peer_table_dict = refresh_peer_row_from_template()
-                    DTS = get_DTS()
-                    peer_table_dict["peer_ID"] = responses_dict["ID"]
-                    peer_table_dict["local_update_DTS"] = DTS
-                    peer_table_dict["peer_type"] = "PP"
+                    if address_available:
+                        peer_table_dict = (
+                            refresh_peer_row_from_template()
+                        )  # ready fro processing
+                        DTS = get_DTS()
+                        peer_table_dict["peer_ID"] = peer_dict["ID"]
+                        peer_table_dict["local_update_DTS"] = DTS
+                        peer_table_dict["peer_type"] = "PP"
+                        peer_table_dict["processing_status"] = "WLR"
+                        peer_table_dict["version"] = connect_address
+                    else:
+                        peer_table_dict = (
+                            refresh_peer_row_from_template()
+                        )  # wait for address
+                        DTS = get_DTS()
+                        peer_table_dict["peer_ID"] = peer_dict["ID"]
+                        peer_table_dict["local_update_DTS"] = DTS
+                        peer_table_dict["peer_type"] = "PP"
+                        peer_table_dict["processing_status"] = "NPC"
+                        peer_table_dict["version"] = "0"
 
                     try:
-                        peer_table_dict["processing_status"] = "WLR"
-                        insert_peer_row(conn, Uqueries, peer_table_dict)
+                        insert_peer_row(
+                            conn, queries, peer_table_dict
+                        )  # zero address and change to npc to test update path
                         conn.commit()
+                        # connect and add to peering
                         added += 1
-                        # NOTE: connect_flag = True disable connect function permanently if latter version prove more robust
-                        # connect_flag = False
+                        modified += 1
                         original_peer_type = peer_table_dict["peer_type"]
 
-                    except IntegrityError:  # NOTE: revisit when python is ? Database
-                        # connect_flag = False
+                    except IntegrityError:
                         peer_table_entry = select_peer_table_entry_by_key(
                             Rconn, Rqueries, peer_table_dict
                         )
+
                         original_peer_type = peer_table_entry["peer_type"]
+                        update_peer = 0
+                        if (
+                            peer_table_entry["version"] == "0"
+                        ):  # exiting entry waiting on address
+                            if (
+                                address_available
+                            ):  # address is available, wait no longer
+                                # peer_table_dict["processing_status"] = "WLR"
+                                # peer_table_dict["version"] = connect_address
+                                update_peer = 1
+                            # else:
+                            #    peer_table_dict["processing_status"] = peer_table_entry[
+                            #        "processing_status"
+                            #    ]
+                            #    peer_table_dict["version"] = peer_table_entry["version"]
+                        # else:                                                       # Yes
+                        #        peer_table_dict["processing_status"] = peer_table_entry[
+                        #            "processing_status"
+                        #        ]
+                        #        peer_table_dict["version"] = peer_table_entry["version"]
 
-                    if original_peer_type == "BP":
-                        if peer_table_entry["processing_status"] == "WLZ":
-                            peer_table_dict["processing_status"] = "WLR"
-                        else:
-                            peer_table_dict["processing_status"] = peer_table_entry[
-                                "processing_status"
-                            ]
-                        # Uconn, Uqueries = set_up_sql_operations(capture_peer_config_dict)
-                        update_peer_table_peer_type_status(
-                            conn, Uqueries, peer_table_dict
-                        )
-                        promoted += 1
-                        conn.commit()
-                        # Uconn.close()
-                        # connect_flag = False
-                        # connect_flag = True
+                        if original_peer_type == "BP":  # promote
+                            # if peer_table_entry["processing_status"] == "WLZ":
+                            #    peer_table_dict["processing_status"] = "WLR"
 
-                    elif original_peer_type == "SP":
-                        if peer_table_entry["processing_status"] == "WLZ":
-                            peer_table_dict["processing_status"] = "WLR"
-                        else:
-                            peer_table_dict["processing_status"] = peer_table_entry[
-                                "processing_status"
-                            ]
-                        # Uconn, Uqueries = set_up_sql_operations(capture_peer_config_dict)
-                        update_peer_table_peer_type_status(
-                            conn, Uqueries, peer_table_dict
-                        )
-                        promoted += 1
-                        conn.commit()
-                        # Uconn.close()
-                        # connect_flag = False
-                        # connect_flag = True
+                            update_peer = 1
+                            # else:
+                            #    peer_table_dict["processing_status"] = peer_table_entry[
+                            #        "processing_status"
+                            #    ]
+                            # Uconn, Uqueries = set_up_sql_operations(capture_peer_config_dict)
+                            # update_peer_table_peer_type_status(
+                            #    conn, queries, peer_table_dict
+                            # )
+                            promoted += 1
+                            # modified += 1
+                            # conn.commit()
+                            # Uconn.close()
+                            # connect_flag = False
+                            # connect_flag = True
 
-                    elif original_peer_type == "LP":
-                        msg = "Local peer was identified as a provider"
+                        elif original_peer_type == "SP":  # promote
+                            # if peer_table_entry["processing_status"] == "WLZ":
+                            #    peer_table_dict["processing_status"] = "WLR"
+                            update_peer = 1
+                            # else:
+                            #    peer_table_dict["processing_status"] = peer_table_entry[
+                            #        "processing_status"
+                            #    ]
+                            # Uconn, Uqueries = set_up_sql_operations(capture_peer_config_dict)
+                            # update_peer_table_peer_type_status(
+                            #    conn, queries, peer_table_dict
+                            # )
+                            promoted += 1
+                            # modified += 1
+                            # conn.commit()
+                            # Uconn.close()
+                            # connect_flag = False
+                            # connect_flag = True
+
+                        elif original_peer_type == "LP":  # added by db-init
+                            msg = "Local peer was identified as a provider"
+                            log_dict = refresh_log_dict()
+                            log_dict["DTS"] = get_DTS()
+                            log_dict["process"] = "peer_capture_decode_provider-2"
+                            log_dict["pid"] = pid
+                            log_dict["peer_type"] = "PP"
+                            log_dict["msg"] = msg
+                            insert_log_row(conn, queries, log_dict)
+                            conn.commit()
+
+                        if update_peer:
+                            update_peer_table_peer_type_status(
+                                conn, queries, peer_table_dict
+                            )
+                            modified += 1
+                            conn.commit()
+
+                    if (
+                        original_peer_type == "PP"
+                    ):  # wake up every interval for providers
+                        # peer_queue.put_nowait("put wake up from PP peer capture")
+
+                        msg = "put wake up from PP peer capture"
                         log_dict = refresh_log_dict()
                         log_dict["DTS"] = get_DTS()
-                        log_dict["process"] = "peer_capture_decode_provider-2"
+                        log_dict["process"] = "peer_capture_decode_provider-3"
+                        log_dict["pid"] = pid
+                        log_dict["peer_type"] = "PP"
+                        log_dict["msg"] = msg
+                        # insert_log_row(conn, queries, log_dict)
+                        # conn.commit()
+
+                    elif original_peer_type == "BP":
+                        # peer_queue.put_nowait(
+                        #    "put promoted from bitswap wake up from PP peer capture"
+                        # )
+
+                        msg = "put promoted from bitswap wake up from PP peer capture"
+                        log_dict = refresh_log_dict()
+                        log_dict["DTS"] = get_DTS()
+                        log_dict["process"] = "peer_capture_decode_provider-4"
                         log_dict["pid"] = pid
                         log_dict["peer_type"] = "PP"
                         log_dict["msg"] = msg
                         insert_log_row(conn, queries, log_dict)
                         conn.commit()
 
-                if original_peer_type == "PP":  # wake up every interval for providers
-                    peer_queue.put_nowait("put wake up from PP peer capture")
+                    elif original_peer_type == "SP":
+                        # peer_queue.put_nowait(
+                        #    "put promoted from swarm wake up from PP peer capture"
+                        # )
 
-                    msg = "put wake up from PP peer capture"
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "peer_capture_decode_provider-3"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = msg
-                    # insert_log_row(conn, queries, log_dict)
-                    # conn.commit()
+                        msg = "put promoted from swarm wake up from PP peer capture"
+                        log_dict = refresh_log_dict()
+                        log_dict["DTS"] = get_DTS()
+                        log_dict["process"] = "peer_capture_decode_provider-5"
+                        log_dict["pid"] = pid
+                        log_dict["peer_type"] = "PP"
+                        log_dict["msg"] = msg
+                        insert_log_row(conn, queries, log_dict)
+                        conn.commit()
 
-                elif original_peer_type == "BP":
-                    peer_queue.put_nowait(
-                        "put promoted from bitswap wake up from PP peer capture"
-                    )
-
-                    msg = "put promoted from bitswap wake up from PP peer capture"
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "peer_capture_decode_provider-4"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = msg
-                    insert_log_row(conn, queries, log_dict)
-                    conn.commit()
-
-                elif original_peer_type == "SP":
-                    peer_queue.put_nowait(
-                        "put promoted from swarm wake up from PP peer capture"
-                    )
-
-                    msg = "put promoted from swarm wake up from PP peer capture"
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "peer_capture_decode_provider-5"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = msg
-                    insert_log_row(conn, queries, log_dict)
-                    conn.commit()
+    if modified:
+        peer_queue.put_nowait("put wake up from PP peer capture")
 
     log_string = f"{found} providers found, {added} added and {promoted} promoted."
 

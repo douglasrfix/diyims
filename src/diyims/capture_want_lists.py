@@ -18,14 +18,16 @@ from diyims.database_utils import (
     update_peer_table_status_WLP,
     update_peer_table_status_WLX,
     update_peer_table_status_WLZ,
-    update_peer_row_by_key_status,
+    update_peer_table_status_to_NPC,
     refresh_log_dict,
     insert_log_row,
+    # select_peer_table_entry_by_key,
 )
 from diyims.general_utils import get_DTS, get_shutdown_target
 from diyims.ipfs_utils import get_url_dict
-from diyims.logger_utils import get_logger_task
+from diyims.logger_utils import get_logger_task, get_logger
 from diyims.config_utils import get_want_list_config_dict
+from diyims.path_utils import get_path_dict
 
 
 def capture_peer_want_lists(peer_type):  # each peer type runs in its own process
@@ -39,6 +41,10 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     pid = p.pid
 
     want_list_config_dict = get_want_list_config_dict()
+    logger = get_logger(
+        want_list_config_dict["log_file"],
+        "none",
+    )
     conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
     wait_seconds = int(want_list_config_dict["wait_before_startup"])
 
@@ -50,7 +56,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     log_dict["pid"] = pid
     log_dict["peer_type"] = peer_type
     log_dict["msg"] = log_string
-    # (conn, queries, log_dict)
+    # insert_log_row(conn, queries, log_dict)
     # conn.commit()
 
     sleep(wait_seconds)
@@ -63,8 +69,8 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     log_dict["pid"] = pid
     log_dict["peer_type"] = peer_type
     log_dict["msg"] = log_string
-    insert_log_row(conn, queries, log_dict)
-    conn.commit()
+    # insert_log_row(conn, queries, log_dict)
+    # conn.commit()
 
     target_DT = get_shutdown_target(want_list_config_dict)
 
@@ -85,7 +91,6 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     log_dict["msg"] = log_string
     # insert_log_row(conn, queries, log_dict)
     # conn.commit()
-    # conn.close()
 
     interval_count = 0
     total_peers_processed = 0
@@ -121,12 +126,26 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
         current_DT = datetime.now()
         while target_DT > current_DT:
             # find any available peers that were previously captured before waiting for new ones
+
+            log_string = "peer selection  for Want List processing."
+
+            log_dict = refresh_log_dict()
+            log_dict["DTS"] = get_DTS()
+            log_dict["process"] = "peer_want_capture_main-1A"
+            log_dict["pid"] = pid
+            log_dict["peer_type"] = peer_type
+            log_dict["msg"] = log_string
+            # if peers_processed > 0:
+            # insert_log_row(conn, queries, log_dict)
+            # conn.commit()
+
             peers_processed = capture_want_lists_for_peers(
                 want_list_config_dict,
                 peer_type,
                 pool,
                 conn,
                 queries,
+                logger,
             )
             # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
             total_peers_processed += peers_processed
@@ -138,7 +157,6 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
             log_dict["pid"] = pid
             log_dict["peer_type"] = peer_type
             log_dict["msg"] = log_string
-            # if peers_processed > 0:
             insert_log_row(conn, queries, log_dict)
             conn.commit()
 
@@ -164,9 +182,8 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
                 log_dict["pid"] = pid
                 log_dict["peer_type"] = peer_type
                 log_dict["msg"] = log_string
-                insert_log_row(conn, queries, log_dict)
-                conn.commit()
-                # conn.close()
+                # insert_log_row(conn, queries, log_dict)
+                # conn.commit()
 
             except AttributeError:
                 sleep(60)
@@ -174,11 +191,11 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
             current_DT = datetime.now()
 
         # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
-        log_string = f"{total_peers_processed} {peer_type} peers submitted for Want List  processing."
+        log_string = f"{total_peers_processed} {peer_type} total peers submitted for Want List  processing."
 
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peer_want_capture_main-0"
+        log_dict["process"] = "peer_want_capture_main-0A"
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = log_string
@@ -198,19 +215,35 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
     return
 
 
-def capture_want_lists_for_peers(want_list_config_dict, peer_type, pool, conn, queries):
+def capture_want_lists_for_peers(
+    want_list_config_dict, peer_type, pool, conn, queries, logger
+):
+    from diyims.ipfs_utils import get_url_dict
+
     peers_processed = 0
     p = psutil.Process()
     pid = p.pid
+    url_dict = get_url_dict()
     Rconn, Rqueries = set_up_sql_operations(want_list_config_dict)  # + 1
-    Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
+    # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
     # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
     # dual connections avoid locking conflict with the read
 
-    rows_of_peers = Rqueries.select_peers_by_peer_type_status(
+    rows_of_peers = Rqueries.select_peers_by_peer_type_status(  # NOTE: where status is WLR set by peer capture or peer not finished
         Rconn, peer_type=peer_type
     )
-    for peer_row in rows_of_peers:  # TODO: need a better throttle
+
+    for peer_row in rows_of_peers:
+        param = {"arg": peer_row["version"]}
+
+        response, status_code, response_dict = execute_request(
+            url_key="connect",
+            logger=logger,
+            url_dict=url_dict,
+            config_dict=want_list_config_dict,
+            param=param,
+        )
+
         peer_table_dict = refresh_peer_row_from_template()
         peer_table_dict["peer_ID"] = peer_row["peer_ID"]
         peer_table_dict["peer_type"] = peer_row["peer_type"]
@@ -219,7 +252,7 @@ def capture_want_lists_for_peers(want_list_config_dict, peer_type, pool, conn, q
         )
         peer_table_dict["local_update_DTS"] = get_DTS()
 
-        update_peer_table_status_WLP(conn, Uqueries, peer_table_dict)
+        update_peer_table_status_WLP(conn, queries, peer_table_dict)
         conn.commit()
 
         pool.apply_async(
@@ -242,8 +275,6 @@ def capture_want_lists_for_peers(want_list_config_dict, peer_type, pool, conn, q
         peers_processed += 1
 
     Rconn.close()  # - 1
-    Uconn.close()  # - 1
-    # conn.close()
 
     return peers_processed
 
@@ -253,13 +284,28 @@ def submitted_capture_peer_want_list_by_id(
     peer_table_dict,
 ):
     p = psutil.Process()
-
+    path_dict = get_path_dict()
     pid = p.pid
     peer_type = peer_table_dict["peer_type"]
     peer_ID = peer_table_dict["peer_ID"]
     conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
-    Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
+    # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
     Rconn, Rqueries = set_up_sql_operations(want_list_config_dict)
+    url_dict = get_url_dict()
+    logger = get_logger(
+        want_list_config_dict["log_file"],
+        "none",
+    )
+
+    response, status_code, response_dict = execute_request(
+        url_key="id",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=want_list_config_dict,
+    )
+
+    self = response_dict["ID"]
+
     logger = get_logger_task(peer_type, peer_ID)
 
     log_string = (
@@ -273,21 +319,23 @@ def submitted_capture_peer_want_list_by_id(
     log_dict["msg"] = log_string
     # insert_log_row(conn, queries, log_dict)
     # conn.commit()
-    # conn.close()
 
     # url_dict = get_url_dict()
+
     peer_table_dict["processing_status"] = "WLX"
     peer_table_dict["local_update_DTS"] = get_DTS()
 
     # indicate processing is active for this peer WLP -> WLX
-    update_peer_table_status_WLX(conn, Uqueries, peer_table_dict)
+    update_peer_table_status_WLX(
+        conn, queries, peer_table_dict
+    )  # NOTE: This is where processing actually begins
     conn.commit()
     # Uconn.close
 
     queue_server = BaseManager(address=("127.0.0.1", 50000), authkey=b"abc")
-    queue_server.register("get_peer_maint_queue")
-    queue_server.connect()
-    peer_maint_queue = queue_server.get_peer_maint_queue()
+    # queue_server.register("get_peer_maint_queue")
+    # queue_server.connect()
+    # peer_maint_queue = queue_server.get_peer_maint_queue()
     if peer_type == "PP":
         p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
@@ -335,11 +383,14 @@ def submitted_capture_peer_want_list_by_id(
     # conn, queries = set_up_sql_operations(want_list_config_dict)
     while (
         samples < number_of_samples_per_interval
-        # NOTE: will this condition allow the wlz to be processed twice?
         and zero_sample_count <= max_zero_sample_count
         # provider peers have the threshold set to 9999 to provide an infinite processing cycle
     ):
+        # TODO: test for already completed peer since the last sample may have pu dated the peer to NPC.
+        # this is to avoid consuming IPFS resources unnecessarily.
+
         sleep(wait_seconds)
+
         found, added, updated = capture_peer_want_list_by_id(
             logger,
             want_list_config_dict,
@@ -348,8 +399,6 @@ def submitted_capture_peer_want_list_by_id(
             queries,
             pid,
             peer_type,
-            Uconn,
-            Uqueries,
             Rconn,
             Rqueries,
         )
@@ -368,15 +417,16 @@ def submitted_capture_peer_want_list_by_id(
             # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
             peer_table_dict["processing_status"] = "WLZ"
             peer_table_dict["local_update_DTS"] = get_DTS()
-            update_peer_table_status_WLZ(conn, Uqueries, peer_table_dict)
+            update_peer_table_status_WLZ(conn, queries, peer_table_dict)
             conn.commit()
-            # Uconn.close
             NCW_count += 1
 
         samples += 1
 
         # conn, queries = set_up_sql_operations(want_list_config_dict)
-        log_string = f"In another sample in {samples} samples for {peer_type}."
+        log_string = (
+            f"another sample in {samples} samples for {peer_ID} of type {peer_type}."
+        )
         # logger.debug(log_string)
 
         log_dict = refresh_log_dict()
@@ -387,38 +437,34 @@ def submitted_capture_peer_want_list_by_id(
         log_dict["msg"] = log_string
         # insert_log_row(conn, queries, log_dict)
         # conn.commit()
-        # conn.close()
 
-    # if pp test for capture Here each interval
-    if peer_type == "PP":
-        filter_wantlist(
-            pid,
-            logger,
-            want_list_config_dict,
-            conn,
-            queries,
-            Uconn,
-            Uqueries,
-            Rconn,
-            Rqueries,
-            peer_maint_queue,
-        )
+        # if pp test for capture Here each sample
+        # it is better to use db resources rather than IPFS
+        if peer_type == "PP":
+            peer_verified = filter_wantlist(
+                pid,
+                logger,
+                want_list_config_dict,
+                conn,
+                queries,
+                path_dict,
+                Rconn,
+                Rqueries,
+                peer_ID,
+                self,
+            )
+            if peer_verified:
+                break
 
     if zero_sample_count < max_zero_sample_count:  # sampling interval completed
-        # conn, queries = set_up_sql_operations(
-        #    want_list_config_dict
-        # )  # set from WLX to WLR so sampling will be continued
+        # set from WLX to WLR so sampling will be continued if not NPC
+
         peer_table_dict["processing_status"] = "WLR"
         peer_table_dict["local_update_DTS"] = get_DTS()
-        # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
-        update_peer_table_status_WLR(conn, Uqueries, peer_table_dict)
+        update_peer_table_status_WLR(conn, queries, peer_table_dict)  # logic in sql
         conn.commit()
-        # Uconn.close
 
-    # conn, queries = set_up_sql_operations(want_list_config_dict)
     log_string = f"In {samples} samples, {total_found} found, {total_added} added, {total_updated} updated and NCW {NCW_count} count for {peer_ID}"
-    # logger.debug(log_string)
-
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
     log_dict["process"] = "peer_want_list_capture_task-3"
@@ -444,7 +490,6 @@ def submitted_capture_peer_want_list_by_id(
     # insert_log_row(conn, queries, log_dict)
     # conn.commit()
     conn.close()  # - 1
-    Uconn.close()
     Rconn.close()
     return
 
@@ -457,8 +502,6 @@ def capture_peer_want_list_by_id(
     queries,
     pid,
     peer_type,
-    Uconn,
-    Uqueries,
     Rconn,
     Rqueries,
 ):  # This is one sample for a peer
@@ -468,6 +511,7 @@ def capture_peer_want_list_by_id(
     added = 0
     updated = 0
 
+    peer_ID = peer_table_dict["peer_ID"]
     param = {"peer": peer_table_dict["peer_ID"]}
     response, status_code, response_dict = execute_request(
         url_key="want_list",
@@ -476,17 +520,15 @@ def capture_peer_want_list_by_id(
         config_dict=want_list_config_dict,
         param=param,
     )
-    log_string = (
-        f"Want list capture for results {response_dict} completed with {status_code}."
-    )
+    log_string = f"Want list capture for {peer_ID} results {response_dict} completed with {status_code}."
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
     log_dict["process"] = "peer_want_list_capture_task-4"
     log_dict["pid"] = pid
     log_dict["peer_type"] = peer_type
     log_dict["msg"] = log_string
-    # insert_log_row(conn, queries, log_dict)
-    # conn.commit()
+    insert_log_row(conn, queries, log_dict)
+    conn.commit()
 
     # level_zero_dict = json.loads(response.text)
     if str(response_dict["Keys"]) == "None":
@@ -494,13 +536,11 @@ def capture_peer_want_list_by_id(
 
     else:
         found, added, updated = decode_want_list_structure(
-            want_list_config_dict,
+            # want_list_config_dict,
             peer_table_dict,
             response_dict,
             conn,
             queries,
-            Uconn,
-            Uqueries,
             Rconn,
             Rqueries,
         )
@@ -509,17 +549,14 @@ def capture_peer_want_list_by_id(
 
 
 def decode_want_list_structure(
-    want_list_config_dict,
+    # want_list_config_dict,
     peer_table_dict,
     response_dict,
     conn,
     queries,
-    Uconn,
-    Uqueries,
     Rconn,
     Rqueries,
 ):
-    # iconn, iqueries = set_up_sql_operations(want_list_config_dict)
     found = 0
     added = 0
     updated = 0
@@ -530,6 +567,7 @@ def decode_want_list_structure(
     # if str(level_one_list) != "None":
     for level_two_dict in level_one_list:
         want_item = level_two_dict["/"]
+        peer_ID = peer_table_dict["peer_ID"]
 
         want_list_table_dict = refresh_want_list_table_dict()  # TODO: rename template
         want_list_table_dict["peer_ID"] = peer_table_dict["peer_ID"]
@@ -542,7 +580,7 @@ def decode_want_list_structure(
             insert_want_list_row(conn, queries, want_list_table_dict)
             conn.commit()
             added += 1
-            log_string = "new want item row"
+            log_string = f"new want item row for peer {peer_ID}"
 
             log_dict = refresh_log_dict()
             log_dict["DTS"] = get_DTS()
@@ -566,7 +604,7 @@ def decode_want_list_structure(
             conn.commit()
             updated += 1
 
-            log_string = "update want item row"
+            log_string = f"update want item row for {peer_ID}"
 
             log_dict = refresh_log_dict()
             log_dict["DTS"] = get_DTS()
@@ -579,8 +617,6 @@ def decode_want_list_structure(
 
         found += 1
 
-    # conn.close()
-    # Uconn.close()
     return found, added, updated
 
 
@@ -590,16 +626,18 @@ def filter_wantlist(
     config_dict,
     conn,
     queries,
-    Uconn,
-    Uqueries,
+    path_dict,
     Rconn,
     Rqueries,
-    peer_maint_queue,
+    peer_ID,
+    self,
 ):
-    # iconn, iqueries = set_up_sql_operations(config_dict)
+    """
+    doc string
+    """
 
     current_DT = datetime.now(timezone.utc)
-    start_off_set = timedelta(hours=2)
+    start_off_set = timedelta(hours=1)
     window_duration = timedelta(hours=1)
     start_dts = current_DT - start_off_set
     end_dts = start_dts + window_duration
@@ -614,16 +652,29 @@ def filter_wantlist(
         Rconn,
         query_start_dts=query_start_dts,
         query_stop_dts=query_stop_dts,
+        peer_ID=peer_ID,
         largest_delta=largest_delta,
         smallest_delta=smallest_delta,
     )
 
+    log_string = f"Filter entered for {peer_ID}"
+
+    log_dict = refresh_log_dict()
+    log_dict["DTS"] = get_DTS()
+    log_dict["process"] = "wantlist-filter-N0"
+    log_dict["pid"] = pid
+    log_dict["peer_type"] = "PP"
+    log_dict["msg"] = log_string
+    # insert_log_row(conn, queries, log_dict)
+    # conn.commit()
+
+    peer_verified = 0
     for want_list_item_row in rows_of_wantlist_items:
         want_list_object_CID = want_list_item_row[
             "object_CID"
         ]  # This is the json file containing the peer row cid
 
-        log_string = f"Object {want_list_object_CID} found between {query_start_dts} and {query_stop_dts}."
+        log_string = f"Object {want_list_object_CID} found between {query_start_dts} and {query_stop_dts} for {peer_ID}."
 
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
@@ -640,18 +691,26 @@ def filter_wantlist(
         }
         url_key = "cat"
 
+        start_DTS = get_DTS()
+
         response, status_code, response_dict = execute_request(
             url_key,
             url_dict=url_dict,
             config_dict=config_dict,
             param=param,
-            timeout=(3.05, 27),
+            timeout=(3.05, 54),
         )
+
+        stop_DTS = get_DTS()
+        start = datetime.fromisoformat(start_DTS)
+        stop = datetime.fromisoformat(stop_DTS)
+
+        duration = stop - start
 
         if status_code == 200:
             X_Content_Length = int(response.headers["X-Content-Length"])
 
-            log_string = f"CAT result {status_code} with dictionary of {response_dict} with {X_Content_Length}."
+            log_string = f"CAT result {status_code} used {duration} with dictionary of {response_dict} with {X_Content_Length} for {peer_ID}."
 
             log_dict = refresh_log_dict()
             log_dict["DTS"] = get_DTS()
@@ -659,17 +718,28 @@ def filter_wantlist(
             log_dict["pid"] = pid
             log_dict["peer_type"] = "PP"
             log_dict["msg"] = log_string
-            # insert_log_row(conn, queries, log_dict)
-            # conn.commit()
+            insert_log_row(conn, queries, log_dict)
+            conn.commit()
 
             if (
                 X_Content_Length >= x_content_min and X_Content_Length <= x_content_max
             ):  # this will filter out most of the false positives
                 peer_row_CID = extract_peer_row_CID(
-                    response_dict, conn, queries, pid, Uconn, Uqueries, Rconn, Rqueries
+                    response_dict,
+                    pid,
                 )
 
                 if peer_row_CID != "null":
+                    log_string = f"Verify and update for {peer_ID}."
+
+                    log_dict = refresh_log_dict()
+                    log_dict["DTS"] = get_DTS()
+                    log_dict["process"] = "wantlist-filter-N3"
+                    log_dict["pid"] = pid
+                    log_dict["peer_type"] = "PP"
+                    log_dict["msg"] = log_string
+                    insert_log_row(conn, queries, log_dict)
+                    conn.commit()
                     try:
                         peer_row_CID = response_dict[
                             "peer_row_CID"
@@ -683,18 +753,19 @@ def filter_wantlist(
                         version = 0
 
                     if version == 1:
-                        verify_peer_and_update(
+                        peer_verified = verify_peer_and_update(
                             peer_row_CID,
                             logger,
                             config_dict,
                             conn,
                             queries,
-                            pid,
-                            Uconn,
-                            Uqueries,
                             Rconn,
                             Rqueries,
-                            peer_maint_queue,
+                            pid,
+                            url_dict,
+                            path_dict,
+                            peer_ID,
+                            self,
                         )
 
                     else:
@@ -744,12 +815,15 @@ def filter_wantlist(
             insert_log_row(conn, queries, log_dict)
             conn.commit()
 
-    # iconn.close()
-    return
+        if peer_verified:
+            break
+
+    return peer_verified
 
 
 def extract_peer_row_CID(
-    response_dict, conn, queries, pid, Uconn, Uqueries, Rconn, Rqueries
+    response_dict,
+    pid,
 ):
     try:
         peer_row_CID = response_dict["peer_row_CID"]  # from want item json file
@@ -762,8 +836,7 @@ def extract_peer_row_CID(
         log_dict["pid"] = pid
         log_dict["peer_type"] = "PP"
         log_dict["msg"] = log_string
-        # (conn, queries, log_dict)
-        # conn.commit()
+
         peer_row_CID = "null"
 
     return peer_row_CID
@@ -775,57 +848,83 @@ def verify_peer_and_update(
     config_dict,
     conn,
     queries,
-    pid,
-    Uconn,
-    Uqueries,
     Rconn,
     Rqueries,
-    peer_maint_queue,
+    pid,
+    url_dict,
+    path_dict,
+    peer_ID,
+    self,
 ):
     from diyims.security_utils import verify_peer_row_from_cid
+    from diyims.ipfs_utils import export_peer_table
+    from diyims.header_utils import ipfs_header_add
+    from diyims.database_utils import (
+        refresh_peer_row_from_template,
+    )  # , select_peer_table_entry_by_key
+
+    peer_row_dict = refresh_peer_row_from_template()
+    peer_row_dict["peer_ID"] = peer_ID
 
     peer_verified, peer_row_dict = verify_peer_row_from_cid(
         peer_row_CID, logger, config_dict
     )
 
-    # Read here for current status
     if peer_verified:
-        # Uconn, Uqueries = set_up_sql_operations(config_dict)
-        peer_row_dict["processing_status"] = "NPC"
         peer_row_dict["local_update_DTS"] = get_DTS()
-        # peer_row_dict["peer_ID"] = want_list_item["peer_ID"]
-        # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
 
-        update_peer_row_by_key_status(conn, queries, peer_row_dict)
+        update_peer_table_status_to_NPC(conn, queries, peer_row_dict)
         conn.commit()
-        # Uconn.close()
 
-        # print("Success")
         log_string = f"Peer {peer_row_dict['peer_ID']}  updated."
-
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "wantlist-filter-N3"
+        log_dict["process"] = "wantlist-filter-verify-peer-N1"
         log_dict["pid"] = pid
         log_dict["peer_type"] = "PP"
         log_dict["msg"] = log_string
         insert_log_row(conn, queries, log_dict)
         conn.commit()
-        # peer_maint_queue.put_nowait("new peer validated")
+
+        object_CID = export_peer_table(  # This creates the table that is used by the maint process as peers and theirs change and are published
+            conn,
+            queries,
+            url_dict,
+            path_dict,
+            config_dict,
+            logger,
+        )
+
+        DTS = get_DTS()
+        object_type = "peer_table_entry"
+        mode = "Normal"
+        peer_ID = self
+
+        ipfs_header_add(
+            DTS,
+            object_CID,
+            object_type,
+            peer_ID,
+            config_dict,
+            logger,
+            mode,
+            conn,
+            queries,
+        )
 
     else:
         log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."
 
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "wantlist-filter-F4"
+        log_dict["process"] = "wantlist-filter_verify_peer-F1"
         log_dict["pid"] = pid
         log_dict["peer_type"] = "PP"
         log_dict["msg"] = log_string
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
-    return
+    return peer_verified
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ CREATE TABLE "peer_table" (
 	"IPNS_name"	TEXT,
 	"id" TEXT,
 	"signature" TEXT,
-	"signature_valid" TEXT,
+	"signature_valid" INTEGER,
 	"peer_type" TEXT,
 	"origin_update_DTS"	TEXT,
 	"local_update_DTS" TEXT,
@@ -128,7 +128,7 @@ where peer_ID = :peer_ID and processing_status = "WLX"
 
 -- name: update_peer_table_peer_type_status!
 update peer_table set peer_type = :peer_type, processing_status = :processing_status,
-local_update_DTS = :local_update_DTS
+local_update_DTS = :local_update_DTS, version = :version
 where peer_ID = :peer_ID
 
 -- name: update_peer_table_metrics!
@@ -155,8 +155,11 @@ update peer_table set processing_status = :processing_status, local_update_DTS =
 where peer_ID = :peer_ID and  processing_status = "WLX"
 
 
--- name: update_peer_table_status_NPC!
-update peer_table set processing_status = :processing_status, local_update_DTS = :local_update_DTS
+-- name: update_peer_table_status_to_NPC!
+update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
+	signature_valid = :signature_valid, origin_update_DTS = :origin_update_DTS, local_update_DTS = :local_update_DTS,
+	 execution_platform = :execution_platform, python_version = :python_version,
+		IPFS_agent = :IPFS_agent, processing_status = :processing_status, agent = :agent
 where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "WLP" or
 	processing_status = "WLX" or processing_status = "WLZ")
 
@@ -194,6 +197,9 @@ ORDER BY
 SELECT
 	peer_ID,
 	IPNS_name,
+	id,
+	signature,
+	signature_valid,
 	peer_type,
    	origin_update_DTS,
 	local_update_DTS,
@@ -254,7 +260,7 @@ SELECT
 FROM
    peer_table
 
-where signature_valid = "1"
+where signature_valid = 1
 
 
 
@@ -357,6 +363,7 @@ where peer_ID = :peer_ID and object_CID = :object_CID
 -- all rows
 select peer_ID, object_CID, insert_DTS, last_update_DTS, insert_update_delta, source_peer_type
 from want_list_table
-where last_update_DTS >= :query_start_dts and last_update_DTS <= :query_stop_dts
+where last_update_DTS >= :query_start_dts and last_update_DTS <= :query_stop_dts and peer_ID = :peer_ID
 	and (insert_update_delta <= :largest_delta and insert_update_delta >= :smallest_delta)
+order by insert_update_delta DESC
 ;

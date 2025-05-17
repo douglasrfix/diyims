@@ -1,7 +1,7 @@
 # from datetime import datetime, timedelta, timezone
 
 # from pathlib import Path
-# from rich import print
+from rich import print
 # import requests
 
 # from diyims.config_utils import get_want_list_config_dict
@@ -12,64 +12,168 @@
 # )
 
 
-def export_peer_table(
-    conn,
-    queries,
-    url_dict,
-    path_dict,
-    config_dict,
-    logger,
-):
+def find_peer_test():
     """
     docstring
     """
-    import json
-    from diyims.path_utils import get_unique_file
+    # import json
+    # from diyims.path_utils import get_unique_file
     from diyims.requests_utils import execute_request
+    from diyims.logger_utils import get_logger
+    from diyims.ipfs_utils import get_url_dict
+    from diyims.config_utils import get_want_list_config_dict
+    import json
 
-    # config_dict = get_want_list_config_dict()
-    # conn, queries = set_up_sql_operations(config_dict)
-    peer_table_rows = queries.select_peer_table_signature_valid(conn)
-    peer_table_dict = {}
-    for row in peer_table_rows:
-        row_key_list = row.keys()
+    config_dict = get_want_list_config_dict()
+    logger = get_logger(
+        config_dict["log_file"],
+        "none",
+    )
+    url_dict = get_url_dict()
 
-        peer_dict = {}
-        for key in row_key_list:
-            peer_dict[key] = row[key]
-
-        # peer_table_dict["peer_ID"] = row["peer_ID"]
-        peer_table_dict[row["peer_ID"]] = peer_dict
-    print(peer_table_dict)
-    # print(peer_dict)
-
-    proto_path = path_dict["peer_path"]
-    proto_file = path_dict["peer_file"]
-    proto_file_path = get_unique_file(proto_path, proto_file)
-
-    param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-    with open(proto_file_path, "w") as write_file:
-        json.dump(peer_table_dict, write_file, indent=4)
-
-    f = open(proto_file_path, "rb")
-    add_file = {"file": f}
     response, status_code, response_dict = execute_request(
-        url_key="add",
+        url_key="id",
         logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
-        file=add_file,
+    )
+
+    self = response_dict["ID"]
+
+    param = {"arg": "QmWXemkANSxL54BApBjXDsu9137YDaUiwRhRxahhsLook6"}
+
+    response, status_code, response_dict = execute_request(
+        url_key="find_providers",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=config_dict,
         param=param,
     )
-    f.close()
+    line_list = []
+    for line in response.iter_lines():
+        line_list.append(line)
 
-    object_CID = response_dict["Hash"]
+    for line in line_list:
+        # for line in response.iter_lines():
+        decoded_line = line.decode("utf-8")  # to translate b string to character
+        line_dict = json.loads(
+            decoded_line
+        )  # could be done just using lists but is more transparent with dictionaries
 
-    return object_CID
+        if line_dict["Type"] == 4:
+            responses_list = line_dict["Responses"]
+            for response in responses_list:
+                list_of_peer_dict = str(response).replace(
+                    "'", '"'
+                )  # needed to use json
+                peer_dict = json.loads(str(list_of_peer_dict))
+                peer_ID = peer_dict["ID"]
+                if self != peer_ID:
+                    print(peer_ID)
+                    address_list = peer_dict["Addrs"]
+                    print(address_list)
+                    for address in address_list:
+                        if address[:5] == "/ip4/":
+                            if address[:7] != "/ip4/10":
+                                if address[:8] != "/ip4/192":  # 172.16 thru 172.31
+                                    if address[:8] != "/ip4/127":
+                                        index = address.lower().find("/tcp/")
+                                        port_start = index + 5
+                                        port = address[port_start:]
+                                        if port.isnumeric():
+                                            print(
+                                                "A",
+                                                index,
+                                                port,
+                                                address,
+                                            )
+                                            connect_address = (
+                                                address + "/p2p/" + peer_ID
+                                            )
+                                            print("B", connect_address)
+
+                                            # if address[:5] == "/ip6/":
+                                            # print("B", address)
+
+                                            param = {"arg": connect_address}
+
+                                            response, status_code, response_dict = (
+                                                execute_request(
+                                                    url_key="peering_add",
+                                                    logger=logger,
+                                                    url_dict=url_dict,
+                                                    config_dict=config_dict,
+                                                    param=param,
+                                                )
+                                            )
+
+                                            print(status_code, response_dict)
+
+                                            param = {"arg": connect_address}
+
+                                            response, status_code, response_dict = (
+                                                execute_request(
+                                                    url_key="connect",
+                                                    logger=logger,
+                                                    url_dict=url_dict,
+                                                    config_dict=config_dict,
+                                                    param=param,
+                                                )
+                                            )
+
+                                            print(status_code, response_dict)
+
+                                            response, status_code, response_dict = (
+                                                execute_request(
+                                                    url_key="dis_connect",
+                                                    logger=logger,
+                                                    url_dict=url_dict,
+                                                    config_dict=config_dict,
+                                                    param=param,
+                                                )
+                                            )
+
+                                            print(status_code, response_dict)
+
+                                            param = {"arg": peer_ID}
+
+                                            response, status_code, response_dict = (
+                                                execute_request(
+                                                    url_key="peering_remove",
+                                                    logger=logger,
+                                                    url_dict=url_dict,
+                                                    config_dict=config_dict,
+                                                    param=param,
+                                                )
+                                            )
+
+                                            print(status_code, response_dict)
+
+    """    for line in line_list:
+        decoded_line = line.decode("utf-8")
+        line_dict = json.loads(decoded_line)
+
+        if line_dict["Type"] != 4:
+            if peer_ID == line_dict["ID"]:
+            #if peer_ID == peer_ID:
+                responses_list = line_dict["Responses"]
+                for response in responses_list:
+
+                    list_of_peer_dict = str(response).replace("'", '"')
+                    peer_dict = json.loads(str(list_of_peer_dict))
+                    print(peer_dict["ID"])
+                    if peer_ID == peer_dict["ID"]:
+                        address_list = peer_dict["Addrs"]
+                        for address in address_list:
+                            #if address[:5] == "/ip4/":
+                            print("B", address)
+    """
+
+    return
 
 
 def test():
-    export_peer_table()
+    find_peer_test()
     return
 
 

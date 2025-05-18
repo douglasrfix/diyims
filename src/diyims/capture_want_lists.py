@@ -698,13 +698,12 @@ def filter_wantlist(
             url_dict=url_dict,
             config_dict=config_dict,
             param=param,
-            timeout=(3.05, 54),
+            timeout=(3.05, 104),
         )
 
         stop_DTS = get_DTS()
         start = datetime.fromisoformat(start_DTS)
         stop = datetime.fromisoformat(stop_DTS)
-
         duration = stop - start
 
         if status_code == 200:

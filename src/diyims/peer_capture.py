@@ -114,7 +114,7 @@ def capture_peer_main(peer_type):
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
-        found, added, promoted = capture_peers(
+        found, added, promoted, duration = capture_peers(
             logger,
             conn,
             queries,
@@ -133,15 +133,15 @@ def capture_peer_main(peer_type):
         total_added += added
         total_promoted += promoted
 
-        msg = f"Interval {capture_interval} complete."
+        msg = f"Interval {capture_interval} complete with find provider duration {duration}."
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
         log_dict["process"] = "peer_capture_main-2"
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = msg
-        # insert_log_row(conn, queries, log_dict)
-        # conn.commit()
+        insert_log_row(conn, queries, log_dict)
+        conn.commit()
 
         conn.close()  # -1
         Uconn.close()
@@ -171,6 +171,8 @@ def capture_peers(
     Rconn,
     Rqueries,
 ):
+    duration = datetime.fromisoformat(get_DTS())
+
     if peer_type == "PP":
         response, status_code, response_dict = execute_request(
             url_key="id",
@@ -180,6 +182,7 @@ def capture_peers(
         )
 
         self = response_dict["ID"]
+        start_DTS = get_DTS()
 
         response, status_code, response_dict = execute_request(
             url_key="find_providers",
@@ -188,6 +191,11 @@ def capture_peers(
             config_dict=capture_peer_config_dict,
             param={"arg": network_name},
         )
+
+        stop_DTS = get_DTS()
+        start = datetime.fromisoformat(start_DTS)
+        stop = datetime.fromisoformat(stop_DTS)
+        duration = stop - start
 
         found, added, promoted = decode_findprovs_structure(
             logger,
@@ -244,7 +252,7 @@ def capture_peers(
             Rqueries,
         )
 
-    return found, added, promoted
+    return found, added, promoted, duration
 
 
 def decode_findprovs_structure(

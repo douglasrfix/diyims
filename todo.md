@@ -163,4 +163,6 @@
 
 # [x]: #31 expand range of cleanup scope and provide internal management of runtimes
 
-# TODO: #35 add peer packaging to filter process
+# [x]: #35 add peer packaging to filter process
+
+# [x]: #37 refresh peer address if it changes during peer capture

@@ -357,7 +357,16 @@ def decode_findprovs_structure(
                                 # peer_table_dict["processing_status"] = "WLR"
                                 # peer_table_dict["version"] = connect_address
                                 update_peer = 1
-                            # else:
+
+                            else:
+                                if (
+                                    peer_table_entry["version"]
+                                    != peer_table_dict["version"]
+                                ):
+                                    peer_table_dict["version"] = peer_table_entry[
+                                        "version"
+                                    ]
+                                    update_peer = 1
                             #    peer_table_dict["processing_status"] = peer_table_entry[
                             #        "processing_status"
                             #    ]

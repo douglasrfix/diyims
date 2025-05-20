@@ -8,7 +8,8 @@ CREATE TABLE "header_table" (
 	"prior_header_CID"	TEXT,
 	'header_CID' TEXT,
 	"peer_ID" TEXT,
-	"processing_status" TEXT
+	"processing_status" TEXT,
+	PRIMARY KEY("header_CID")
 );
 
 CREATE TABLE "peer_table" (
@@ -304,6 +305,24 @@ where peer_ID = :peer_ID
 ORDER BY
 
 	insert_DTS DESC
+;
+
+-- name: select_header_CID^
+SELECT
+ 	version,
+   	object_CID,
+   	object_type,
+   	insert_DTS,
+   	prior_header_CID,
+   	header_CID,
+	peer_ID,
+	processing_status
+
+FROM
+   header_table
+
+where header_CID = :header_CID
+
 ;
 
 -- name: select_first_peer_row_entry_pointer^

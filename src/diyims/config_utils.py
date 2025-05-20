@@ -203,7 +203,7 @@ def get_scheduler_config_dict():
         parser["Scheduler"]["bitswap_enable"] = "False"
         parser["Scheduler"]["swarm_enable"] = "False"
         parser["Scheduler"]["submit_delay"] = "0"
-        parser["Scheduler"]["worker_pool"] = "6"
+        parser["Scheduler"]["worker_pool"] = "7"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
         parser["Scheduler"]["log_file"] = "scheduler.log"

@@ -9,6 +9,7 @@ from diyims.config_utils import get_scheduler_config_dict
 from diyims.queue_server import queue_main
 from diyims.database_utils import reset_peer_table_status
 from diyims.general_utils import select_local_peer_and_update_metrics
+from diyims.header_chain_utils import monitor_peer_publishing
 
 from multiprocessing import Process, set_start_method, freeze_support
 
@@ -39,6 +40,13 @@ def scheduler_main():
         sleep(int(scheduler_config_dict["submit_delay"]))
         publish_main_process.start()
         logger.debug("publish_main started.")
+
+        monitor_peer_publishing_main_process = Process(
+            target=monitor_peer_publishing
+        )  # 1
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        monitor_peer_publishing_main_process.start()
+        logger.debug("monitor_peer_publishing_main_process started.")
 
     if scheduler_config_dict["reset_enable"] == "True":
         reset_peer_table_status_process = Process(target=reset_peer_table_status)
@@ -125,6 +133,7 @@ def scheduler_main():
 
     if scheduler_config_dict["publish_enable"] == "Only":
         publish_main_process.join()
+        monitor_peer_publishing_main_process.join()
     if scheduler_config_dict["beacon_enable"] == "True":
         beacon_main_process.join()
         satisfy_main_process.join()
@@ -139,8 +148,9 @@ def scheduler_main():
         capture_swarm_want_lists_process.join()
 
     if scheduler_config_dict["publish_enable"] == "True":
-        logger.info("issuing terminate of publish .")
+        logger.info("issuing terminate of publish.")
         publish_main_process.terminate()
+        monitor_peer_publishing_main_process.terminate()
 
     if scheduler_config_dict["provider_enable"] == "True":
         logger.info("issuing terminate of logger_server_provider .")

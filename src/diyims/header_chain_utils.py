@@ -48,46 +48,30 @@ def monitor_peer_publishing():
                     config_dict=ipfs_config_dict,
                     param=param,
                 )
-                stop_DTS = get_DTS()
-                start = datetime.fromisoformat(start_DTS)
-                stop = datetime.fromisoformat(stop_DTS)
-                duration = stop - start
 
-                peer_ID = row["peer_ID"]
-                msg = f"In {duration} resolve for {peer_ID}."
-                log_dict = refresh_log_dict()
-                log_dict["DTS"] = get_DTS()
-                log_dict["process"] = "monitor peer publishing"
-                log_dict["pid"] = pid
-                log_dict["peer_type"] = "CM"
-                log_dict["msg"] = msg
-                insert_log_row(conn, queries, log_dict)
-                conn.commit()
+                if status_code == 200:
+                    stop_DTS = get_DTS()
+                    start = datetime.fromisoformat(start_DTS)
+                    stop = datetime.fromisoformat(stop_DTS)
+                    duration = stop - start
 
-                ipfs_header_CID = response_dict["Path"][6:]
-                db_header_row = Rqueries.select_last_header(Rconn, peer_ID=peer_ID)
+                    peer_ID = row["peer_ID"]
+                    msg = f"In {duration} resolve for {peer_ID}."
+                    log_dict = refresh_log_dict()
+                    log_dict["DTS"] = get_DTS()
+                    log_dict["process"] = "monitor peer publishing"
+                    log_dict["pid"] = pid
+                    log_dict["peer_type"] = "CM"
+                    log_dict["msg"] = msg
+                    insert_log_row(conn, queries, log_dict)
+                    conn.commit()
 
-                if (
-                    db_header_row is None
-                ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
-                    header_chain_maint(
-                        conn,
-                        queries,
-                        Rconn,
-                        Rqueries,
-                        ipfs_header_CID,
-                        logger,
-                        url_dict,
-                        ipfs_config_dict,
-                        pid,
-                    )  # add one or more headers
+                    ipfs_header_CID = response_dict["Path"][6:]
+                    db_header_row = Rqueries.select_last_header(Rconn, peer_ID=peer_ID)
 
-                else:
-                    most_recent_db_header = db_header_row["header_CID"]
-                    if most_recent_db_header == ipfs_header_CID:  # nothing new
-                        pass
-                        # print(f"no new entries for {peer_ID}")
-                    else:
+                    if (
+                        db_header_row is None
+                    ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
                         header_chain_maint(
                             conn,
                             queries,
@@ -99,7 +83,25 @@ def monitor_peer_publishing():
                             ipfs_config_dict,
                             pid,
                         )  # add one or more headers
-                        # this assumes an in order arrival sequence dht delivers a best value as the most current
+
+                    else:
+                        most_recent_db_header = db_header_row["header_CID"]
+                        if most_recent_db_header == ipfs_header_CID:  # nothing new
+                            pass
+                            # print(f"no new entries for {peer_ID}")
+                        else:
+                            header_chain_maint(
+                                conn,
+                                queries,
+                                Rconn,
+                                Rqueries,
+                                ipfs_header_CID,
+                                logger,
+                                url_dict,
+                                ipfs_config_dict,
+                                pid,
+                            )  # add one or more headers
+                            # this assumes an in order arrival sequence dht delivers a best value as the most current
 
         conn.close()
         sleep(600)

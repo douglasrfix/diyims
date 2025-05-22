@@ -18,10 +18,10 @@ from diyims.database_utils import (
     update_peer_table_status_WLP,
     update_peer_table_status_WLX,
     update_peer_table_status_WLZ,
-    update_peer_table_status_to_NPC,
+    update_peer_table_status_to_NPP,
     refresh_log_dict,
     insert_log_row,
-    # select_peer_table_entry_by_key,
+    select_peer_table_entry_by_key,
 )
 from diyims.general_utils import get_DTS, get_shutdown_target
 from diyims.ipfs_utils import get_url_dict
@@ -388,73 +388,75 @@ def submitted_capture_peer_want_list_by_id(
     ):
         # TODO: test for already completed peer since the last sample may have pu dated the peer to NPC.
         # this is to avoid consuming IPFS resources unnecessarily.
+        peer_row_dict = refresh_peer_row_from_template()
+        peer_row_dict["peer_ID"] = peer_ID
+        peer_row_entry = select_peer_table_entry_by_key(Rconn, Rqueries, peer_row_dict)
 
-        sleep(wait_seconds)
+        if peer_row_entry["processing_status"] == "WLX":
+            sleep(wait_seconds)
 
-        found, added, updated = capture_peer_want_list_by_id(
-            logger,
-            want_list_config_dict,
-            peer_table_dict,
-            conn,
-            queries,
-            pid,
-            peer_type,
-            Rconn,
-            Rqueries,
-        )
-        total_found += found
-        total_added += added
-        total_updated += updated
-
-        if found == 0:
-            zero_sample_count += 1
-        else:
-            zero_sample_count -= 1
-
-        if (
-            zero_sample_count == max_zero_sample_count
-        ):  # sampling permanently completed due to no want list available for peer
-            # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
-            peer_table_dict["processing_status"] = "WLZ"
-            peer_table_dict["local_update_DTS"] = get_DTS()
-            update_peer_table_status_WLZ(conn, queries, peer_table_dict)
-            conn.commit()
-            NCW_count += 1
-
-        samples += 1
-
-        # conn, queries = set_up_sql_operations(want_list_config_dict)
-        log_string = (
-            f"another sample in {samples} samples for {peer_ID} of type {peer_type}."
-        )
-        # logger.debug(log_string)
-
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peerID_want_list_capture_task-2"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = peer_type
-        log_dict["msg"] = log_string
-        # insert_log_row(conn, queries, log_dict)
-        # conn.commit()
-
-        # if pp test for capture Here each sample
-        # it is better to use db resources rather than IPFS
-        if peer_type == "PP":
-            peer_verified = filter_wantlist(
-                pid,
+            found, added, updated = capture_peer_want_list_by_id(
                 logger,
                 want_list_config_dict,
+                peer_table_dict,
                 conn,
                 queries,
-                path_dict,
+                pid,
+                peer_type,
                 Rconn,
                 Rqueries,
-                peer_ID,
-                self,
             )
-            if peer_verified:
-                break
+            total_found += found
+            total_added += added
+            total_updated += updated
+
+            if found == 0:
+                zero_sample_count += 1
+            else:
+                zero_sample_count -= 1
+
+            if (
+                zero_sample_count == max_zero_sample_count
+            ):  # sampling permanently completed due to no want list available for peer
+                # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
+                peer_table_dict["processing_status"] = "WLZ"
+                peer_table_dict["local_update_DTS"] = get_DTS()
+                update_peer_table_status_WLZ(conn, queries, peer_table_dict)
+                conn.commit()
+                NCW_count += 1
+
+            samples += 1
+
+            # conn, queries = set_up_sql_operations(want_list_config_dict)
+            log_string = f"another sample in {samples} samples for {peer_ID} of type {peer_type}."
+            # logger.debug(log_string)
+
+            log_dict = refresh_log_dict()
+            log_dict["DTS"] = get_DTS()
+            log_dict["process"] = "peerID_want_list_capture_task-2"
+            log_dict["pid"] = pid
+            log_dict["peer_type"] = peer_type
+            log_dict["msg"] = log_string
+            # insert_log_row(conn, queries, log_dict)
+            # conn.commit()
+
+            # if pp test for capture Here each sample
+            # it is better to use db resources rather than IPFS
+            if peer_type == "PP":
+                peer_verified = filter_wantlist(
+                    pid,
+                    logger,
+                    want_list_config_dict,
+                    conn,
+                    queries,
+                    path_dict,
+                    Rconn,
+                    Rqueries,
+                    peer_ID,
+                    self,
+                )
+                if peer_verified:
+                    break
 
     if zero_sample_count < max_zero_sample_count:  # sampling interval completed
         # set from WLX to WLR so sampling will be continued if not NPC
@@ -670,152 +672,161 @@ def filter_wantlist(
 
     peer_verified = 0
     for want_list_item_row in rows_of_wantlist_items:
-        want_list_object_CID = want_list_item_row[
-            "object_CID"
-        ]  # This is the json file containing the peer row cid
+        peer_row_dict = refresh_peer_row_from_template()
+        peer_row_dict["peer_ID"] = peer_ID
+        peer_row_entry = select_peer_table_entry_by_key(Rconn, Rqueries, peer_row_dict)
+        if peer_row_entry["processing_status"] == "WLX":
+            want_list_object_CID = want_list_item_row[
+                "object_CID"
+            ]  # This is the json file containing the peer row cid
 
-        log_string = f"Object {want_list_object_CID} found between {query_start_dts} and {query_stop_dts} for {peer_ID}."
-
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "wantlist-filter-N1"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = "PP"
-        log_dict["msg"] = log_string
-        # insert_log_row(conn, queries, log_dict)
-        # conn.commit()
-
-        url_dict = get_url_dict()
-        param = {
-            "arg": want_list_object_CID,  # json file
-        }
-        url_key = "cat"
-
-        start_DTS = get_DTS()
-
-        response, status_code, response_dict = execute_request(
-            url_key,
-            url_dict=url_dict,
-            config_dict=config_dict,
-            param=param,
-            timeout=(3.05, 104),
-        )
-
-        stop_DTS = get_DTS()
-        start = datetime.fromisoformat(start_DTS)
-        stop = datetime.fromisoformat(stop_DTS)
-        duration = stop - start
-
-        if status_code == 200:
-            X_Content_Length = int(response.headers["X-Content-Length"])
-
-            log_string = f"CAT result {status_code} used {duration} with dictionary of {response_dict} with {X_Content_Length} for {peer_ID}."
+            log_string = f"Object {want_list_object_CID} found between {query_start_dts} and {query_stop_dts} for {peer_ID}."
 
             log_dict = refresh_log_dict()
             log_dict["DTS"] = get_DTS()
-            log_dict["process"] = "wantlist-filter-N2"
+            log_dict["process"] = "wantlist-filter-N1"
             log_dict["pid"] = pid
             log_dict["peer_type"] = "PP"
             log_dict["msg"] = log_string
-            insert_log_row(conn, queries, log_dict)
-            conn.commit()
+            # insert_log_row(conn, queries, log_dict)
+            # conn.commit()
 
-            if (
-                X_Content_Length >= x_content_min and X_Content_Length <= x_content_max
-            ):  # this will filter out most of the false positives
-                peer_row_CID = extract_peer_row_CID(
-                    response_dict,
-                    pid,
-                )
+            url_dict = get_url_dict()
+            param = {
+                "arg": want_list_object_CID,  # json file
+            }
+            url_key = "cat"
 
-                if peer_row_CID != "null":
-                    log_string = f"Verify and update for {peer_ID}."
+            start_DTS = get_DTS()
 
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "wantlist-filter-N3"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = log_string
-                    insert_log_row(conn, queries, log_dict)
-                    conn.commit()
-                    try:
-                        peer_row_CID = response_dict[
-                            "peer_row_CID"
-                        ]  # from want item json file
-                        version = 1
+            response, status_code, response_dict = execute_request(
+                url_key,
+                url_dict=url_dict,
+                config_dict=config_dict,
+                param=param,
+                timeout=(3.05, 104),
+            )
 
-                    except KeyError:
-                        peer_row_CID = response_dict[
-                            "peer_row_CID"
-                        ]  # from want item json file
-                        version = 0
+            stop_DTS = get_DTS()
+            start = datetime.fromisoformat(start_DTS)
+            stop = datetime.fromisoformat(stop_DTS)
+            duration = stop - start
 
-                    if version == 1:
-                        peer_verified = verify_peer_and_update(
-                            peer_row_CID,
-                            logger,
-                            config_dict,
-                            conn,
-                            queries,
-                            Rconn,
-                            Rqueries,
-                            pid,
-                            url_dict,
-                            path_dict,
-                            peer_ID,
-                            self,
-                        )
+            if status_code == 200:
+                X_Content_Length = int(response.headers["X-Content-Length"])
 
-                    else:
-                        log_string = "Probably early version of application dictionary."
-
-                        log_dict = refresh_log_dict()
-                        log_dict["DTS"] = get_DTS()
-                        log_dict["process"] = "wantlist-filter-F5"
-                        log_dict["pid"] = pid
-                        log_dict["peer_type"] = "PP"
-                        log_dict["msg"] = log_string
-                        insert_log_row(conn, queries, log_dict)
-                        conn.commit()
-
-                else:
-                    log_string = "Unknown dictionary."
-
-                    log_dict = refresh_log_dict()
-                    log_dict["DTS"] = get_DTS()
-                    log_dict["process"] = "wantlist-filter-F4"
-                    log_dict["pid"] = pid
-                    log_dict["peer_type"] = "PP"
-                    log_dict["msg"] = log_string
-                    insert_log_row(conn, queries, log_dict)
-                    conn.commit()
-            else:
-                log_string = f"{want_list_object_CID} failed header length test with{X_Content_Length}."
+                log_string = f"CAT result {status_code} used {duration} with dictionary of {response_dict} with {X_Content_Length} for {peer_ID}."
 
                 log_dict = refresh_log_dict()
                 log_dict["DTS"] = get_DTS()
-                log_dict["process"] = "wantlist-filter-F2"
+                log_dict["process"] = "wantlist-filter-N2"
                 log_dict["pid"] = pid
                 log_dict["peer_type"] = "PP"
                 log_dict["msg"] = log_string
                 insert_log_row(conn, queries, log_dict)
                 conn.commit()
 
-        else:
-            log_string = f"CAT failed for {want_list_object_CID} with {status_code}."
+                if (
+                    X_Content_Length >= x_content_min
+                    and X_Content_Length <= x_content_max
+                ):  # this will filter out most of the false positives
+                    peer_row_CID = extract_peer_row_CID(
+                        response_dict,
+                        pid,
+                    )
 
-            log_dict = refresh_log_dict()
-            log_dict["DTS"] = get_DTS()
-            log_dict["process"] = "wantlist-filter-F1"
-            log_dict["pid"] = pid
-            log_dict["peer_type"] = "PP"
-            log_dict["msg"] = log_string
-            insert_log_row(conn, queries, log_dict)
-            conn.commit()
+                    if peer_row_CID != "null":
+                        log_string = f"Verify and update for {peer_ID}."
 
-        if peer_verified:
-            break
+                        log_dict = refresh_log_dict()
+                        log_dict["DTS"] = get_DTS()
+                        log_dict["process"] = "wantlist-filter-N3"
+                        log_dict["pid"] = pid
+                        log_dict["peer_type"] = "PP"
+                        log_dict["msg"] = log_string
+                        insert_log_row(conn, queries, log_dict)
+                        conn.commit()
+                        try:
+                            peer_row_CID = response_dict[
+                                "peer_row_CID"
+                            ]  # from want item json file
+                            version = 1
+
+                        except KeyError:
+                            peer_row_CID = response_dict[
+                                "peer_row_CID"
+                            ]  # from want item json file
+                            version = 0
+
+                        if version == 1:
+                            peer_verified = verify_peer_and_update(
+                                peer_row_CID,
+                                logger,
+                                config_dict,
+                                conn,
+                                queries,
+                                Rconn,
+                                Rqueries,
+                                pid,
+                                url_dict,
+                                path_dict,
+                                peer_ID,
+                                self,
+                            )
+
+                        else:
+                            log_string = (
+                                "Probably early version of application dictionary."
+                            )
+
+                            log_dict = refresh_log_dict()
+                            log_dict["DTS"] = get_DTS()
+                            log_dict["process"] = "wantlist-filter-F5"
+                            log_dict["pid"] = pid
+                            log_dict["peer_type"] = "PP"
+                            log_dict["msg"] = log_string
+                            insert_log_row(conn, queries, log_dict)
+                            conn.commit()
+
+                    else:
+                        log_string = "Unknown dictionary."
+
+                        log_dict = refresh_log_dict()
+                        log_dict["DTS"] = get_DTS()
+                        log_dict["process"] = "wantlist-filter-F4"
+                        log_dict["pid"] = pid
+                        log_dict["peer_type"] = "PP"
+                        log_dict["msg"] = log_string
+                        insert_log_row(conn, queries, log_dict)
+                        conn.commit()
+                else:
+                    log_string = f"{want_list_object_CID} failed header length test with{X_Content_Length}."
+
+                    log_dict = refresh_log_dict()
+                    log_dict["DTS"] = get_DTS()
+                    log_dict["process"] = "wantlist-filter-F2"
+                    log_dict["pid"] = pid
+                    log_dict["peer_type"] = "PP"
+                    log_dict["msg"] = log_string
+                    insert_log_row(conn, queries, log_dict)
+                    conn.commit()
+
+            else:
+                log_string = (
+                    f"CAT failed for {want_list_object_CID} with {status_code}."
+                )
+
+                log_dict = refresh_log_dict()
+                log_dict["DTS"] = get_DTS()
+                log_dict["process"] = "wantlist-filter-F1"
+                log_dict["pid"] = pid
+                log_dict["peer_type"] = "PP"
+                log_dict["msg"] = log_string
+                insert_log_row(conn, queries, log_dict)
+                conn.commit()
+
+            if peer_verified:
+                break
 
     return peer_verified
 
@@ -825,7 +836,9 @@ def extract_peer_row_CID(
     pid,
 ):
     try:
-        peer_row_CID = response_dict["peer_row_CID"]  # from want item json file
+        peer_row_CID = response_dict[
+            "peer_row_CID"
+        ]  # from want item json file which is a pointer to the
     except KeyError:
         log_string = "dictionary did not contain a peer_row_CID."
 
@@ -858,12 +871,14 @@ def verify_peer_and_update(
     from diyims.security_utils import verify_peer_row_from_cid
     from diyims.ipfs_utils import export_peer_table
     from diyims.header_utils import ipfs_header_add
-    from diyims.database_utils import (
-        refresh_peer_row_from_template,
-    )  # , select_peer_table_entry_by_key
+    from diyims.database_utils import refresh_peer_row_from_template
 
     peer_row_dict = refresh_peer_row_from_template()
     peer_row_dict["peer_ID"] = peer_ID
+
+    # peer_row_entry = select_peer_table_entry_by_key(Rconn, Rqueries, peer_row_dict)
+
+    # if peer_row_entry["processing_status"] == "WLX":
 
     peer_verified, peer_row_dict = verify_peer_row_from_cid(
         peer_row_CID, logger, config_dict
@@ -872,7 +887,7 @@ def verify_peer_and_update(
     if peer_verified:
         peer_row_dict["local_update_DTS"] = get_DTS()
 
-        update_peer_table_status_to_NPC(conn, queries, peer_row_dict)
+        update_peer_table_status_to_NPP(conn, queries, peer_row_dict)
         conn.commit()
 
         log_string = f"Peer {peer_row_dict['peer_ID']}  updated."
@@ -885,17 +900,20 @@ def verify_peer_and_update(
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
-        object_CID = export_peer_table(  # This creates the table that is used by the maint process as peers and theirs change and are published
-            conn,
-            queries,
-            url_dict,
-            path_dict,
-            config_dict,
-            logger,
+        object_CID = (
+            export_peer_table(  # NOTE:  what object should this be for table processing
+                conn,
+                queries,
+                url_dict,
+                path_dict,
+                config_dict,
+                logger,
+            )
         )
+        object_CID = peer_row_CID  #
 
         DTS = get_DTS()
-        object_type = "peer_table_entry"
+        object_type = "validated_remote_peer_row_entry"
         mode = "Normal"
         peer_ID = self
 
@@ -923,7 +941,7 @@ def verify_peer_and_update(
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
-    return peer_verified
+        return peer_verified
 
 
 if __name__ == "__main__":

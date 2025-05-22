@@ -60,9 +60,28 @@ CREATE TABLE "clean_up" (
 	PRIMARY KEY("DTS")
 );
 
+CREATE TABLE "subscription" (
+	"peer_ID"	TEXT,
+	"object_type"	TEXT,
+	"notify_queue"	TEXT,
+	"header_CID"	TEXT
+);
+
 -- name: set_pragma#
 PRAGMA journal_mode = WAL
 ;
+
+-- name: select_subscriptions_by_object_type
+SELECT
+	peer_ID,
+	object_type,
+	notify_queue,
+	header_CID
+
+FROM
+   subscription
+
+WHERE object_type = :object_type
 
 -- name: select_clean_up_rows_by_date
 SELECT
@@ -156,7 +175,7 @@ update peer_table set processing_status = :processing_status, local_update_DTS =
 where peer_ID = :peer_ID and  processing_status = "WLX"
 
 
--- name: update_peer_table_status_to_NPC!
+-- name: update_peer_table_status_to_NPP!
 update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
 	signature_valid = :signature_valid, origin_update_DTS = :origin_update_DTS, local_update_DTS = :local_update_DTS,
 	 execution_platform = :execution_platform, python_version = :python_version,

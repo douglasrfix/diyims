@@ -165,7 +165,7 @@ def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
+def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -180,7 +180,7 @@ def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
         queries (_type_): _description_
         peer_table_dict (_type_): _description_
     """
-    queries.update_peer_table_status_to_NPC(
+    queries.update_peer_table_status_to_NPP(
         conn,
         IPNS_name=peer_table_dict["IPNS_name"],
         id=peer_table_dict["id"],
@@ -191,7 +191,7 @@ def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
         execution_platform=peer_table_dict["execution_platform"],
         python_version=peer_table_dict["python_version"],
         IPFS_agent=peer_table_dict["IPFS_agent"],
-        processing_status="NPC",
+        processing_status="NPP",
         # processing_status=peer_table_dict["processing_status"],
         agent=peer_table_dict["agent"],
         peer_ID=peer_table_dict["peer_ID"],

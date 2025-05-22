@@ -1,8 +1,9 @@
 from datetime import datetime
 from time import sleep
 import psutil
+from multiprocessing.managers import BaseManager
 from sqlite3 import IntegrityError
-from diyims.config_utils import get_ipfs_config_dict
+from diyims.config_utils import get_beacon_config_dict
 from diyims.database_utils import (
     set_up_sql_operations,
     insert_header_row,
@@ -22,13 +23,18 @@ def monitor_peer_publishing():
 
     p = psutil.Process()
     pid = p.pid
-
-    ipfs_config_dict = get_ipfs_config_dict()
+    ipfs_config_dict = get_beacon_config_dict()
     logger = get_logger(
         ipfs_config_dict["log_file"],
         "none",
     )
     url_dict = get_url_dict()
+
+    q_server_port = int(ipfs_config_dict["q_server_port"])
+    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+    queue_server.register("get_peer_maint_queue")
+    queue_server.connect()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
 
     while True:
         conn, queries = set_up_sql_operations(ipfs_config_dict)
@@ -82,6 +88,7 @@ def monitor_peer_publishing():
                             url_dict,
                             ipfs_config_dict,
                             pid,
+                            peer_maint_queue,
                         )  # add one or more headers
 
                     else:
@@ -100,6 +107,7 @@ def monitor_peer_publishing():
                                 url_dict,
                                 ipfs_config_dict,
                                 pid,
+                                peer_maint_queue,
                             )  # add one or more headers
                             # this assumes an in order arrival sequence dht delivers a best value as the most current
 
@@ -119,11 +127,13 @@ def header_chain_maint(
     url_dict,
     ipfs_config_dict,
     pid,
+    peer_maint_queue,
 ):
     """
     docstring
     """
 
+    # ipfs_config_dict = get_ipfs_config_dict()
     while True:
         start_DTS = get_DTS()
         ipfs_path = "/ipfs/" + ipfs_header_CID
@@ -154,15 +164,29 @@ def header_chain_maint(
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
+        object_type = response_dict["object_type"]
+        subscription_rows = Rqueries.select_subscriptions_by_object_type(
+            Rconn, object_type=object_type
+        )
+
+        for row in subscription_rows:
+            if row["object_type"] == "local_peer_row_entry":
+                if (
+                    row["notify_maint_queue"] == "peer_maint_queue"
+                ):  # maybe dictionary look up put function into a variable and execute
+                    peer_maint_queue.put_nowait(response_dict)
+
         try:  # this method adds one extra cat to the process
             insert_header_row(conn, queries, response_dict, ipfs_header_CID)
             conn.commit()
 
         except IntegrityError:
             # pass will correct missing db components
+            conn.rollback()
             break
 
         # this method eliminates the cat  abd insert exception and uses a db read instead
+
         ipfs_header_CID = response_dict["prior_header_CID"]
 
         if ipfs_header_CID == "null":  # no more headers

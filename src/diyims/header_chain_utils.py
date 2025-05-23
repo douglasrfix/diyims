@@ -42,7 +42,7 @@ def monitor_peer_publishing():
         peer_table_rows = Rqueries.select_peer_table_signature_valid(Rconn)
 
         for row in peer_table_rows:  # peer level
-            if row["peer_type"] != "LP":
+            if row["peer_type"] != "LP" and row["processing_status"] == "NPC":
                 ipns_path = "/ipns/" + row["IPNS_name"]
 
                 start_DTS = get_DTS()

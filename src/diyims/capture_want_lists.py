@@ -25,6 +25,8 @@ from diyims.database_utils import (
 )
 from diyims.general_utils import get_DTS, get_shutdown_target
 from diyims.ipfs_utils import get_url_dict
+
+# from diyims.header_utils import ipfs_header_add
 from diyims.logger_utils import get_logger_task, get_logger
 from diyims.config_utils import get_want_list_config_dict
 from diyims.path_utils import get_path_dict
@@ -234,45 +236,46 @@ def capture_want_lists_for_peers(
     )
 
     for peer_row in rows_of_peers:
-        param = {"arg": peer_row["version"]}
+        if peer_row["version"] != "null":
+            param = {"arg": peer_row["version"]}
 
-        response, status_code, response_dict = execute_request(
-            url_key="connect",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=want_list_config_dict,
-            param=param,
-        )
+            response, status_code, response_dict = execute_request(
+                url_key="connect",
+                logger=logger,
+                url_dict=url_dict,
+                config_dict=want_list_config_dict,
+                param=param,
+            )
+            if status_code == 200:
+                peer_table_dict = refresh_peer_row_from_template()
+                peer_table_dict["peer_ID"] = peer_row["peer_ID"]
+                peer_table_dict["peer_type"] = peer_row["peer_type"]
+                peer_table_dict["processing_status"] = (
+                    "WLP"  # suppress resubmission by WLR -> WLP
+                )
+                peer_table_dict["local_update_DTS"] = get_DTS()
 
-        peer_table_dict = refresh_peer_row_from_template()
-        peer_table_dict["peer_ID"] = peer_row["peer_ID"]
-        peer_table_dict["peer_type"] = peer_row["peer_type"]
-        peer_table_dict["processing_status"] = (
-            "WLP"  # suppress resubmission by WLR -> WLP
-        )
-        peer_table_dict["local_update_DTS"] = get_DTS()
+                update_peer_table_status_WLP(conn, queries, peer_table_dict)
+                conn.commit()
 
-        update_peer_table_status_WLP(conn, queries, peer_table_dict)
-        conn.commit()
+                pool.apply_async(
+                    submitted_capture_peer_want_list_by_id,
+                    args=(
+                        want_list_config_dict,
+                        peer_table_dict,
+                    ),
+                )
 
-        pool.apply_async(
-            submitted_capture_peer_want_list_by_id,
-            args=(
-                want_list_config_dict,
-                peer_table_dict,
-            ),
-        )
-
-        log_string = f"peer {peers_processed} id {peer_table_dict['peer_ID']}."
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peer_want_capture_peer-1"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = peer_type
-        log_dict["msg"] = log_string
-        # insert_log_row(conn, queries, log_dict)
-        # conn.commit()
-        peers_processed += 1
+                log_string = f"peer {peers_processed} id {peer_table_dict['peer_ID']}."
+                log_dict = refresh_log_dict()
+                log_dict["DTS"] = get_DTS()
+                log_dict["process"] = "peer_want_capture_peer-1"
+                log_dict["pid"] = pid
+                log_dict["peer_type"] = peer_type
+                log_dict["msg"] = log_string
+                # insert_log_row(conn, queries, log_dict)
+                # conn.commit()
+                peers_processed += 1
 
     Rconn.close()  # - 1
 
@@ -572,7 +575,7 @@ def decode_want_list_structure(
         peer_ID = peer_table_dict["peer_ID"]
 
         want_list_table_dict = refresh_want_list_table_dict()  # TODO: rename template
-        want_list_table_dict["peer_ID"] = peer_table_dict["peer_ID"]
+        want_list_table_dict["peer_ID"] = peer_ID
         want_list_table_dict["object_CID"] = want_item
         want_list_table_dict["insert_DTS"] = get_DTS()
         want_list_table_dict["source_peer_type"] = peer_table_dict["peer_type"]
@@ -746,6 +749,8 @@ def filter_wantlist(
                         log_dict["msg"] = log_string
                         insert_log_row(conn, queries, log_dict)
                         conn.commit()
+                        version = 1
+                        """
                         try:
                             peer_row_CID = response_dict[
                                 "peer_row_CID"
@@ -757,22 +762,38 @@ def filter_wantlist(
                                 "peer_row_CID"
                             ]  # from want item json file
                             version = 0
+                        """
 
                         if version == 1:
-                            peer_verified = verify_peer_and_update(
-                                peer_row_CID,
-                                logger,
+                            DTS = get_DTS()
+                            peer_row_dict["local_update_DTS"] = DTS
+                            update_peer_table_status_to_NPP(
+                                conn, queries, peer_row_dict, peer_row_CID
+                            )
+                            conn.commit()
+
+                            """
+                            object_CID = peer_row_CID  #
+
+                            DTS = get_DTS()
+                            object_type = "provider_remote_peer_row_entry"
+                            mode = "init"
+                            peer_ID = self
+
+                            ipfs_header_add(
+                                DTS,
+                                object_CID,
+                                object_type,
+                                peer_ID,
                                 config_dict,
+                                logger,
+                                mode,
                                 conn,
                                 queries,
-                                Rconn,
-                                Rqueries,
-                                pid,
-                                url_dict,
-                                path_dict,
-                                peer_ID,
-                                self,
                             )
+
+
+                            """
 
                         else:
                             log_string = (
@@ -852,96 +873,6 @@ def extract_peer_row_CID(
         peer_row_CID = "null"
 
     return peer_row_CID
-
-
-def verify_peer_and_update(
-    peer_row_CID,
-    logger,
-    config_dict,
-    conn,
-    queries,
-    Rconn,
-    Rqueries,
-    pid,
-    url_dict,
-    path_dict,
-    peer_ID,
-    self,
-):
-    from diyims.security_utils import verify_peer_row_from_cid
-    from diyims.ipfs_utils import export_peer_table
-    from diyims.header_utils import ipfs_header_add
-    from diyims.database_utils import refresh_peer_row_from_template
-
-    peer_row_dict = refresh_peer_row_from_template()
-    peer_row_dict["peer_ID"] = peer_ID
-
-    # peer_row_entry = select_peer_table_entry_by_key(Rconn, Rqueries, peer_row_dict)
-
-    # if peer_row_entry["processing_status"] == "WLX":
-
-    peer_verified, peer_row_dict = verify_peer_row_from_cid(
-        peer_row_CID, logger, config_dict
-    )
-
-    if peer_verified:
-        peer_row_dict["local_update_DTS"] = get_DTS()
-
-        update_peer_table_status_to_NPP(conn, queries, peer_row_dict)
-        conn.commit()
-
-        log_string = f"Peer {peer_row_dict['peer_ID']}  updated."
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "wantlist-filter-verify-peer-N1"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = "PP"
-        log_dict["msg"] = log_string
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
-
-        object_CID = (
-            export_peer_table(  # NOTE:  what object should this be for table processing
-                conn,
-                queries,
-                url_dict,
-                path_dict,
-                config_dict,
-                logger,
-            )
-        )
-        object_CID = peer_row_CID  #
-
-        DTS = get_DTS()
-        object_type = "validated_remote_peer_row_entry"
-        mode = "Normal"
-        peer_ID = self
-
-        ipfs_header_add(
-            DTS,
-            object_CID,
-            object_type,
-            peer_ID,
-            config_dict,
-            logger,
-            mode,
-            conn,
-            queries,
-        )
-
-    else:
-        log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."
-
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "wantlist-filter_verify_peer-F1"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = "PP"
-        log_dict["msg"] = log_string
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
-
-        return peer_verified
 
 
 if __name__ == "__main__":

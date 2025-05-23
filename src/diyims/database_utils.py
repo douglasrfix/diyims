@@ -165,7 +165,7 @@ def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
+def update_peer_table_status_to_NPP(conn, queries, peer_table_dict, peer_row_CID):
     """
     Summary:
 
@@ -182,6 +182,32 @@ def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
     """
     queries.update_peer_table_status_to_NPP(
         conn,
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        processing_status="NPP",
+        agent=peer_row_CID,
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
+    """
+    Summary:
+
+    _summary_
+
+    Updates IPNS_name, id, signature, signature_valid, origin_update_DTS, local_update_DTS,
+            execution_platform, python_version, IPFS_agent, processing_status, and agent
+        based upon peer_ID
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+    """
+
+    queries.update_peer_table_status_to_NPC(
+        conn,
         IPNS_name=peer_table_dict["IPNS_name"],
         id=peer_table_dict["id"],
         signature=peer_table_dict["signature"],
@@ -192,7 +218,6 @@ def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
         python_version=peer_table_dict["python_version"],
         IPFS_agent=peer_table_dict["IPFS_agent"],
         processing_status="NPP",
-        # processing_status=peer_table_dict["processing_status"],
         agent=peer_table_dict["agent"],
         peer_ID=peer_table_dict["peer_ID"],
     )

@@ -328,7 +328,7 @@ def decode_findprovs_structure(
                         peer_table_dict["peer_ID"] = peer_dict["ID"]
                         peer_table_dict["local_update_DTS"] = DTS
                         peer_table_dict["peer_type"] = "PP"
-                        peer_table_dict["processing_status"] = "NPC"
+                        peer_table_dict["processing_status"] = "NPR"
                         peer_table_dict["version"] = "0"
 
                     try:

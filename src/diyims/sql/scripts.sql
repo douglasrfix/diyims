@@ -176,12 +176,16 @@ where peer_ID = :peer_ID and  processing_status = "WLX"
 
 
 -- name: update_peer_table_status_to_NPP!
+update peer_table set  local_update_DTS = :local_update_DTS, processing_status = :processing_status, agent = :agent
+where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "WLP" or
+	processing_status = "WLX" or processing_status = "WLZ")
+
+-- name: update_peer_table_status_to_NPC!
 update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
 	signature_valid = :signature_valid, origin_update_DTS = :origin_update_DTS, local_update_DTS = :local_update_DTS,
 	 execution_platform = :execution_platform, python_version = :python_version,
-		IPFS_agent = :IPFS_agent, processing_status = :processing_status, agent = :agent
-where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "WLP" or
-	processing_status = "WLX" or processing_status = "WLZ")
+		IPFS_agent = :IPFS_agent, processing_status = :processing_status, version = :agent
+where peer_ID = :peer_ID
 
 
 -- name: reset_peer_table_status#
@@ -282,6 +286,27 @@ FROM
 
 where signature_valid = 1
 
+-- name: select_peer_table_processing_status_NPP
+SELECT
+	peer_ID,
+	IPNS_name,
+	id,
+	signature,
+	signature_valid,
+	peer_type,
+   	origin_update_DTS,
+	local_update_DTS,
+   	execution_platform,
+	python_version,
+   	IPFS_agent,
+	processing_status,
+	agent,
+ 	version
+
+FROM
+   peer_table
+
+where processing_status = "NPP"
 
 
 -- name: insert_header_row!

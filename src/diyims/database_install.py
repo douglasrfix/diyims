@@ -225,12 +225,21 @@ def init():
     conn.commit()
 
     object_CID = response_dict["Hash"]
+    peer_row_CID = object_CID
     object_type = "local_peer_row_entry"
 
     mode = "init"
 
     header_CID = ipfs_header_add(
-        DTS, object_CID, object_type, peer_ID, config_dict, logger, mode, conn, queries
+        DTS,
+        peer_row_CID,
+        object_type,
+        peer_ID,
+        config_dict,
+        logger,
+        mode,
+        conn,
+        queries,
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")

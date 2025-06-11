@@ -15,7 +15,7 @@ from typing_extensions import Annotated
 from diyims import install_cli
 from diyims import beacon_cli
 from diyims.scheduler import scheduler_main
-from diyims.general_utils import clean_up
+from diyims.general_utils import clean_up, shutdown_cmd
 from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
 from diyims.peer_capture import capture_peer_main
@@ -35,6 +35,11 @@ app.add_typer(beacon_cli.app, name="beacon-utils")
 @app.command()
 def danger():
     force_purge()
+
+
+@app.command()
+def shutdown():
+    shutdown_cmd()
 
 
 @app.command()

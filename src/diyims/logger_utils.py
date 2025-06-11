@@ -144,4 +144,4 @@ def logger_server_main(peer_type):
         message = server_queue.get()
         # log the message
         logger.handle(message)
-        # sleep(1)
+        # sleep(1#)

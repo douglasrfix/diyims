@@ -166,3 +166,5 @@
 # [x]: #35 add peer packaging to filter process
 
 # [x]: #37 refresh peer address if it changes during peer capture
+
+# TODO: #39 validate signature when adding a local peer entry via chain maint

@@ -141,17 +141,17 @@
 
 ## [x]: add number of intervals to the shutdown criteria
 
-## []: add scheduling element to peer table
+## [x]: add scheduling element to peer table
 
-## []: add provider monitoring data element to peer table
+## [x]: add provider monitoring data element to peer table
 
-## NOTE: task to clean up beacon CIDs
+## [x]: task to clean up beacon CIDs
 
 ## [x]: #7 support for peer table revision ABANDONED
 
 ## [x]: #17 up grade db-init process to use new header functions
 
-## TODO: #19 implement rapid shut down
+## [x]: #19 implement rapid shut down
 
 ## [x]: #21 integrate metrics update into start up process
 
@@ -167,4 +167,6 @@
 
 ## [x]: #37 refresh peer address if it changes during peer capture
 
-## TODO: #39 validate signature when adding a local peer entry via chain maint
+## [x]: #39 validate signature when adding a local peer entry via chain maint
+
+## TODO: #41 add header chain corruption detection

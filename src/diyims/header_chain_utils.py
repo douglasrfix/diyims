@@ -55,7 +55,7 @@ def monitor_peer_publishing():
             shutdown_row_dict = select_shutdown_entry(
                 Rconn,
                 Rqueries,
-            )  # TODO: should cain maint be interrupted
+            )
             if shutdown_row_dict["enabled"]:
                 break
             if (
@@ -139,14 +139,14 @@ def monitor_peer_publishing():
                 shutdown_row_dict = select_shutdown_entry(
                     Rconn,
                     Rqueries,
-                )  # TODO: should cain maint be interrupted
+                )
                 if shutdown_row_dict["enabled"]:
                     break
             else:
                 shutdown_row_dict = select_shutdown_entry(
                     Rconn,
                     Rqueries,
-                )  # TODO: should cain maint be interrupted
+                )
                 if shutdown_row_dict["enabled"]:
                     break
                 sleep(60)  # config value
@@ -155,14 +155,14 @@ def monitor_peer_publishing():
             shutdown_row_dict = select_shutdown_entry(
                 Rconn,
                 Rqueries,
-            )  # TODO: should cain maint be interrupted
+            )
             if shutdown_row_dict["enabled"]:
                 break
         except AttributeError:
             shutdown_row_dict = select_shutdown_entry(
                 Rconn,
                 Rqueries,
-            )  # TODO: should cain maint be interrupted
+            )
             if shutdown_row_dict["enabled"]:
                 break
             sleep(60)  # config_value wait on queue ?

@@ -1,7 +1,8 @@
 # diyims
+
 do it yourself independent media services
 
-# What is a media service anyway?
+## What is a media service anyway?
 
 At the moment, it is the publisher role. This implies transmission of content,
 not necessarily creation of content. This may be packaging of content from creators and advertisers.  It would
@@ -14,4 +15,4 @@ needs an text editor, non text media manager. Storage space and
 distribution capability to a set of subscribers. It would be nice to be
 able to generate voice from the text as well.
 
-pip install --upgrade --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ diyims
+pip install --upgrade --index-url <https://test.pypi.org/simple/> --extra-index-url <https://pypi.org/simple/> diyims

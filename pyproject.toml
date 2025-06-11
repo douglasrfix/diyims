@@ -9,13 +9,13 @@ authors = [
 ]
 #license = "GPL-3.0-or-later"
 #repository = "https://github.com/douglasrfix/diyims"
-requires-python = ">=3.9.13"
+requires-python = ">=3.12.10"
 dependencies = [
     "aiosql>=13.4",
     "psutil>=7.0.0",
     "python-dateutil>=2.9.0.post0",
-    "requests>=2.32.3",
-    "typer>=0.15.2",
+    "requests>=2.32.4",
+    "typer<=16.0",
 ]
 [project.scripts]
 diyims = "diyims.diyims_cmd:app"
@@ -37,10 +37,10 @@ packages = ["src/diyims"]
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
-    "pytest>=8.3.5",
+    "pytest>=8.4.0",
     "pytest-cov>=6.1.1",
-    "pytest-xdist>=3.6.1",
-    "ruff>=0.11.5",
+    "pytest-xdist>=3.7.0",
+    "ruff>=0.11.13",
 ]
 
 [tool.pytest.ini_options]

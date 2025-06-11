@@ -355,6 +355,7 @@ FROM
 
 where signature_valid = 1
 
+
 -- name: select_peer_table_processing_status_NPP
 SELECT
 	peer_ID,

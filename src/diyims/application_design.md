@@ -1,5 +1,14 @@
+#
 
-Philosophy
+Philosophy:
+
+Security through ipfs node(peer) trust. IPFS provides useful features that in combination can provide trust for the connection.
+The logic is as follows:
+
+Step 1: beacon creation
+    retrieve the oldest peer table "LP" record for the local node
+
+
 
 Assume a low power dedicated machine for the entire application.
 Assume most of the activity is communication based and therefore mostly waiting for a response.
@@ -31,6 +40,8 @@ Theory of operation
 
         All peers are expected to advertise the cid of it's most current peer table entry which contains an IPNS name that points to the most recent entry of the published item chain. This name is put in the peer entry and the peer maintenance process is notified.
 
+
+
         The process of advertising is accomplished by creating an entry in the peer's wantlist for a period that is long enough to be reasonably unique. After the time period has elapsed, the wantlist item is satisfied ba a local process since there is no option for timeout of the wanted item.
 
         All peers are expected to look for a peer, new to the local peer, advertising this cid by examining the peer's wantlist and storing the entries in the database. After storing the entries the search for advertised cid process is notified.
@@ -54,6 +65,8 @@ Peer states:
     NPP normal peer processing pending
     NPX normal peer processing active
     NPC normal peer processing complete
+
+
 
 
 

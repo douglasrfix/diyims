@@ -7,7 +7,7 @@ from pathlib import Path
 
 from diyims.path_utils import get_path_dict
 from diyims.py_version_dep import get_sql_str
-from diyims.config_utils import get_clean_up_config_dict
+from diyims.config_utils import get_clean_up_config_dict, get_shutdown_config_dict
 from diyims.logger_utils import get_logger
 from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
@@ -18,6 +18,7 @@ from diyims.database_utils import (
     delete_clean_up_row_by_date,
     set_up_sql_operations_list,
     delete_log_rows_by_date,
+    update_shutdown_enabled_1,
 )
 from diyims.requests_utils import execute_request
 
@@ -42,7 +43,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a76"  # NOTE: How to extract at run time
+    agent = "0.0.0a100"  # NOTE: How to extract at run time
 
     return agent
 
@@ -55,6 +56,52 @@ def get_shutdown_target(config_dict):
     target_DT = parse(shutdown_time, default=current_date)
 
     return target_DT
+
+
+def shutdown_cmd():
+    from multiprocessing.managers import BaseManager
+
+    config_dict = get_shutdown_config_dict()
+    conn, queries = set_up_sql_operations(config_dict)
+    update_shutdown_enabled_1(
+        conn,
+        queries,
+    )
+    conn.commit()
+    conn.close()
+
+    q_server_port = int(config_dict["q_server_port"])
+
+    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+    queue_server.register("get_satisfy_queue")
+    queue_server.register("get_beacon_queue")
+    queue_server.register("get_provider_queue")
+    queue_server.register("get_want_list_queue")
+    queue_server.register("get_peer_monitor_queue")
+    queue_server.register("get_publish_queue")
+    queue_server.register("get_peer_maint_queue")
+
+    try:
+        queue_server.connect()
+    except ConnectionRefusedError:
+        return
+    satisfy_queue = queue_server.get_satisfy_queue()
+    beacon_queue = queue_server.get_beacon_queue()
+    provider_queue = queue_server.get_provider_queue()
+    want_list_queue = queue_server.get_want_list_queue()
+    peer_monitor_queue = queue_server.get_peer_monitor_queue()
+    publish_queue = queue_server.get_publish_queue()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
+    # order these by the most likely to be in a long wait
+    satisfy_queue.put_nowait("shutdown")
+    beacon_queue.put_nowait("shutdown")
+    provider_queue.put_nowait("shutdown")
+    want_list_queue.put_nowait("shutdown")
+    peer_monitor_queue.put_nowait("shutdown")
+    publish_queue.put_nowait("shutdown")
+    peer_maint_queue.put_nowait("shutdown")
+
+    return
 
 
 def clean_up():
@@ -77,6 +124,7 @@ def clean_up():
     )
     delete_log_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
+
     delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
 
@@ -107,152 +155,6 @@ def clean_up():
         delete_clean_up_row_by_date(conn, queries, clean_up_dict)
 
         conn.commit()
-    conn.close()
-
-    return
-
-
-def select_local_peer_and_update_metrics():
-    import json
-    from diyims.platform_utils import get_python_version, test_os_platform
-    from diyims.ipfs_utils import test_ipfs_version
-    from diyims.config_utils import get_metrics_config_dict
-    from diyims.database_utils import (
-        set_up_sql_operations,
-        refresh_peer_row_from_template,
-        select_peer_table_local_peer_entry,
-        update_peer_table_metrics,
-        export_local_peer_row,
-    )
-    from diyims.general_utils import get_DTS
-    from diyims.path_utils import get_path_dict, get_unique_file
-    from diyims.logger_utils import (
-        get_logger,
-    )
-    from diyims.ipfs_utils import get_url_dict
-    from diyims.header_utils import ipfs_header_add
-    from diyims.ipfs_utils import export_peer_table
-
-    config_dict = get_metrics_config_dict()
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
-    url_dict = get_url_dict()
-    path_dict = get_path_dict()
-
-    conn, queries = set_up_sql_operations(config_dict)
-
-    peer_table_dict = refresh_peer_row_from_template()
-    peer_table_entry = select_peer_table_local_peer_entry(
-        conn, queries, peer_table_dict
-    )
-
-    IPFS_agent = test_ipfs_version()
-    os_platform = test_os_platform()
-    python_version = get_python_version()
-    agent = get_agent()
-
-    changed_metrics = False
-
-    if peer_table_entry["execution_platform"] != os_platform:
-        peer_table_dict["execution_platform"] = os_platform
-        changed_metrics = True
-    else:
-        peer_table_dict["execution_platform"] = os_platform
-
-    if peer_table_entry["python_version"] != python_version:
-        peer_table_dict["python_version"] = python_version
-        changed_metrics = True
-    else:
-        peer_table_dict["python_version"] = python_version
-
-    if peer_table_entry["IPFS_agent"] != IPFS_agent:
-        peer_table_dict["IPFS_agent"] = IPFS_agent
-        changed_metrics = True
-    else:
-        peer_table_dict["IPFS_agent"] = IPFS_agent
-
-    if peer_table_entry["agent"] != agent:
-        peer_table_dict["agent"] = agent
-        changed_metrics = True
-    else:
-        peer_table_dict["agent"] = agent
-
-    if changed_metrics:
-        logger.info("Metrics changed processed.")
-        DTS = get_DTS()
-        peer_table_dict["origin_update_DTS"] = DTS
-
-        update_peer_table_metrics(conn, queries, peer_table_dict)
-        conn.commit()
-
-        peer_row_dict = export_local_peer_row(config_dict)
-
-        proto_path = path_dict["peer_path"]
-        proto_file = path_dict["peer_file"]
-        proto_file_path = get_unique_file(proto_path, proto_file)
-
-        param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-        with open(proto_file_path, "w") as write_file:
-            json.dump(peer_row_dict, write_file, indent=4)
-
-        f = open(proto_file_path, "rb")
-        add_file = {"file": f}
-        response, status_code, response_dict = execute_request(
-            url_key="add",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=config_dict,
-            file=add_file,
-            param=param,
-        )
-        f.close()
-
-        peer_ID = peer_row_dict["peer_ID"]  # new entry to pint at updated peer row
-        object_CID = response_dict["Hash"]
-        object_type = "local_peer_row_entry"
-        mode = "init"
-
-        ipfs_header_add(
-            DTS,
-            object_CID,
-            object_type,
-            peer_ID,
-            config_dict,
-            logger,
-            mode,
-            conn,
-            queries,
-        )
-
-        logger.info("Metrics changed processed.")
-
-        object_CID = export_peer_table(
-            conn,
-            queries,
-            url_dict,
-            path_dict,
-            config_dict,
-            logger,
-        )
-
-        DTS = get_DTS()
-        object_type = "peer_table_entry"
-        mode = "Normal"
-
-        ipfs_header_add(  # entry pointing to a new peer table rather than a updated row
-            DTS,
-            object_CID,
-            object_type,
-            peer_ID,
-            config_dict,
-            logger,
-            mode,
-            conn,
-            queries,
-        )
-
     conn.close()
 
     return

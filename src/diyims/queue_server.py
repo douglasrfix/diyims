@@ -14,16 +14,17 @@ def queue_main():
     logger = get_logger(queue_config_dict["log_file"], "none")
     wait_seconds = int(queue_config_dict["wait_before_startup"])
     logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
-    sleep(wait_seconds)
-    logger.info("Startup of Queue Server.")
-    logger.info(
-        "Shutdown is dependent upon the Scheduler issuing a terminate() against this process"
-    )
+    sleep(wait_seconds)  # config_value
+    logger.info("Queue Server startup.")
+    # logger.info(
+    #    "Shutdown is dependent upon the Scheduler issuing a terminate() against this process"
+    # )
     q_server_port = int(queue_config_dict["q_server_port"])
     manager = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    provider_queue = Queue()
+    want_list_queue = Queue()
     bitswap_queue = Queue()
     swarm_queue = Queue()
+    provider_queue = Queue()
     provider_server_queue = Queue()
     bitswap_server_queue = Queue()
     swarm_server_queue = Queue()
@@ -31,11 +32,14 @@ def queue_main():
     satisfy_queue = Queue()
     publish_queue = Queue()
     peer_maint_queue = Queue()
+    peer_monitor_queue = Queue()
     manager.register("get_beacon_queue", callable=lambda: beacon_queue)
+    manager.register("get_peer_monitor_queue", callable=lambda: peer_monitor_queue)
+    manager.register("get_provider_queue", callable=lambda: provider_queue)
     manager.register("get_satisfy_queue", callable=lambda: satisfy_queue)
     manager.register("get_publish_queue", callable=lambda: publish_queue)
     manager.register("get_peer_maint_queue", callable=lambda: peer_maint_queue)
-    manager.register("get_provider_queue", callable=lambda: provider_queue)
+    manager.register("get_want_list_queue", callable=lambda: want_list_queue)
     manager.register("get_bitswap_queue", callable=lambda: bitswap_queue)
     manager.register("get_swarm_queue", callable=lambda: swarm_queue)
     manager.register(

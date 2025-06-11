@@ -65,7 +65,7 @@ def execute_request(url_key, **kwargs):
             if logger:
                 logger.exception()
             status_code = 601
-            sleep(connect_retry_delay)
+            sleep(connect_retry_delay)  # config value
             retry += 1
         except ReadTimeout:
             status_code = 602
@@ -79,7 +79,7 @@ def execute_request(url_key, **kwargs):
             if logger:
                 status_code = 603
                 logger.exception(status_code)
-            sleep(connect_retry_delay)
+            sleep(connect_retry_delay)  # config value
             retry += 1
     # print(timeout_tuple)
     if not response_ok:

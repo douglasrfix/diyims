@@ -1,19 +1,19 @@
-import json
-import os
-from time import sleep
-import requests
-from requests.exceptions import HTTPError
+# import json
+# import os
+# from time import sleep
+# import requests
+# from requests.exceptions import HTTPError
 
 
-from diyims.requests_utils import execute_request
-from diyims.error_classes import UnSupportedIPFSVersionError
-from diyims.py_version_dep import get_car_path
-from diyims.database_utils import (
-    refresh_network_table_from_template,
-    select_network_name,
-)
+# from diyims.requests_utils import execute_request
+# from diyims.error_classes import UnSupportedIPFSVersionError
+# from diyims.py_version_dep import get_car_path
+# from diyims.database_utils import (
+#    refresh_network_table_from_template,
+#    select_network_name,
+# )
 
-from diyims.database_utils import set_up_sql_operations
+# from diyims.database_utils import set_up_sql_operations
 
 
 def get_url_dict():
@@ -56,6 +56,7 @@ def publish_main(mode):
     from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
     from diyims.config_utils import get_publish_config_dict
+    from diyims.database_utils import set_up_sql_operations, select_shutdown_entry
 
     url_dict = get_url_dict()
 
@@ -65,16 +66,16 @@ def publish_main(mode):
         "none",
     )
 
-    last_insert_DTS = "null"
+    # last_insert_DTS = "null"
 
-    logger.info("Startup of Publish.")
+    logger.info("Publish startup.")
 
     if mode != "init":
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
         queue_server.register("get_publish_queue")
         queue_server.connect()
-        publish_queue = queue_server.get_publish_queue()
+        in_bound = queue_server.get_publish_queue()
 
     response, status_code, response_dict = execute_request(
         url_key="id",
@@ -86,18 +87,37 @@ def publish_main(mode):
     peer_ID = response_dict["ID"]
 
     conn, queries = set_up_sql_operations(config_dict)
-    test = "True"
-    while test == "True":  # Change to for loo with break
+    Rconn, Rqueries = set_up_sql_operations(config_dict)
+    peer_table_row = Rqueries.select_peer_table_local_peer_entry(Rconn)
+    ipns_path = "/ipns/" + peer_table_row["IPNS_name"]
+
+    while True:
+        shutdown_row_dict = select_shutdown_entry(
+            Rconn,
+            Rqueries,
+        )
+        if shutdown_row_dict["enabled"]:
+            break
         query_row = queries.select_last_header(
             conn, peer_ID=peer_ID
         )  # find the header CID of the last header
 
-        # TODO: #15 add most recent publish
-
         if query_row is not None:
-            if last_insert_DTS != query_row["insert_DTS"]:
-                last_insert_DTS = query_row["insert_DTS"]
+            param = {"arg": ipns_path}
+            response, status_code, response_dict = execute_request(
+                url_key="resolve",
+                logger=logger,
+                url_dict=url_dict,
+                config_dict=config_dict,
+                param=param,
+            )
 
+            if status_code == 200:
+                ipfs_header_CID = response_dict["Path"][6:]
+            else:
+                ipfs_header_CID = "null"
+
+            if ipfs_header_CID != query_row["header_CID"]:
                 header_CID = query_row["header_CID"]
 
                 ipfs_path = "/ipfs/" + header_CID
@@ -124,21 +144,24 @@ def publish_main(mode):
 
             try:
                 # logger.info("queue get.")
-                publish_queue.get(timeout=wait_for_next_request_seconds)
+                in_bound.get(timeout=wait_for_next_request_seconds)
                 # logger.info("get satisfied.")
             except Empty:
                 # logger.info(f"queue empty at {wait_for_next_request_seconds}.")
                 # test = "False"
                 pass
 
-        # logger.info("next cycle.")
-
+    Rconn.close()
+    logger.info("Publish shutdown.")
     return
 
 
 def purge():
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger
+    from diyims.requests_utils import execute_request
+    from diyims.database_utils import set_up_sql_operations
+    import requests
 
     ipfs_config_dict = get_ipfs_config_dict()
     peer_type = "none"
@@ -204,6 +227,11 @@ def purge():
 
 
 def test_ipfs_version():
+    import json
+    import os
+    import requests
+    from diyims.error_classes import UnSupportedIPFSVersionError
+
     url_dict = get_url_dict()
 
     with requests.post(url_dict["id"], stream=False) as r:  # NOTE: fix
@@ -233,8 +261,11 @@ def test_ipfs_version():
 
 
 def force_purge():
+    import json
+    import requests
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger
+    from diyims.requests_utils import execute_request
 
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
@@ -263,10 +294,12 @@ def force_purge():
         r.raise_for_status()
 
 
-def wait_on_ipfs(logger):  # NOTE: fix
-    url_dict = get_url_dict()
+def wait_on_ipfs(logger):
+    from time import sleep
+    import requests
     from diyims.config_utils import get_ipfs_config_dict
 
+    url_dict = get_url_dict()
     ipfs_config_dict = get_ipfs_config_dict()
     i = 0
     not_found = True
@@ -287,8 +320,17 @@ def wait_on_ipfs(logger):  # NOTE: fix
 
 
 def refresh_network_name():
+    import requests
+    from requests.exceptions import HTTPError
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger
+    from diyims.requests_utils import execute_request
+    from diyims.database_utils import set_up_sql_operations
+    from diyims.database_utils import (
+        refresh_network_table_from_template,
+        select_network_name,
+    )
+    from diyims.py_version_dep import get_car_path
 
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
@@ -354,6 +396,8 @@ def refresh_network_name():
 
 
 def unpack_peer_row_from_cid(peer_row_CID, config_dict):
+    from diyims.requests_utils import execute_request
+
     url_dict = get_url_dict()
     param = {
         "arg": peer_row_CID,

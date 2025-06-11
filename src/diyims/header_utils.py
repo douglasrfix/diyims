@@ -1,14 +1,14 @@
-import json
+# import json
 
 
-import requests
+# import requests
 
 # from diyims.logger_utils import get_logger
-from diyims.ipfs_utils import get_url_dict
-from diyims.path_utils import get_path_dict, get_unique_file
+# from diyims.ipfs_utils import get_url_dict
+# from diyims.path_utils import get_path_dict, get_unique_file
 
 # from diyims.config_utils import get_want_list_config_dict
-from diyims.requests_utils import execute_request
+# from diyims.requests_utils import execute_request
 
 # from diyims.database_utils import (
 #    set_up_sql_operations,
@@ -26,9 +26,14 @@ def ipfs_header_add(
     mode,
     conn,
     queries,
+    processing_status,
 ):
     from diyims.database_utils import insert_header_row
     from multiprocessing.managers import BaseManager
+    from diyims.requests_utils import execute_request
+    from diyims.path_utils import get_path_dict, get_unique_file
+    from diyims.ipfs_utils import get_url_dict
+    import json
 
     path_dict = get_path_dict()
     url_dict = get_url_dict()
@@ -36,7 +41,9 @@ def ipfs_header_add(
     if mode != "init":
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-        queue_server.register("get_publish_queue")
+        queue_server.register(
+            "get_publish_queue"
+        )  # NOTE: eventually pass which queue to use
         queue_server.connect()
         publish_queue = queue_server.get_publish_queue()
 
@@ -52,7 +59,7 @@ def ipfs_header_add(
     else:
         header_dict["prior_header_CID"] = query_row["header_CID"]
     header_dict["peer_ID"] = peer_ID
-    header_dict["processing_status"] = "null"
+    header_dict["processing_status"] = processing_status
 
     proto_path = path_dict["header_path"]
     proto_file = path_dict["header_file"]
@@ -76,18 +83,55 @@ def ipfs_header_add(
     f.close()
 
     header_CID = response_dict["Hash"]
-
     insert_header_row(conn, queries, header_dict, header_CID)
     conn.commit()
 
     if mode != "init":
-        publish_queue.put_nowait("publish request")
-        # publish_main(mode)
+        publish_queue.put_nowait("wake up")
 
     return header_CID
 
 
+def ipfs_header_update(
+    DTS,
+    object_CID,
+    object_type,
+    peer_ID,
+    config_dict,
+    logger,
+    mode,
+    conn,
+    queries,
+    processing_status,
+    header_dict,
+):
+    from diyims.database_utils import insert_header_row
+    from multiprocessing.managers import BaseManager
+
+    if mode != "init":
+        q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+        queue_server.register(
+            "get_peer_maint_queue"
+        )  # NOTE: eventually pass which queue to use
+        queue_server.connect()
+        peer_maint_queue = queue_server.get_peer_maint_queue()
+
+    # query_row = queries.select_last_header(conn, peer_ID=peer_ID)
+
+    insert_header_row(conn, queries, header_dict)
+    conn.commit()
+
+    if mode != "init":
+        peer_maint_queue.put_nowait("wake up")
+
+    return
+
+
 def test_header_by_IPNS_name(IPNS_name):
+    import requests
+    from diyims.ipfs_utils import get_url_dict
+
     # path_dict = get_path_dict()
     url_dict = get_url_dict()
     ipns_path = "/ipns/" + IPNS_name

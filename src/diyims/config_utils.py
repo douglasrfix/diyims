@@ -62,6 +62,7 @@ def get_beacon_config_dict():
         beacon_config_dict["shutdown_time"] = parser["Beacon"]["shutdown_time"]
         beacon_config_dict["q_server_port"] = parser["Beacon"]["q_server_port"]
         beacon_config_dict["log_file"] = parser["Beacon"]["log_file"]
+        beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
 
         beacon_config_dict["connect_retries"] = parser["Beacon"]["connect_retries"]
         beacon_config_dict["connect_retry_delay"] = parser["Beacon"][
@@ -78,6 +79,7 @@ def get_beacon_config_dict():
         parser["Beacon"]["max_intervals"] = "9999"
         parser["Beacon"]["shutdown_time"] = "99:99:99"
         parser["Beacon"]["q_server_port"] = "50000"
+        parser["Beacon"]["sql_timeout"] = "60"
         parser["Beacon"]["log_file"] = "beacon.log"
         parser["Beacon"]["connect_retries"] = "30"
         parser["Beacon"]["connect_retry_delay"] = "10"
@@ -103,7 +105,7 @@ def get_beacon_config_dict():
         beacon_config_dict["shutdown_time"] = parser["Beacon"]["shutdown_time"]
         beacon_config_dict["q_server_port"] = parser["Beacon"]["q_server_port"]
         beacon_config_dict["log_file"] = parser["Beacon"]["log_file"]
-
+        beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
         beacon_config_dict["connect_retries"] = parser["Beacon"]["connect_retries"]
         beacon_config_dict["connect_retry_delay"] = parser["Beacon"][
             "connect_retry_delay"
@@ -131,6 +133,7 @@ def get_satisfy_config_dict():
             "wait_before_startup"
         ]
         satisfy_config_dict["q_server_port"] = parser["Satisfy"]["q_server_port"]
+        satisfy_config_dict["sql_timeout"] = parser["Satisfy"]["sql_timeout"]
         satisfy_config_dict["log_file"] = parser["Satisfy"]["log_file"]
         satisfy_config_dict["connect_retries"] = parser["Satisfy"]["connect_retries"]
         satisfy_config_dict["connect_retry_delay"] = parser["Satisfy"][
@@ -141,6 +144,7 @@ def get_satisfy_config_dict():
         parser["Satisfy"] = {}
         parser["Satisfy"]["wait_before_startup"] = "10"
         parser["Satisfy"]["q_server_port"] = "50000"
+        parser["Satisfy"]["sql_timeout"] = "60"
         parser["Satisfy"]["log_file"] = "satisfy.log"
         parser["Satisfy"]["connect_retries"] = "30"
         parser["Satisfy"]["connect_retry_delay"] = "10"
@@ -152,6 +156,7 @@ def get_satisfy_config_dict():
             "wait_before_startup"
         ]
         satisfy_config_dict["q_server_port"] = parser["Satisfy"]["q_server_port"]
+        satisfy_config_dict["sql_timeout"] = parser["Satisfy"]["sql_timeout"]
         satisfy_config_dict["log_file"] = parser["Satisfy"]["log_file"]
         satisfy_config_dict["connect_retries"] = parser["Satisfy"]["connect_retries"]
         satisfy_config_dict["connect_retry_delay"] = parser["Satisfy"][
@@ -200,10 +205,10 @@ def get_scheduler_config_dict():
         parser["Scheduler"]["metrics_enable"] = "True"
         parser["Scheduler"]["beacon_enable"] = "True"
         parser["Scheduler"]["provider_enable"] = "True"
-        parser["Scheduler"]["bitswap_enable"] = "False"
+        parser["Scheduler"]["bitswap_enable"] = "True"
         parser["Scheduler"]["swarm_enable"] = "False"
         parser["Scheduler"]["submit_delay"] = "0"
-        parser["Scheduler"]["worker_pool"] = "7"
+        parser["Scheduler"]["worker_pool"] = "9"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
         parser["Scheduler"]["log_file"] = "scheduler.log"
@@ -278,6 +283,48 @@ def get_clean_up_config_dict():
     return clean_up_config_dict
 
 
+def get_shutdown_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        config_dict = {}
+        config_dict["q_server_port"] = parser["Shutdown"]["q_server_port"]
+        config_dict["sql_timeout"] = parser["Shutdown"]["sql_timeout"]
+        config_dict["log_file"] = parser["Shutdown"]["log_file"]
+        config_dict["connect_retries"] = parser["Shutdown"]["connect_retries"]
+        config_dict["connect_retry_delay"] = parser["Shutdown"]["connect_retry_delay"]
+
+    except KeyError:
+        parser["Shutdown"] = {}
+        parser["Shutdown"]["q_server_port"] = "50000"
+        parser["Shutdown"]["sql_timeout"] = "60"
+        parser["Shutdown"]["log_file"] = "Shutdown.log"
+        parser["Shutdown"]["connect_retries"] = "30"
+        parser["Shutdown"]["connect_retry_delay"] = "10"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        config_dict = {}
+        config_dict["q_server_port"] = parser["Shutdown"]["q_server_port"]
+        config_dict["sql_timeout"] = parser["Shutdown"]["sql_timeout"]
+        config_dict["log_file"] = parser["Shutdown"]["log_file"]
+        config_dict["connect_retries"] = parser["Shutdown"]["connect_retries"]
+        config_dict["connect_retry_delay"] = parser["Shutdown"]["connect_retry_delay"]
+
+    return config_dict
+
+
 def get_ipfs_config_dict():
     install_dict = get_install_template_dict()
 
@@ -309,7 +356,7 @@ def get_ipfs_config_dict():
                     json_dict = json.loads(r.text)
                     not_found = False
             except ConnectionError:
-                sleep(10)
+                sleep(10)  # config value
                 i += 1
 
         parser["IPFS"] = {}

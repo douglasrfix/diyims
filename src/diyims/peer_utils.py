@@ -1,4 +1,5 @@
 import json
+from queue import Empty
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.ipfs_utils import test_ipfs_version
 from diyims.config_utils import get_metrics_config_dict
@@ -9,6 +10,8 @@ from diyims.database_utils import (
     update_peer_table_metrics,
     export_local_peer_row,
     update_peer_table_status_to_NPC,
+    update_peer_table_status_to_NPC_no_update,
+    select_shutdown_entry,
 )
 from diyims.general_utils import get_DTS, get_agent
 from diyims.path_utils import get_path_dict, get_unique_file
@@ -22,7 +25,7 @@ from diyims.header_utils import ipfs_header_add
 from diyims.requests_utils import execute_request
 
 # from datetime import datetime
-from time import sleep
+# from time import sleep
 import psutil
 from multiprocessing.managers import BaseManager
 
@@ -33,6 +36,7 @@ from diyims.database_utils import (
     #    insert_header_row,
     refresh_log_dict,
     insert_log_row,
+    select_peer_table_entry_by_key,
 )
 
 # from diyims.header_chain_utils import header_chain_maint
@@ -59,13 +63,14 @@ def monitor_peer_table_maint():
         "none",
     )
     url_dict = get_url_dict()
-    url_dict = get_url_dict()
     path_dict = get_path_dict()
     conn, queries = set_up_sql_operations(config_dict)
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
+    # logger = get_logger(
+    #    config_dict["log_file"],
+    #    "none",
+    # )
+
+    logger.info("Peer Maintenance startup.")
     response, status_code, response_dict = execute_request(
         url_key="id",
         logger=logger,
@@ -79,35 +84,60 @@ def monitor_peer_table_maint():
     queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
     queue_server.register("get_peer_maint_queue")
     queue_server.connect()
-    # peer_maint_queue = queue_server.get_peer_maint_queue()
+    in_bound = queue_server.get_peer_maint_queue()
 
     while True:
         conn, queries = set_up_sql_operations(config_dict)
         Rconn, Rqueries = set_up_sql_operations(config_dict)
         peer_table_rows = Rqueries.select_peer_table_processing_status_NPP(Rconn)
 
-        for row in peer_table_rows:  # peer level
-            if row["processing_status"] == "NPP":
-                peer_row_CID = row["agent"]
-                peer_ID = row["peer_ID"]
+        for peer in peer_table_rows:  # peer level
+            shutdown_row_dict = select_shutdown_entry(
+                Rconn,
+                Rqueries,
+            )
+            if shutdown_row_dict["enabled"]:
+                break
+            peer_row_CID = peer["version"]
+            peer_ID = peer["peer_ID"]
+            peer_type = peer["peer_type"]
 
-                verify_peer_and_update(
-                    peer_row_CID,
-                    logger,
-                    config_dict,
-                    conn,
-                    queries,
-                    Rconn,
-                    Rqueries,
-                    pid,
-                    url_dict,
-                    path_dict,
-                    peer_ID,
-                    self,
-                )
+            # header_CID = header["header_CID"]
 
+            verify_peer_and_update(
+                peer_row_CID,
+                logger,
+                config_dict,
+                conn,
+                queries,
+                Rconn,
+                Rqueries,
+                pid,
+                url_dict,
+                path_dict,
+                peer_ID,
+                self,
+                peer_type,
+            )
+
+        try:
+            in_bound.get(timeout=600)  # config value
+            shutdown_row_dict = select_shutdown_entry(
+                Rconn,
+                Rqueries,
+            )
+            if shutdown_row_dict["enabled"]:
+                break
+        except Empty:
+            shutdown_row_dict = select_shutdown_entry(
+                Rconn,
+                Rqueries,
+            )
+            if shutdown_row_dict["enabled"]:
+                break
         conn.close()
-        sleep(600)
+        Rconn.close()
+    logger.info("Peer Maintenance shutdown.")
     return
 
 
@@ -124,6 +154,7 @@ def verify_peer_and_update(
     path_dict,
     peer_ID,
     self,
+    peer_type,
 ):
     """_summary_
 
@@ -156,38 +187,89 @@ def verify_peer_and_update(
     )
 
     if peer_verified:
+        peer_row_dict["signature_valid"] = peer_verified
+        peer_row_dict["version"] = 0
         peer_row_dict["local_update_DTS"] = get_DTS()
 
-        update_peer_table_status_to_NPC(conn, queries, peer_row_dict)
-        conn.commit()
-
-        log_string = f"Peer {peer_row_dict['peer_ID']}  updated."
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "verify-and-update"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = "VP"
-        log_dict["msg"] = log_string
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
-
-        object_CID = peer_row_CID
-        DTS = get_DTS()
-        object_type = "validated_remote_peer_entry"
-        mode = "Normal"
-        peer_ID = self
-
-        ipfs_header_add(
-            DTS,
-            object_CID,
-            object_type,
-            peer_ID,
-            config_dict,
-            logger,
-            mode,
-            conn,
-            queries,
+        peer_table_entry = select_peer_table_entry_by_key(
+            Rconn, Rqueries, peer_row_dict
         )
+        old_origin_value = peer_table_entry["origin_update_DTS"]
+        new_origin_value = peer_row_dict["origin_update_DTS"]
+
+        if (old_origin_value < new_origin_value) or (
+            old_origin_value == "null" or peer_table_entry["processing_status"] == "PMP"
+        ):
+            # TODO: ping peer monitor
+            if (old_origin_value < new_origin_value) or old_origin_value == "null":
+                update_peer_table_status_to_NPC(conn, queries, peer_row_dict)
+                conn.commit()
+
+                log_string = f"Peer {peer_row_dict['peer_ID']}  {peer_row_dict['peer_type']} {peer_type} updated."
+            else:
+                update_peer_table_status_to_NPC_no_update(conn, queries, peer_row_dict)
+                conn.commit()
+
+                log_string = f"Peer {peer_row_dict['peer_ID']}  {peer_row_dict['peer_type']} {peer_type} updated to clear NPP."
+
+            log_dict = refresh_log_dict()
+            log_dict["DTS"] = get_DTS()
+            log_dict["process"] = "verify-and-update"
+            log_dict["pid"] = pid
+            log_dict["peer_type"] = "UP"
+            log_dict["msg"] = log_string
+            insert_log_row(conn, queries, log_dict)
+            conn.commit()
+
+        # if first time for peer put out a header
+        if old_origin_value == "null":
+            proto_path = path_dict["header_path"]
+            proto_file = path_dict["header_file"]
+            proto_file_path = get_unique_file(proto_path, proto_file)
+
+            param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
+
+            with open(proto_file_path, "w") as write_file:
+                json.dump(peer_row_dict, write_file, indent=4)
+
+            f = open(proto_file_path, "rb")
+            add_file = {"file": f}
+            response, status_code, response_dict = execute_request(
+                url_key="add",
+                logger=logger,
+                url_dict=url_dict,
+                config_dict=config_dict,
+                param=param,
+                file=add_file,
+            )
+            f.close()
+
+            object_CID = response_dict["Hash"]  # new peer_row_cid
+
+            object_CID = peer_row_CID
+            DTS = get_DTS()
+
+            if peer_type == "PP":
+                object_type = "provider_peer_entry"  # comes from want list processing one entry per peer row
+            else:
+                object_type = "remote_peer_entry"  # comes from peer monitor processing one entry per peer row
+
+            mode = "Normal"
+            peer_ID = self
+            processing_status = DTS
+
+            ipfs_header_add(
+                DTS,
+                object_CID,
+                object_type,
+                peer_ID,
+                config_dict,
+                logger,
+                mode,
+                conn,
+                queries,
+                processing_status,
+            )
 
     else:
         log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."
@@ -206,7 +288,7 @@ def verify_peer_and_update(
 
 def select_local_peer_and_update_metrics():
     """ """
-
+    # TODO: add message
     config_dict = get_metrics_config_dict()
     url_dict = get_url_dict()
     path_dict = get_path_dict()
@@ -281,10 +363,11 @@ def select_local_peer_and_update_metrics():
         )
         f.close()
 
-        peer_ID = peer_row_dict["peer_ID"]  # new entry to pint at updated peer row
-        object_CID = response_dict["Hash"]
-        object_type = "local_peer_row_entry"
+        peer_ID = peer_row_dict["peer_ID"]
+        object_CID = response_dict["Hash"]  # new peer row cid
+        object_type = "local_peer_entry"
         mode = "Normal"
+        processing_status = DTS
 
         ipfs_header_add(
             DTS,
@@ -296,6 +379,7 @@ def select_local_peer_and_update_metrics():
             mode,
             conn,
             queries,
+            processing_status,
         )
 
         # logger.info("Metrics change processed.")
@@ -324,6 +408,7 @@ def select_local_peer_and_update_metrics():
             mode,
             conn,
             queries,
+            processing_status
         )
         """
     conn.close()

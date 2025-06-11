@@ -7,7 +7,7 @@ from pathlib import Path
 
 from diyims.path_utils import get_path_dict
 from diyims.py_version_dep import get_sql_str
-from diyims.config_utils import get_clean_up_config_dict
+from diyims.config_utils import get_clean_up_config_dict, get_shutdown_config_dict
 from diyims.logger_utils import get_logger
 from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
@@ -18,6 +18,7 @@ from diyims.database_utils import (
     delete_clean_up_row_by_date,
     set_up_sql_operations_list,
     delete_log_rows_by_date,
+    update_shutdown_enabled_1,
 )
 from diyims.requests_utils import execute_request
 
@@ -42,7 +43,7 @@ def get_DTS():
 
 
 def get_agent():
-    agent = "0.0.0a78"  # NOTE: How to extract at run time
+    agent = "0.0.0a100"  # NOTE: How to extract at run time
 
     return agent
 
@@ -55,6 +56,52 @@ def get_shutdown_target(config_dict):
     target_DT = parse(shutdown_time, default=current_date)
 
     return target_DT
+
+
+def shutdown_cmd():
+    from multiprocessing.managers import BaseManager
+
+    config_dict = get_shutdown_config_dict()
+    conn, queries = set_up_sql_operations(config_dict)
+    update_shutdown_enabled_1(
+        conn,
+        queries,
+    )
+    conn.commit()
+    conn.close()
+
+    q_server_port = int(config_dict["q_server_port"])
+
+    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+    queue_server.register("get_satisfy_queue")
+    queue_server.register("get_beacon_queue")
+    queue_server.register("get_provider_queue")
+    queue_server.register("get_want_list_queue")
+    queue_server.register("get_peer_monitor_queue")
+    queue_server.register("get_publish_queue")
+    queue_server.register("get_peer_maint_queue")
+
+    try:
+        queue_server.connect()
+    except ConnectionRefusedError:
+        return
+    satisfy_queue = queue_server.get_satisfy_queue()
+    beacon_queue = queue_server.get_beacon_queue()
+    provider_queue = queue_server.get_provider_queue()
+    want_list_queue = queue_server.get_want_list_queue()
+    peer_monitor_queue = queue_server.get_peer_monitor_queue()
+    publish_queue = queue_server.get_publish_queue()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
+    # order these by the most likely to be in a long wait
+    satisfy_queue.put_nowait("shutdown")
+    beacon_queue.put_nowait("shutdown")
+    provider_queue.put_nowait("shutdown")
+    want_list_queue.put_nowait("shutdown")
+    peer_monitor_queue.put_nowait("shutdown")
+    publish_queue.put_nowait("shutdown")
+    peer_maint_queue.put_nowait("shutdown")
+
+    return
 
 
 def clean_up():
@@ -77,6 +124,7 @@ def clean_up():
     )
     delete_log_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
+
     delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
 

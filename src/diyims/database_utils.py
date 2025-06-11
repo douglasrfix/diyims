@@ -52,8 +52,39 @@ def reset_peer_table_status():
         conn,
     )
     conn.commit()
-    conn.close()
+
+    update_shutdown_enabled_0(conn, queries)
+    conn.commit()
+    conn.close
     return
+
+
+def add_shutdown_entry(conn, queries):
+    queries.add_shutdown_entry(
+        conn,
+    )
+    return
+
+
+def update_shutdown_enabled_1(conn, queries):
+    queries.update_shutdown_enabled_1(
+        conn,
+    )
+    return
+
+
+def update_shutdown_enabled_0(conn, queries):
+    queries.update_shutdown_enabled_0(
+        conn,
+    )
+    return
+
+
+def select_shutdown_entry(conn, queries):
+    shutdown_row_dict = queries.select_shutdown_entry(
+        conn,
+    )
+    return shutdown_row_dict
 
 
 def insert_peer_row(conn, queries, peer_table_dict):
@@ -99,6 +130,16 @@ def update_peer_row_by_key_status(conn, queries, peer_row_dict):
 
 
 def select_peer_table_entry_by_key(conn, queries, peer_table_dict):
+    """_summary_
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     peer_table_entry = queries.select_peer_table_entry_by_key(
         conn,
         peer_ID=peer_table_dict["peer_ID"],
@@ -113,6 +154,16 @@ def select_peer_table_local_peer_entry(conn, queries, peer_table_dict):
     return peer_table_entry
 
 
+def update_peer_table_version(conn, queries, peer_table_dict):
+    queries.update_peer_table_version(
+        conn,
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
 def update_peer_table_peer_type_status(conn, queries, peer_table_dict):
     queries.update_peer_table_peer_type_status(
         conn,
@@ -125,11 +176,40 @@ def update_peer_table_peer_type_status(conn, queries, peer_table_dict):
     return
 
 
+def update_peer_table_peer_type_BP_to_PP(conn, queries, peer_table_dict):
+    queries.update_peer_table_peer_type_BP_to_PP(
+        conn,
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_peer_type_SP_to_PP(conn, queries, peer_table_dict):
+    queries.update_peer_table_peer_type_SP_to_PP(
+        conn,
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
 def update_peer_table_status_WLR(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLR(
         conn,
-        processing_status=peer_table_dict["processing_status"],
+        # processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_WPW_to_WLR(conn, queries, peer_table_dict):
+    queries.update_peer_table_status_WPW_to_WLR(
+        conn,
+        # processing_status=peer_table_dict["processing_status"],
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
@@ -138,7 +218,7 @@ def update_peer_table_status_WLR(conn, queries, peer_table_dict):
 def update_peer_table_status_WLP(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLP(
         conn,
-        processing_status=peer_table_dict["processing_status"],
+        # processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
         peer_ID=peer_table_dict["peer_ID"],
     )
@@ -148,7 +228,7 @@ def update_peer_table_status_WLP(conn, queries, peer_table_dict):
 def update_peer_table_status_WLX(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLX(
         conn,
-        processing_status=peer_table_dict["processing_status"],
+        # processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
         peer_ID=peer_table_dict["peer_ID"],
     )
@@ -158,14 +238,14 @@ def update_peer_table_status_WLX(conn, queries, peer_table_dict):
 def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLZ(
         conn,
-        processing_status=peer_table_dict["processing_status"],
+        # processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
 
 
-def update_peer_table_status_to_NPP(conn, queries, peer_table_dict, peer_row_CID):
+def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -182,9 +262,84 @@ def update_peer_table_status_to_NPP(conn, queries, peer_table_dict, peer_row_CID
     """
     queries.update_peer_table_status_to_NPP(
         conn,
+        # peer_type=peer_table_dict["peer_type"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
-        processing_status="NPP",
-        agent=peer_row_CID,
+        version=peer_table_dict["version"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_to_PMP(conn, queries, peer_table_dict):
+    """
+    Summary:
+
+    _summary_
+
+    Updates IPNS_name, id, signature, signature_valid, origin_update_DTS, local_update_DTS,
+            execution_platform, python_version, IPFS_agent, processing_status, and agent
+        based upon peer_ID
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+    """
+    queries.update_peer_table_status_to_PMP(
+        conn,
+        # peer_type=peer_table_dict["peer_type"],
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_to_NPP_type_PR(conn, queries, peer_table_dict):
+    """
+    Summary:
+
+    _summary_
+
+    Updates IPNS_name, id, signature, signature_valid, origin_update_DTS, local_update_DTS,
+            execution_platform, python_version, IPFS_agent, processing_status, and agent
+        based upon peer_ID
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+    """
+    queries.update_peer_table_status_to_NPP_type_PR(
+        conn,
+        # peer_type=peer_table_dict["peer_type"],
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_to_PMP_type_PR(conn, queries, peer_table_dict):
+    """
+    Summary:
+
+    _summary_
+
+    Updates IPNS_name, id, signature, signature_valid, origin_update_DTS, local_update_DTS,
+            execution_platform, python_version, IPFS_agent, processing_status, and agent
+        based upon peer_ID
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+    """
+    queries.update_peer_table_status_to_PMP_type_PR(
+        conn,
+        # peer_type=peer_table_dict["peer_type"],
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
@@ -217,8 +372,33 @@ def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
         execution_platform=peer_table_dict["execution_platform"],
         python_version=peer_table_dict["python_version"],
         IPFS_agent=peer_table_dict["IPFS_agent"],
-        processing_status="NPP",
         agent=peer_table_dict["agent"],
+        version=peer_table_dict["version"],
+        peer_ID=peer_table_dict["peer_ID"],
+    )
+    return
+
+
+def update_peer_table_status_to_NPC_no_update(conn, queries, peer_table_dict):
+    """
+    Summary:
+
+    _summary_
+
+    Updates IPNS_name, id, signature, signature_valid, origin_update_DTS, local_update_DTS,
+            execution_platform, python_version, IPFS_agent, processing_status, and agent
+        based upon peer_ID
+
+    Args:
+        conn (_type_): _description_
+        queries (_type_): _description_
+        peer_table_dict (_type_): _description_
+    """
+
+    queries.update_peer_table_status_to_NPC_no_update(
+        conn,
+        local_update_DTS=peer_table_dict["local_update_DTS"],
+        version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
@@ -256,12 +436,43 @@ def refresh_peer_row_from_template():
     return peer_row_dict
 
 
-def export_local_peer_row(config_dict):
+def export_local_peer_row(
+    config_dict,
+):  # NOTE: need a header table version by header cid
     conn, queries = set_up_sql_operations(config_dict)
     peer_table_dict = {}
     peer_table_entry = select_peer_table_local_peer_entry(
         conn, queries, peer_table_dict
     )
+
+    peer_row_dict = {}
+    peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]
+    peer_row_dict["IPNS_name"] = peer_table_entry["IPNS_name"]
+    peer_row_dict["id"] = peer_table_entry["id"]
+    peer_row_dict["signature"] = peer_table_entry["signature"]
+    peer_row_dict["signature_valid"] = peer_table_entry["signature_valid"]
+    peer_row_dict["peer_type"] = peer_table_entry["peer_type"]
+    peer_row_dict["origin_update_DTS"] = peer_table_entry["origin_update_DTS"]
+    peer_row_dict["local_update_DTS"] = peer_table_entry["local_update_DTS"]
+    peer_row_dict["execution_platform"] = peer_table_entry["execution_platform"]
+    peer_row_dict["python_version"] = peer_table_entry["python_version"]
+    peer_row_dict["IPFS_agent"] = peer_table_entry["IPFS_agent"]
+    peer_row_dict["processing_status"] = peer_table_entry["processing_status"]
+    peer_row_dict["agent"] = peer_table_entry["agent"]
+    peer_row_dict["version"] = peer_table_entry["version"]
+
+    conn.close()
+
+    return peer_row_dict
+
+
+def export_peer_row_for_peerID(
+    peerID, config_dict
+):  # NOTE: need a header table version by header cid
+    conn, queries = set_up_sql_operations(config_dict)
+    peer_table_dict = {}
+    peer_table_dict["peer_ID"] = peerID
+    peer_table_entry = select_peer_table_entry_by_key(conn, queries, peer_table_dict)
 
     peer_row_dict = {}
     peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]

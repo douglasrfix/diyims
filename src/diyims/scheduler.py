@@ -24,9 +24,9 @@ def scheduler_main():
     wait_on_ipfs(logger)
     wait_seconds = int(scheduler_config_dict["wait_before_startup"])
     logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
-    sleep(wait_seconds)
-    logger.info("Startup of Scheduler.")
-    logger.info("Shutdown is dependent upon the shutdown of the scheduled tasks")
+    sleep(wait_seconds)  # config value
+    logger.info("Scheduler startup.")
+    # logger.info("Shutdown is dependent upon the shutdown of the scheduled tasks")
 
     queue_server_main_process = Process(target=queue_main)  # 1
     sleep(int(scheduler_config_dict["submit_delay"]))
@@ -37,21 +37,25 @@ def scheduler_main():
         scheduler_config_dict["publish_enable"] == "True"
         or scheduler_config_dict["publish_enable"] == "Only"
     ):
-        publish_main_process = Process(target=publish_main, args=("Normal",))  # 1
+        publish_main_process = Process(
+            target=publish_main,  # 2
+            args=("Normal",),
+        )
         sleep(int(scheduler_config_dict["submit_delay"]))
         publish_main_process.start()
         logger.debug("publish_main started.")
 
         monitor_peer_publishing_main_process = Process(
-            target=monitor_peer_publishing
+            target=monitor_peer_publishing  # 3
         )  # 1
         sleep(int(scheduler_config_dict["submit_delay"]))
         monitor_peer_publishing_main_process.start()
         logger.debug("monitor_peer_publishing_main_process started.")
-        monitor_peer_table_maint_process = Process(target=monitor_peer_table_maint)
+
+        monitor_peer_table_maint_process = Process(target=monitor_peer_table_maint)  # 4
         sleep(int(scheduler_config_dict["submit_delay"]))
         monitor_peer_table_maint_process.start()
-        logger.debug("update metrics started.")
+        logger.debug("Monitor peer table maint started.")
 
     if scheduler_config_dict["reset_enable"] == "True":
         reset_peer_table_status_process = Process(target=reset_peer_table_status)
@@ -72,53 +76,62 @@ def scheduler_main():
         logger.debug("update metrics completed.")
 
     if scheduler_config_dict["beacon_enable"] == "True":
-        beacon_main_process = Process(  # 2
-            target=beacon_main,
+        beacon_main_process = Process(
+            target=beacon_main,  # 5
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         beacon_main_process.start()
-        logger.debug("beacon_main started.")
+        logger.debug("Beacon_main started.")
 
-        satisfy_main_process = Process(  # 3
-            target=satisfy_main,
+        satisfy_main_process = Process(
+            target=satisfy_main,  # 6
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         satisfy_main_process.start()
-        logger.debug("satisfy_main started.")
+        logger.debug("Satisfy_main started.")
 
     if scheduler_config_dict["provider_enable"] == "True":
-        logger_server_provider_process = Process(  # 4
-            target=logger_server_main, args=("PP",)
+        logger_server_provider_process = Process(
+            target=logger_server_main,
+            args=("PP",),  # 7
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         logger_server_provider_process.start()
         logger.debug("logger_server_provider started.")
-        capture_provider_want_lists_process = Process(  # 5
-            target=capture_peer_want_lists, args=("PP",)
-        )
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        capture_provider_want_lists_process.start()
-        logger.debug("capture_provider_want_lists started.")
-        capture_provider_process = Process(target=capture_peer_main, args=("PP",))  # 6
+        # capture_provider_want_lists_process = Process(  # 5
+        #    target=capture_peer_want_lists, args=("PP",)
+        # )
+        # sleep(int(scheduler_config_dict["submit_delay"]))
+        # capture_provider_want_lists_process.start()
+        # logger.info("capture_provider_want_lists started.")
+        capture_provider_process = Process(target=capture_peer_main, args=("PP",))  # 8
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_provider_process.start()
         logger.debug("capture_provider_main started.")
 
-    if scheduler_config_dict["bitswap_enable"] == "True":
-        logger_server_bitswap_process = Process(target=logger_server_main, args=("BP",))
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        logger_server_bitswap_process.start()
-        logger.debug("logger_server_bitswap started.")
-        capture_bitswap_want_lists_process = Process(
-            target=capture_peer_want_lists, args=("BP",)
+    if scheduler_config_dict["bitswap_enable"] == "True":  # TODO: proper names
+        # logger_server_bitswap_process = Process(target=logger_server_main, args=("BP",))
+        # sleep(int(scheduler_config_dict["submit_delay"]))
+        # logger_server_bitswap_process.start()
+        # logger.debug("logger_server_bitswap started.")
+        # capture_bitswap_want_lists_process = Process(
+        #    target=capture_peer_want_lists, args=("BP",)
+        # )
+        # sleep(int(scheduler_config_dict["submit_delay"]))
+        # capture_bitswap_want_lists_process.start()
+        # logger.info("capture_bitswap_want_lists started.")
+        # capture_bitswap_process = Process(target=capture_peer_main, args=("BP",))
+        # sleep(int(scheduler_config_dict["submit_delay"]))
+        # capture_bitswap_process.start()
+        # logger.info("capture_bitswap_main started.")
+
+        capture_provider_want_lists_process = Process(
+            target=capture_peer_want_lists,
+            args=("PP",),  # 9
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
-        capture_bitswap_want_lists_process.start()
-        logger.debug("capture_bitswap_want_lists started.")
-        capture_bitswap_process = Process(target=capture_peer_main, args=("BP",))
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        capture_bitswap_process.start()
-        logger.debug("capture_bitswap_main started.")
+        capture_provider_want_lists_process.start()
+        logger.debug("capture_provider_want_lists started.")
 
     if scheduler_config_dict["swarm_enable"] == "True":
         logger_server_swarm_process = Process(target=logger_server_main, args=("SP",))
@@ -146,34 +159,36 @@ def scheduler_main():
         satisfy_main_process.join()
     if scheduler_config_dict["provider_enable"] == "True":
         capture_provider_process.join()
-        capture_provider_want_lists_process.join()
+        # capture_provider_want_lists_process.join()
     if scheduler_config_dict["bitswap_enable"] == "True":
-        capture_bitswap_process.join()
-        capture_bitswap_want_lists_process.join()
+        capture_provider_want_lists_process.join()
+        # capture_provider_process.join()
+        # capture_bitswap_process.join()
+        # capture_bitswap_want_lists_process.join()
     if scheduler_config_dict["swarm_enable"] == "True":
         capture_swarm_process.join()
         capture_swarm_want_lists_process.join()
 
     if scheduler_config_dict["publish_enable"] == "True":
-        logger.info("issuing terminate of publish.")
-        publish_main_process.terminate()
-        monitor_peer_publishing_main_process.terminate()
-        monitor_peer_table_maint_process.terminate()
+        # logger.info("issuing terminate of publish.")
+        publish_main_process.join()
+        monitor_peer_publishing_main_process.join()
+        monitor_peer_table_maint_process.join()
 
     if scheduler_config_dict["provider_enable"] == "True":
-        logger.info("issuing terminate of logger_server_provider .")
+        logger.debug("issuing terminate of logger_server_provider .")
         logger_server_provider_process.terminate()
     if scheduler_config_dict["bitswap_enable"] == "True":
-        logger.info("issuing terminate of logger_server_bitswap .")
-        logger_server_bitswap_process.terminate()
+        logger.debug("issuing terminate of logger_server_bitswap .")
+        # logger_server_bitswap_process.terminate()
     if scheduler_config_dict["swarm_enable"] == "True":
-        logger.info("issuing terminate of logger_server_swarm .")
+        logger.debug("issuing terminate of logger_server_swarm .")
         logger_server_swarm_process.terminate()
 
-    logger.info("issuing terminate of queue_server .")
+    logger.info("Issuing terminate of Queue Server .")
     queue_server_main_process.terminate()
 
-    logger.info("Normal shutdown of Scheduler.")
+    logger.info("Scheduler shutdown.")
 
     return
 

@@ -12,6 +12,7 @@ from diyims.database_utils import (
     refresh_network_table_from_template,
     refresh_peer_row_from_template,
     set_up_sql_operations,
+    add_shutdown_entry,
 )
 from diyims.error_classes import (
     ApplicationNotInstalledError,
@@ -196,7 +197,7 @@ def init():
     peer_row_dict["signature_valid"] = signature_valid
     peer_row_dict["peer_type"] = "LP"  # local provider peer
     peer_row_dict["origin_update_DTS"] = DTS
-    peer_row_dict["local_update_DTS"] = DTS
+    peer_row_dict["local_update_DTS"] = "null"
     peer_row_dict["execution_platform"] = os_platform
     peer_row_dict["python_version"] = python_version
     peer_row_dict["IPFS_agent"] = IPFS_agent
@@ -226,9 +227,10 @@ def init():
 
     object_CID = response_dict["Hash"]
     peer_row_CID = object_CID
-    object_type = "local_peer_row_entry"
+    object_type = "local_peer_entry"
 
     mode = "init"
+    processing_status = DTS
 
     header_CID = ipfs_header_add(
         DTS,
@@ -240,6 +242,7 @@ def init():
         mode,
         conn,
         queries,
+        processing_status,
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
@@ -256,11 +259,25 @@ def init():
     object_type = "network_name"
 
     mode = "init"
-
+    processing_status = DTS
     header_CID = ipfs_header_add(  # header for network name
-        DTS, object_CID, object_type, peer_ID, config_dict, logger, mode, conn, queries
+        DTS,
+        object_CID,
+        object_type,
+        peer_ID,
+        config_dict,
+        logger,
+        mode,
+        conn,
+        queries,
+        processing_status,
     )
 
+    add_shutdown_entry(
+        conn,
+        queries,
+    )
+    conn.commit()
     conn.close()
     return
 
@@ -276,7 +293,7 @@ def import_car():
     car_path = get_car_path()
     dag_import_files = {"file": car_path}
     dag_import_params = {
-        "pin-roots": "true",  # http status 500 if false but true does not pin if not in off-line mode
+        "pin-roots": "true",  # http status 500 if false but true does not pin if not in off-line mode ####name?
         "silent": "false",
         "stats": "false",
         "allow-big-block": "false",
@@ -293,7 +310,7 @@ def import_car():
 
     imported_CID = response_dict["Root"]["Cid"]["/"]
 
-    # import does not pin unless in offline mode so it must be done manually
+    # import does not pin unless in offline mode so it must be done manually ###### name?
     pin_add_params = {"arg": imported_CID}
 
     response, status_code, response_dict = execute_request(

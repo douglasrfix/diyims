@@ -80,6 +80,7 @@ def init():
     wait_on_ipfs(logger)
 
     conn, queries = set_up_sql_operations(config_dict)
+    Rconn, Rqueries = set_up_sql_operations(config_dict)
 
     network_name = queries.select_network_name(conn)
 
@@ -243,6 +244,8 @@ def init():
         conn,
         queries,
         processing_status,
+        Rconn,
+        Rqueries,
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
@@ -271,6 +274,8 @@ def init():
         conn,
         queries,
         processing_status,
+        Rconn,
+        Rqueries,
     )
 
     add_shutdown_entry(

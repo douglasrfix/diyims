@@ -82,7 +82,7 @@ def run_scheduler(
         ),
     ] = "Roaming",
 ):
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
 
     scheduler_main()
 
@@ -98,7 +98,7 @@ def run_clean_up(
         ),
     ] = "Roaming",
 ):
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
 
     clean_up()
 
@@ -128,6 +128,6 @@ def run_test(
         ),
     ] = "Roaming",
 ):
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
 
     test()

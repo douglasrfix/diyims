@@ -7,9 +7,9 @@
 
 ## TODO: error vs warning for permissive failures
 
-## TODO: add shutdown functionality by command line
+## [x]: add shutdown functionality by command line
 
-## TODO: add restart capability by resetting peer processing status at startup
+## [x]: add restart capability by resetting peer processing status at startup
 
 ## [x]: introduce logging
 

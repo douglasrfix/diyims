@@ -22,6 +22,7 @@ def config_install():
     get_logger_config_dict()
     get_logger_server_config_dict()
     get_ipfs_config_dict()
+    get_request_config_dict()
     get_clean_up_config_dict()
     get_db_init_config_dict()
     get_metrics_config_dict()
@@ -343,6 +344,9 @@ def get_ipfs_config_dict():
         ipfs_config_dict["agent"] = parser["IPFS"]["agent"]
         ipfs_config_dict["sql_timeout"] = parser["IPFS"]["sql_timeout"]
         ipfs_config_dict["log_file"] = parser["IPFS"]["log_file"]
+        ipfs_config_dict["stream"] = parser["IPFS"]["stream"]
+        ipfs_config_dict["connect_timeout"] = parser["IPFS"]["connect_timeout"]
+        ipfs_config_dict["read_timeout"] = parser["IPFS"]["read_timeout"]
         ipfs_config_dict["connect_retries"] = parser["IPFS"]["connect_retries"]
         ipfs_config_dict["connect_retry_delay"] = parser["IPFS"]["connect_retry_delay"]
 
@@ -363,6 +367,9 @@ def get_ipfs_config_dict():
         parser["IPFS"]["agent"] = json_dict["AgentVersion"]
         parser["IPFS"]["sql_timeout"] = "60"
         parser["IPFS"]["log_file"] = "ipfs.log"
+        parser["IPFS"]["stream"] = "False"
+        parser["IPFS"]["connect_timeout"] = "3.05"
+        parser["IPFS"]["read_timeout"] = "120"
         parser["IPFS"]["connect_retries"] = "30"
         parser["IPFS"]["connect_retry_delay"] = "10"
 
@@ -373,10 +380,59 @@ def get_ipfs_config_dict():
         ipfs_config_dict["agent"] = parser["IPFS"]["agent"]
         ipfs_config_dict["log_file"] = parser["IPFS"]["log_file"]
         ipfs_config_dict["sql_timeout"] = parser["IPFS"]["sql_timeout"]
+        ipfs_config_dict["stream"] = parser["IPFS"]["stream"]
+        ipfs_config_dict["connect_timeout"] = parser["IPFS"]["connect_timeout"]
+        ipfs_config_dict["read_timeout"] = parser["IPFS"]["read_timeout"]
         ipfs_config_dict["connect_retries"] = parser["IPFS"]["connect_retries"]
         ipfs_config_dict["connect_retry_delay"] = parser["IPFS"]["connect_retry_delay"]
 
     return ipfs_config_dict
+
+
+def get_request_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        request_config_dict = {}
+        request_config_dict["stream"] = parser["Request"]["stream"]
+        request_config_dict["connect_timeout"] = parser["Request"]["connect_timeout"]
+        request_config_dict["read_timeout"] = parser["Request"]["read_timeout"]
+        request_config_dict["connect_retries"] = parser["Request"]["connect_retries"]
+        request_config_dict["connect_retry_delay"] = parser["Request"][
+            "connect_retry_delay"
+        ]
+
+    except KeyError:
+        parser["Request"] = {}
+        parser["Request"]["stream"] = "False"
+        parser["Request"]["connect_timeout"] = "3.05"
+        parser["Request"]["read_timeout"] = "120"
+        parser["Request"]["connect_retries"] = "30"
+        parser["Rquest"]["connect_retry_delay"] = "10"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        request_config_dict = {}
+        request_config_dict["stream"] = parser["Request"]["stream"]
+        request_config_dict["connect_timeout"] = parser["Request"]["connect_timeout"]
+        request_config_dict["read_timeout"] = parser["Request"]["read_timeout"]
+        request_config_dict["connect_retries"] = parser["Request"]["connect_retries"]
+        request_config_dict["connect_retry_delay"] = parser["Request"][
+            "connect_retry_delay"
+        ]
+
+    return request_config_dict
 
 
 def get_capture_peer_config_dict():

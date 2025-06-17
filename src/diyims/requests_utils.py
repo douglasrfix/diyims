@@ -2,86 +2,69 @@ from time import sleep
 import json
 import requests
 from requests.exceptions import ConnectionError, HTTPError, ConnectTimeout, ReadTimeout
+from diyims.config_utils import get_request_config_dict, get_url_dict
 
 
 def execute_request(url_key, **kwargs):
+    default_dict = get_request_config_dict()
+    url_dict = get_url_dict()
     try:
-        url_dict = kwargs["url_dict"]
+        default_dict["timeout"] = kwargs["timeout"]
     except KeyError:
-        url_dict = ""
-    try:
-        config_dict = kwargs["config_dict"]
-    except KeyError:
-        config_dict = ""
-    try:
-        param = kwargs["param"]
-    except KeyError:
-        param = ""
-    try:
-        file = kwargs["file"]
-    except KeyError:
-        file = ""
-    try:
-        logger = kwargs["logger"]
-    except KeyError:
-        logger = ""
-    try:
-        timeout_tuple = kwargs["timeout"]
-    except KeyError:
-        timeout_tuple = None
+        default_dict["timeout"] = tuple(
+            [float(default_dict["connect_timeout"]), int(default_dict["read_timeout"])]
+        )
 
-    if config_dict:
-        connect_retries = int(config_dict["connect_retries"])
-        connect_retry_delay = int(config_dict["connect_retry_delay"])
-    else:
-        connect_retries = 30
-        connect_retry_delay = 10
+    default_dict["param"] = ""
+    default_dict["file"] = ""
 
-    retry = 0
+    value_dict = {**default_dict, **kwargs}
+
+    retry = -1
     response_ok = False
-    while retry < connect_retries and not response_ok:
+
+    if value_dict["stream"] == "False":
+        stream = False
+    else:
+        stream = True
+
+    while retry < int(value_dict["connect_retries"]) and not response_ok:
+        if retry > 0:
+            sleep(int(value_dict["connect_retry_delay"]))
+
         try:
-            if file:
-                with requests.post(
-                    url_dict[url_key],
-                    params=param,
-                    files=file,
-                    stream=False,
-                    timeout=timeout_tuple,
-                ) as r:
-                    r.raise_for_status()
-                    response_ok = True
-            else:
-                with requests.post(
-                    url=url_dict[url_key],
-                    params=param,
-                    stream=False,
-                    timeout=timeout_tuple,
-                ) as r:
-                    r.raise_for_status()
-                    response_ok = True
+            with requests.post(
+                url=url_dict[url_key],
+                params=value_dict["param"],
+                files=value_dict["file"],
+                stream=stream,
+                timeout=value_dict["timeout"],
+            ) as r:
+                r.raise_for_status()
+                response_ok = True
 
         except ConnectTimeout:
-            if logger:
-                logger.exception()
+            # if logger:
+            #    logger.exception(r.status_code)
             status_code = 601
-            sleep(connect_retry_delay)  # config value
+            sleep(int(value_dict["connect_retry_delay"]))
             retry += 1
         except ReadTimeout:
             status_code = 602
-            break
+            # break
+            retry += 1
         except HTTPError:
-            if logger:
-                logger.exception(param)
-            status_code = 500
+            # if logger:
+            #    logger.exception(param)
+            status_code = r.status_code
             break
         except ConnectionError:
-            if logger:
-                status_code = 603
-                logger.exception(status_code)
-            sleep(connect_retry_delay)  # config value
+            # if logger:
+            status_code = 603
+            #    logger.exception(status_code)
+
             retry += 1
-    # print(timeout_tuple)
+
     if not response_ok:
         r = 600
         response_dict = {}

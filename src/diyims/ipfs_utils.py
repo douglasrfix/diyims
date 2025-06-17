@@ -98,8 +98,8 @@ def publish_main(mode):
         )
         if shutdown_row_dict["enabled"]:
             break
-        query_row = queries.select_last_header(
-            conn, peer_ID=peer_ID
+        query_row = Rqueries.select_last_header(
+            Rconn, peer_ID=peer_ID
         )  # find the header CID of the last header
 
         if query_row is not None:

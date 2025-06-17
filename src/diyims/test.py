@@ -1,19 +1,15 @@
 def test():
     """ """
-    from diyims.database_utils import (
-        set_up_sql_operations,
-        select_peer_table_entry_by_key,
-    )
-    from diyims.config_utils import get_metrics_config_dict
+    from rich import print
+    from diyims.requests_utils import execute_request
 
-    config_dict = get_metrics_config_dict()
-    Rconn, Rqueries = set_up_sql_operations(config_dict)
-    peer_row_dict = {}
-    peer_row_dict["peer_ID"] = "12D3KooWEVZcNKwWkxC9edn13qxMsG3bYLmmWkmz3XCrqdCV7Uj1"
-    peer_table_entry = select_peer_table_entry_by_key(Rconn, Rqueries, peer_row_dict)
-    for entry in peer_table_entry:
-        print(entry)
-    return
+    ipfs_header_CID = "bafkreidufrs6om7p3gyombkzv7s6gy3vlt45xt6sighqwt4v2jax4uvboq"
+    ipfs_path = "/ipfs/" + ipfs_header_CID
+    param = {"arg": ipfs_path}
+    response, status_code, response_dict = execute_request(
+        url_key="cat", param=param, timeout=(3.05, 100)
+    )
+    print(response_dict)
 
 
 if __name__ == "__main__":

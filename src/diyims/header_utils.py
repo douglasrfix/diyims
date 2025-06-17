@@ -27,6 +27,8 @@ def ipfs_header_add(
     conn,
     queries,
     processing_status,
+    Rconn,
+    Rqueries,
 ):
     from diyims.database_utils import insert_header_row
     from multiprocessing.managers import BaseManager
@@ -47,7 +49,7 @@ def ipfs_header_add(
         queue_server.connect()
         publish_queue = queue_server.get_publish_queue()
 
-    query_row = queries.select_last_header(conn, peer_ID=peer_ID)
+    query_row = Rqueries.select_last_header(Rconn, peer_ID=peer_ID)
 
     header_dict = {}
     header_dict["version"] = "0"

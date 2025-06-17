@@ -16,6 +16,7 @@ from diyims.database_utils import (
     update_peer_table_status_to_PMP,
     update_peer_table_status_to_PMP_type_PR,
     select_shutdown_entry,
+    add_header_chain_status_entry,
 )
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
@@ -49,7 +50,9 @@ def monitor_peer_publishing():
     while True:
         conn, queries = set_up_sql_operations(ipfs_config_dict)
         Rconn, Rqueries = set_up_sql_operations(ipfs_config_dict)
-        peer_table_rows = Rqueries.select_peer_table_signature_valid(Rconn)
+        peer_table_rows = Rqueries.select_peer_table_signature_valid(
+            Rconn
+        )  # TODO: change to function
 
         for row in peer_table_rows:  # peer level
             shutdown_row_dict = select_shutdown_entry(
@@ -67,10 +70,10 @@ def monitor_peer_publishing():
                 param = {"arg": ipns_path}
                 response, status_code, response_dict = execute_request(
                     url_key="resolve",
-                    logger=logger,
-                    url_dict=url_dict,
-                    config_dict=ipfs_config_dict,
-                    param=param,
+                    # logger=logger,
+                    # url_dict=url_dict,
+                    # config_dict=ipfs_config_dict,
+                    param=param,  # may need timeout special
                 )
 
                 if status_code == 200:
@@ -91,9 +94,9 @@ def monitor_peer_publishing():
                     conn.commit()
 
                     ipfs_header_CID = response_dict["Path"][6:]  # header cid in publish
-                    db_header_row = Rqueries.select_last_header(
+                    db_header_row = Rqueries.select_last_header(  # TODO: change to function and name to newest header
                         Rconn, peer_ID=peer_ID
-                    )  # last published cid processed
+                    )  # last published cid that was processed
 
                     if (
                         db_header_row is None
@@ -109,11 +112,17 @@ def monitor_peer_publishing():
                             ipfs_config_dict,
                             pid,
                             out_bound,
+                            peer_ID,
                         )  # add one or more headers
 
                     else:
                         most_recent_db_header = db_header_row["header_CID"]
-                        if most_recent_db_header == ipfs_header_CID:  # nothing new
+                        # if we have a null cid a head of chain we should only process current entries
+                        # if we hav e a gap whe should process the current entry and follow the chain tito see if we can fill the gap
+                        # if we find the null entry we should delete any gap entry
+                        if (
+                            most_recent_db_header == ipfs_header_CID
+                        ):  # nothing new #TODO: we should check for an existing gap and retry if there is one
                             pass
                             # print(f"no new entries for {peer_ID}")
                         else:
@@ -128,6 +137,7 @@ def monitor_peer_publishing():
                                 ipfs_config_dict,
                                 pid,
                                 out_bound,
+                                peer_ID,
                             )  # add one or more headers
                             # this assumes an in order arrival sequence dht delivers a best value as the most current
 
@@ -184,6 +194,7 @@ def header_chain_maint(
     config_dict,
     pid,
     out_bound,
+    peer_ID,
 ):
     """
     docstring
@@ -192,20 +203,39 @@ def header_chain_maint(
     # ipfs_config_dict = get_ipfs_config_dict()
     while True:
         start_DTS = get_DTS()
+        # ipfs_header_CID =  "QmbY1Utuz753VwtQGyBvirB5Hgn8wouaRZ1xzBa99KaMRB"
         ipfs_path = "/ipfs/" + ipfs_header_CID
 
         param = {"arg": ipfs_path}
         response, status_code, response_dict = execute_request(
             url_key="cat",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=config_dict,
+            # logger=logger,
+            # url_dict=url_dict,   # TODO: add to kwargs as override
+            # config_dict=config_dict,
             param=param,
-            timeout=(3.05, 120),
+            # timeout=(3.05, 120),
+            # connect_retries=0,
         )
 
-        if status_code != 200:
-            break
+        if status_code != 200:  # This could be caused by a time out or by a missing CID
+            header_chain_status_dict = {}
+            header_chain_status_dict["insert_DTS"] = get_DTS()
+            header_chain_status_dict["peer_ID"] = peer_ID
+            header_chain_status_dict["missing_header_CID"] = ipfs_header_CID
+            header_chain_status_dict["message"] = "missing header"
+
+            try:
+                add_header_chain_status_entry(
+                    conn,
+                    queries,
+                    header_chain_status_dict,
+                )
+                conn.commit()
+            except IntegrityError:
+                conn.commit()
+                pass
+
+            break  # log chain broken
 
         stop_DTS = get_DTS()
         start = datetime.fromisoformat(start_DTS)
@@ -223,19 +253,6 @@ def header_chain_maint(
 
         object_type = response_dict["object_type"]
         object_CID = response_dict["object_CID"]
-
-        """
-        subscription_rows = Rqueries.select_subscriptions_by_object_type(
-            Rconn, object_type=object_type
-        )
-
-        for row in subscription_rows:
-            if row["object_type"] == "local_peer_entry":
-                if (
-                    row["notify_maint_queue"] == "out_bound"
-                ):  # maybe dictionary look up put function into a variable and execute
-                    out_bound.put_nowait(response_dict)
-        """
 
         if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
             remote_peer_row_dict = unpack_peer_row_from_cid(object_CID, config_dict)
@@ -315,20 +332,34 @@ def header_chain_maint(
 
         ipfs_header_CID = response_dict["prior_header_CID"]
 
-        if (
-            ipfs_header_CID == "null"
-        ):  # no more headers    #TODO: set chain complete flag
-            break
+        if ipfs_header_CID == "null":
+            header_chain_status_dict = {}
+            header_chain_status_dict["insert_DTS"] = get_DTS()
+            header_chain_status_dict["peer_ID"] = peer_ID
+            header_chain_status_dict["missing_header_CID"] = ipfs_header_CID
+            header_chain_status_dict["message"] = "Root header found"
 
-        db_header_row = Rqueries.select_header_CID(
+            add_header_chain_status_entry(
+                conn,
+                queries,
+                header_chain_status_dict,
+            )
+            conn.commit()
+            break  # log chain complete
+
+        db_header_row = Rqueries.select_header_CID(  # TODO: change to db function
             Rconn, header_CID=ipfs_header_CID
         )  # test for next entry
 
         if (
             db_header_row is not None
-        ):  # If not missing, this will build the complete chain until the prior is null
+        ):  # If not missing, this will add to the chain until the prior is null
             break
 
+    # a missing cid ot time out currently goes here
+    # a nieve assumption would be to treat it as a missing cid
+
+    # log gap
     return
 
 

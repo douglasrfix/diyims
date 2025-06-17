@@ -418,7 +418,7 @@ def get_request_config_dict():
         parser["Request"]["connect_timeout"] = "3.05"
         parser["Request"]["read_timeout"] = "120"
         parser["Request"]["connect_retries"] = "30"
-        parser["Rquest"]["connect_retry_delay"] = "10"
+        parser["Request"]["connect_retry_delay"] = "10"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)

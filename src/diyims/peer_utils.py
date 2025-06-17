@@ -269,6 +269,8 @@ def verify_peer_and_update(
                 conn,
                 queries,
                 processing_status,
+                Rconn,
+                Rqueries,
             )
 
     else:
@@ -293,6 +295,7 @@ def select_local_peer_and_update_metrics():
     url_dict = get_url_dict()
     path_dict = get_path_dict()
     conn, queries = set_up_sql_operations(config_dict)
+    Rconn, Rqueries = set_up_sql_operations(config_dict)
     logger = get_logger(
         config_dict["log_file"],
         "none",
@@ -304,7 +307,7 @@ def select_local_peer_and_update_metrics():
 
     peer_table_dict = refresh_peer_row_from_template()
     peer_table_entry = select_peer_table_local_peer_entry(
-        conn, queries, peer_table_dict
+        Rconn, Rqueries, peer_table_dict
     )
 
     changed_metrics = False
@@ -380,6 +383,8 @@ def select_local_peer_and_update_metrics():
             conn,
             queries,
             processing_status,
+            Rconn,
+            Rqueries,
         )
 
         # logger.info("Metrics change processed.")

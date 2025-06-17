@@ -635,9 +635,9 @@ def capture_peer_want_list_by_id(
     log_dict["pid"] = pid
     log_dict["peer_type"] = peer_type
     log_dict["msg"] = log_string
-    if test == 1:
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
+    # if test == 1:
+    # insert_log_row(conn, queries, log_dict)
+    # conn.commit()
 
     # level_zero_dict = json.loads(response.text)
     if str(response_dict["Keys"]) == "None":
@@ -821,10 +821,10 @@ def filter_wantlist(
 
             response, status_code, response_dict = execute_request(
                 url_key,
-                url_dict=url_dict,
-                config_dict=config_dict,
+                # url_dict=url_dict,
+                # config_dict=config_dict,
                 param=param,
-                timeout=(3.05, 104),
+                # timeout=(3.05, 104),
             )
 
             stop_DTS = get_DTS()

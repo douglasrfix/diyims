@@ -67,13 +67,31 @@ CREATE TABLE "subscription" (
 	"header_CID"	TEXT
 );
 
+
 CREATE TABLE "shutdown" (
 	"enabled"	INTEGER
+);
+
+
+CREATE TABLE "header_chain_status" (
+	"insert_DTS" TEXT,
+	"peer_ID"	TEXT,
+	"missing_header_CID"	TEXT,
+	"message"  TEXT,
+	PRIMARY KEY("peer_ID", "missing_header_CID")
+
 );
 
 -- name: set_pragma#
 PRAGMA journal_mode = WAL
 ;
+
+
+-- name: add_header_chain_status_entry!
+insert into header_chain_status (insert_DTS, peer_ID, missing_header_CID, message)
+values (:insert_DTS, :peer_ID, :missing_header_CID, :message);
+
+
 
 
 -- name: add_shutdown_entry!

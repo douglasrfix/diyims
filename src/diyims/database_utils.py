@@ -59,6 +59,17 @@ def reset_peer_table_status():
     return
 
 
+def add_header_chain_status_entry(conn, queries, header_chain_status_dict):
+    queries.add_header_chain_status_entry(
+        conn,
+        insert_DTS=header_chain_status_dict["insert_DTS"],
+        peer_ID=header_chain_status_dict["peer_ID"],
+        missing_header_CID=header_chain_status_dict["missing_header_CID"],
+        message=header_chain_status_dict["message"],
+    )
+    return
+
+
 def add_shutdown_entry(conn, queries):
     queries.add_shutdown_entry(
         conn,

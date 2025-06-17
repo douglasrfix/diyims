@@ -54,7 +54,7 @@ def install(
         no matter the source.
 
     """
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
     try:
         install_main(drive_letter, force_install)
 
@@ -93,7 +93,7 @@ def create_schema(
     """Initializes the database to a known state. If a pre-existing
     installation exists it will simply return with an error message
     """
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
     try:
         create()
     except CreateSchemaError as error:
@@ -124,7 +124,7 @@ def init_database(
     message
 
     """
-    os.environ["ROAMING"] = roaming
+    os.environ["ROAMING"] = str(roaming)
     try:
         init()
 

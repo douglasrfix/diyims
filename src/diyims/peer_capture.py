@@ -154,7 +154,7 @@ def capture_peer_main(peer_type):
         total_added += added
         total_promoted += promoted
 
-        if modified:
+        if modified > 0:
             out_bound.put_nowait("wake up")
 
         msg = f"Interval {capture_interval} complete with find provider duration {duration}."
@@ -392,6 +392,8 @@ def decode_findprovs_structure(
                                     update_peer_table_status_WPW_to_WLR(
                                         conn, queries, peer_table_dict
                                     )
+                                    # conn.commit()
+
                                     modified += 1
                                     commit_peer = 1
 
@@ -409,6 +411,8 @@ def decode_findprovs_structure(
                                     update_peer_table_version(
                                         conn, queries, peer_table_dict
                                     )
+                                    # conn.commit()
+
                                     modified += 1
                                     commit_peer = 1
 
@@ -418,6 +422,7 @@ def decode_findprovs_structure(
                             update_peer_table_peer_type_BP_to_PP(
                                 conn, queries, peer_table_dict
                             )
+                            # conn.commit()
 
                             commit_peer = 1
                             modified += 1
@@ -429,6 +434,8 @@ def decode_findprovs_structure(
                             update_peer_table_peer_type_SP_to_PP(
                                 conn, queries, peer_table_dict
                             )
+                            # conn.commit()
+
                             commit_peer = 1
                             modified += 1
                             promoted += 1
@@ -460,8 +467,8 @@ def decode_findprovs_structure(
                         log_dict["pid"] = pid
                         log_dict["peer_type"] = "PP"
                         log_dict["msg"] = msg
-                        insert_log_row(conn, queries, log_dict)
-                        conn.commit()
+                        # insert_log_row(conn, queries, log_dict)
+                        # conn.commit()
 
                     elif original_peer_type == "BP":
                         msg = "put promoted from bitswap wake up from PP peer capture"
@@ -531,7 +538,7 @@ def decode_bitswap_stat_structure(
         )
         # zero want list threshold limit
         try:
-            insert_peer_row(conn, Uqueries, peer_table_dict)
+            insert_peer_row(conn, queries, peer_table_dict)
             conn.commit()
 
             added += 1

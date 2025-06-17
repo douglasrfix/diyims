@@ -2,8 +2,8 @@ import configparser
 import os
 from pathlib import Path
 
-
 from rich import print
+
 
 from diyims.error_classes import (
     InvalidDriveLetterError,

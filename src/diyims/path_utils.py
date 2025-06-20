@@ -76,10 +76,12 @@ def get_linux_template_dict():
     except KeyError:
         xdg_home = Path.home()
 
-    xdg_data_home = Path(xdg_home).joinpath(".local", "diyims", "share")
-    xdg_config_home = Path(xdg_home).joinpath(".config", "diyims")
-    xdg_cache_home = Path(xdg_home).joinpath(".cache", "diyims")
-    xdg_state_home = Path(xdg_home).joinpath(".local", "diyims", "state")
+    xdg_data_home = Path(xdg_home).joinpath(
+        "local", "diyims", "share"
+    )  # removed . to ease debugging
+    xdg_config_home = Path(xdg_home).joinpath("config", "diyims")
+    xdg_cache_home = Path(xdg_home).joinpath("cache", "diyims")
+    xdg_state_home = Path(xdg_home).joinpath("local", "diyims", "state")
 
     template_path_dict = {}
     template_path_dict["config_path"] = xdg_config_home

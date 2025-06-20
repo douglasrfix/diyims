@@ -117,7 +117,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
 
         if peer_type == "PP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_want_list_queue")
             queue_server.connect()
@@ -125,7 +125,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
             pool_workers = int(want_list_config_dict["provider_pool_workers"])
             maxtasks = int(want_list_config_dict["provider_maxtasks"])
         elif peer_type == "BP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_bitswap_queue")
             queue_server.connect()
@@ -133,7 +133,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
             pool_workers = int(want_list_config_dict["bitswap_pool_workers"])
             maxtasks = int(want_list_config_dict["bitswap_maxtasks"])
         elif peer_type == "SP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_swarm_queue")
             queue_server.connect()
@@ -299,6 +299,7 @@ def capture_want_lists_for_peers(
     peers_processed = 0
     p = psutil.Process()
     pid = p.pid
+    address_wait_enabled = 0
     # Rconn, Rqueries = set_up_sql_operations(want_list_config_dict)  # + 1
     # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
     # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
@@ -326,39 +327,44 @@ def capture_want_lists_for_peers(
                 config_dict=want_list_config_dict,
                 param=param,
             )
+        else:
+            if address_wait_enabled:
+                status_code = 500
+            else:
+                status_code = 200
 
-            if status_code == 200:
-                peer_table_dict = refresh_peer_row_from_template()
-                peer_table_dict["peer_ID"] = peer_row["peer_ID"]
-                peer_table_dict["peer_type"] = peer_row["peer_type"]
-                # peer_table_dict["processing_status"] = (
-                #    "WLP"  # suppress resubmission by WLR -> WLP
-                # )
-                peer_table_dict["local_update_DTS"] = get_DTS()
+        if status_code == 200:
+            peer_table_dict = refresh_peer_row_from_template()
+            peer_table_dict["peer_ID"] = peer_row["peer_ID"]
+            peer_table_dict["peer_type"] = peer_row["peer_type"]
+            # peer_table_dict["processing_status"] = (
+            #    "WLP"  # suppress resubmission by WLR -> WLP
+            # )
+            peer_table_dict["local_update_DTS"] = get_DTS()
 
-                update_peer_table_status_WLP(conn, queries, peer_table_dict)
-                conn.commit()
+            update_peer_table_status_WLP(conn, queries, peer_table_dict)
+            conn.commit()
 
-                pool.apply_async(
-                    submitted_capture_peer_want_list_by_id,
-                    args=(
-                        want_list_config_dict,
-                        peer_table_dict,
-                        self,
-                        test,
-                    ),
-                )
+            pool.apply_async(
+                submitted_capture_peer_want_list_by_id,
+                args=(
+                    want_list_config_dict,
+                    peer_table_dict,
+                    self,
+                    test,
+                ),
+            )
 
-                log_string = f"Peer id {peer_table_dict['peer_ID']} submitted."
-                log_dict = refresh_log_dict()
-                log_dict["DTS"] = get_DTS()
-                log_dict["process"] = "peer_want_capture_peer-submit"
-                log_dict["pid"] = pid
-                log_dict["peer_type"] = peer_type
-                log_dict["msg"] = log_string
-                insert_log_row(conn, queries, log_dict)
-                conn.commit()
-                peers_processed += 1
+            log_string = f"Peer id {peer_table_dict['peer_ID']} submitted."
+            log_dict = refresh_log_dict()
+            log_dict["DTS"] = get_DTS()
+            log_dict["process"] = "peer_want_capture_peer-submit"
+            log_dict["pid"] = pid
+            log_dict["peer_type"] = peer_type
+            log_dict["msg"] = log_string
+            insert_log_row(conn, queries, log_dict)
+            conn.commit()
+            peers_processed += 1
 
     # Rconn.close()  # - 1
 
@@ -414,7 +420,7 @@ def submitted_capture_peer_want_list_by_id(
         queue_server.connect()
         # peer_maint_queue = queue_server.get_peer_maint_queue()
         if peer_type == "PP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_peer_maint_queue")
             queue_server.connect()
@@ -426,7 +432,7 @@ def submitted_capture_peer_want_list_by_id(
             # peer_table_dict["processing_status"] = "WLR"
 
         elif peer_type == "BP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_bitswap_queue")
             queue_server.connect()
@@ -437,7 +443,7 @@ def submitted_capture_peer_want_list_by_id(
             # peer_table_dict["processing_status"] = "WLR"
 
         elif peer_type == "SP":
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
+            # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # NOTE: put in config
 
             queue_server.register("get_swarm_queue")
             queue_server.connect()

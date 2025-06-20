@@ -143,7 +143,7 @@ def get_satisfy_config_dict():
 
     except KeyError:
         parser["Satisfy"] = {}
-        parser["Satisfy"]["wait_before_startup"] = "10"
+        parser["Satisfy"]["wait_before_startup"] = "0"
         parser["Satisfy"]["q_server_port"] = "50000"
         parser["Satisfy"]["sql_timeout"] = "60"
         parser["Satisfy"]["log_file"] = "satisfy.log"
@@ -208,7 +208,7 @@ def get_scheduler_config_dict():
         parser["Scheduler"]["provider_enable"] = "True"
         parser["Scheduler"]["bitswap_enable"] = "True"
         parser["Scheduler"]["swarm_enable"] = "False"
-        parser["Scheduler"]["submit_delay"] = "0"
+        parser["Scheduler"]["submit_delay"] = "15"
         parser["Scheduler"]["worker_pool"] = "9"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
@@ -683,7 +683,7 @@ def get_want_list_config_dict():
         parser["Want_List"]["samples_per_minute"] = "6"
         parser["Want_List"]["number_of_samples_per_interval"] = "60"
         parser["Want_List"]["sql_timeout"] = "60"
-        parser["Want_List"]["wait_before_startup"] = "30"
+        parser["Want_List"]["wait_before_startup"] = "0"
         parser["Want_List"]["max_intervals"] = "9999"
         parser["Want_List"]["shutdown_time"] = "99:99:99"
         parser["Want_List"]["q_server_port"] = "50000"

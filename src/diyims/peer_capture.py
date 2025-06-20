@@ -59,15 +59,15 @@ def capture_peer_main(peer_type):
     logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
     sleep(wait_seconds)  # config value
     if peer_type == "PP":
-        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Provider Capture startup.")
     elif peer_type == "BP":
-        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Startup of Bitswap Capture.")
     elif peer_type == "SP":
-        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
 
         logger.info("Startup of Swarm Capture.")
     interval_length = int(capture_peer_config_dict["capture_interval_delay"])
@@ -352,14 +352,17 @@ def decode_findprovs_structure(
                     peer_table_dict["peer_ID"] = peer_dict["ID"]
                     peer_table_dict["local_update_DTS"] = get_DTS()
                     peer_table_dict["peer_type"] = "PP"
+                    address_wait_enabled = 0
 
                     if address_available:
                         peer_table_dict["processing_status"] = "WLR"
                         peer_table_dict["version"] = connect_address
                     else:
                         # wait for address
-
-                        peer_table_dict["processing_status"] = "WPW"
+                        if address_wait_enabled:
+                            peer_table_dict["processing_status"] = "WPW"
+                        else:
+                            peer_table_dict["processing_status"] = "WLR"
                         peer_table_dict["version"] = "0"
 
                     try:

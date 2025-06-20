@@ -66,14 +66,15 @@ def install_main(drive_letter, force_install):
         raise (PreExistingInstallationError(" "))
 
     if override_drive != "True":
-        db_path.mkdir(mode=755, parents=True, exist_ok=True)
-        want_item_path.mkdir(mode=755, parents=True, exist_ok=True)
+        db_path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    config_path.mkdir(mode=755, parents=True, exist_ok=True)
-    log_path.mkdir(mode=755, parents=True, exist_ok=True)
-    header_path.mkdir(mode=755, parents=True, exist_ok=True)
-    peer_path.mkdir(mode=755, parents=True, exist_ok=True)
-    sign_path.mkdir(mode=755, parents=True, exist_ok=True)
+        want_item_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+
+    config_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    log_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    header_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    peer_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    sign_path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
     db_file = Path(db_path).joinpath("diyims.db")
     header_file = Path(header_path).joinpath("header.json")

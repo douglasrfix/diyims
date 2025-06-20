@@ -7,7 +7,8 @@ The stats captured will also be used to create timing information (3)
 
 # import logging
 from queue import Empty
-import psutil
+
+# import psutil
 import json
 from diyims.requests_utils import execute_request
 from datetime import datetime
@@ -30,8 +31,8 @@ from diyims.database_utils import (
 def beacon_main():
     # import psutil
 
-    p = psutil.Process()
-    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    # p = psutil.Process()
+    # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
     logging_enabled = 0  # TODO: config
     beacon_config_dict = get_beacon_config_dict()
     conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
@@ -266,8 +267,8 @@ def satisfy_main():
     """
     # import psutil
 
-    p = psutil.Process()
-    p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+    # p = psutil.Process()
+    # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
     config_dict = get_satisfy_config_dict()
     logging_enabled = 0
 

@@ -100,8 +100,8 @@ def install_main(drive_letter, force_install):
 
     with open(config_file, "w") as configfile:
         parser.write(configfile)
-    print("Installation Complete")
 
     config_install()
+    print("Installation Complete")
 
     return 0

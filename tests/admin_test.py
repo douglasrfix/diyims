@@ -10,10 +10,10 @@ runner = CliRunner()
 
 @pytest.fixture(scope="function")
 def environ_m(monkeypatch):
-    monkeypatch.setenv("OVERRIDE_PLATFORM", "win32")
+    monkeypatch.setenv("OVERRIDE_PLATFORM", "linux")
 
 
-@pytest.mark.skip(reason="native")
+# @pytest.mark.skip(reason="native")
 # @pytest.mark.run
 def test_linux_install(environ_m):
     """testing  general install 'real path'process for linux and unspecified drive letter"""

@@ -78,7 +78,7 @@ CREATE TABLE "header_chain_status" (
 	"peer_ID"	TEXT,
 	"missing_header_CID"	TEXT,
 	"message"  TEXT,
-	PRIMARY KEY("peer_ID", "missing_header_CID")
+	PRIMARY KEY("insert_DTS", "peer_ID", "missing_header_CID")
 
 );
 

@@ -299,7 +299,7 @@ def capture_want_lists_for_peers(
     peers_processed = 0
     p = psutil.Process()
     pid = p.pid
-    address_wait_enabled = 0
+    address_wait_is_enabled = 0
     # Rconn, Rqueries = set_up_sql_operations(want_list_config_dict)  # + 1
     # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
     # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
@@ -328,7 +328,7 @@ def capture_want_lists_for_peers(
                 param=param,
             )
         else:
-            if address_wait_enabled:
+            if address_wait_is_enabled:
                 status_code = 500
             else:
                 status_code = 200

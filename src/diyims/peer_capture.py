@@ -310,6 +310,7 @@ def decode_findprovs_structure(
     modified = 0
     p = psutil.Process()
     pid = p.pid
+    address_wait_is_enabled = 0
 
     line_list = []
     for line in response.iter_lines():
@@ -352,14 +353,13 @@ def decode_findprovs_structure(
                     peer_table_dict["peer_ID"] = peer_dict["ID"]
                     peer_table_dict["local_update_DTS"] = get_DTS()
                     peer_table_dict["peer_type"] = "PP"
-                    address_wait_enabled = 0
 
                     if address_available:
                         peer_table_dict["processing_status"] = "WLR"
                         peer_table_dict["version"] = connect_address
                     else:
                         # wait for address
-                        if address_wait_enabled:
+                        if address_wait_is_enabled:
                             peer_table_dict["processing_status"] = "WPW"
                         else:
                             peer_table_dict["processing_status"] = "WLR"

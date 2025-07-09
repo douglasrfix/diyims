@@ -11,6 +11,7 @@ from diyims.database_utils import reset_peer_table_status
 from diyims.peer_utils import select_local_peer_and_update_metrics
 from diyims.header_chain_utils import monitor_peer_publishing
 from diyims.peer_utils import monitor_peer_table_maint
+from diyims.general_utils import clean_up
 
 from multiprocessing import Process, set_start_method, freeze_support
 
@@ -32,6 +33,21 @@ def scheduler_main():
     sleep(int(scheduler_config_dict["submit_delay"]))
     queue_server_main_process.start()
     logger.debug("queue_server_main started.")
+
+    if scheduler_config_dict["reset_enable"] == "True":
+        reset_peer_table_status_process = Process(target=reset_peer_table_status)
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        reset_peer_table_status_process.start()
+        logger.info("Reset peer table status started.")
+        reset_peer_table_status_process.join()
+        logger.info("Reset peer table status completed.")
+
+        clean_up_process = Process(target=clean_up)
+        sleep(int(scheduler_config_dict["submit_delay"]))
+        clean_up_process.start()
+        logger.info("Clean up process started.")
+        clean_up_process.join()
+        logger.info("Clean up process completed.")
 
     if (
         scheduler_config_dict["publish_enable"] == "True"
@@ -56,14 +72,6 @@ def scheduler_main():
         sleep(int(scheduler_config_dict["submit_delay"]))
         monitor_peer_table_maint_process.start()
         logger.debug("Monitor peer table maint started.")
-
-    if scheduler_config_dict["reset_enable"] == "True":
-        reset_peer_table_status_process = Process(target=reset_peer_table_status)
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        reset_peer_table_status_process.start()
-        logger.debug("reset peer table status started.")
-        reset_peer_table_status_process.join()
-        logger.debug("reset peer table status completed.")
 
     if scheduler_config_dict["metrics_enable"] == "True":
         select_local_peer_and_update_metrics_process = Process(

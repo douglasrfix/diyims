@@ -41,32 +41,24 @@ def execute_request(url_key, **kwargs):
                 timeout=value_dict["timeout"],
             ) as r:
                 r.raise_for_status()
+                status_code = r.status_code
                 response_ok = True
 
         except ConnectTimeout:
-            # if logger:
-            #    logger.exception(r.status_code)
             status_code = 601
             sleep(int(value_dict["connect_retry_delay"]))
             retry += 1
         except ReadTimeout:
             status_code = 602
-            # break
             retry += 1
         except HTTPError:
-            # if logger:
-            #    logger.exception(param)
             status_code = r.status_code
             break
         except ConnectionError:
-            # if logger:
             status_code = 603
-            #    logger.exception(status_code)
-
             retry += 1
 
     if not response_ok:
-        r = 600
         response_dict = {}
     else:
         status_code = r.status_code

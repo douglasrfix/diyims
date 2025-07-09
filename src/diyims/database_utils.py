@@ -14,6 +14,7 @@ def set_up_sql_operations(config_dict):  # TODO: row v s cursor set up ?
     conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
     # conn = sqlite3.connect(connect_path, timeout=int(600))
     conn.row_factory = sqlite3.Row
+    # conn.execute("PRAGMA busy_timeout = 100000;")
     return conn, queries
 
 
@@ -28,6 +29,7 @@ def set_up_sql_operations_list(config_dict):
     connect_path = path_dict["db_file"]
     queries = aiosql.from_str(sql_str, "sqlite3")
     conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn.execute("PRAGMA busy_timeout = 100000;")
     # conn = sqlite3.connect(connect_path, timeout=int(600))
     return conn, queries
 
@@ -215,12 +217,12 @@ def update_peer_table_status_WLR(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WPW_to_WLR(conn, queries, peer_table_dict):
-    queries.update_peer_table_status_WPW_to_WLR(
+def update_peer_table_status_WLW_to_WLR(conn, queries, peer_table_dict):
+    queries.update_peer_table_status_WLW_to_WLR(
         conn,
         # processing_status=peer_table_dict["processing_status"],
         local_update_DTS=peer_table_dict["local_update_DTS"],
-        version=peer_table_dict["version"],
+        # version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return

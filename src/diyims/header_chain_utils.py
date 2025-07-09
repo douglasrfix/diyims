@@ -49,16 +49,19 @@ def monitor_peer_publishing():
 
     while True:
         conn, queries = set_up_sql_operations(ipfs_config_dict)
-        Rconn, Rqueries = set_up_sql_operations(ipfs_config_dict)
-        peer_table_rows = Rqueries.select_peer_table_signature_valid(
-            Rconn
-        )  # TODO: change to function
+        peer_table_rows = queries.select_peer_table_signature_valid(conn)
+        peer_list = []
+        for row in peer_table_rows:
+            peer_list.append(row)
+        conn.close()
 
-        for row in peer_table_rows:  # peer level
+        for peer in peer_list:  # peer level
+            conn, queries = set_up_sql_operations(ipfs_config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
             if (
@@ -90,22 +93,23 @@ def monitor_peer_publishing():
                     log_dict["pid"] = pid
                     log_dict["peer_type"] = "CM"
                     log_dict["msg"] = msg
+                    conn, queries = set_up_sql_operations(ipfs_config_dict)
                     insert_log_row(conn, queries, log_dict)
                     conn.commit()
 
                     ipfs_header_CID = response_dict["Path"][6:]  # header cid in publish
-                    db_header_row = Rqueries.select_last_header(  # TODO: change to function and name to newest header
-                        Rconn, peer_ID=peer_ID
+                    db_header_row = queries.select_last_header(  # TODO: change to function and name to newest header
+                        conn, peer_ID=peer_ID
                     )  # last published cid that was processed
-
+                    conn.close()
                     if (
                         db_header_row is None
                     ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
                         header_chain_maint(
-                            conn,
-                            queries,
-                            Rconn,
-                            Rqueries,
+                            # conn,
+                            # Rqueries,
+                            # Rconn,
+                            # queries,
                             ipfs_header_CID,
                             logger,
                             url_dict,
@@ -127,10 +131,10 @@ def monitor_peer_publishing():
                             # print(f"no new entries for {peer_ID}")
                         else:
                             header_chain_maint(
-                                conn,
-                                queries,
-                                Rconn,
-                                Rqueries,
+                                # conn,
+                                # queries,
+                                # Rconn,
+                                # Rqueries,
                                 ipfs_header_CID,
                                 logger,
                                 url_dict,
@@ -146,48 +150,54 @@ def monitor_peer_publishing():
                 in_bound.get(
                     timeout=600  # config value
                 )  # comes from peer capture process
+                conn, queries = set_up_sql_operations(ipfs_config_dict)
                 shutdown_row_dict = select_shutdown_entry(
-                    Rconn,
-                    Rqueries,
+                    conn,
+                    queries,
                 )
+                conn.close()
                 if shutdown_row_dict["enabled"]:
                     break
             else:
+                conn, queries = set_up_sql_operations(ipfs_config_dict)
                 shutdown_row_dict = select_shutdown_entry(
-                    Rconn,
-                    Rqueries,
+                    conn,
+                    queries,
                 )
+                conn.close()
                 if shutdown_row_dict["enabled"]:
                     break
                 sleep(60)  # config value
 
         except Empty:
+            conn, queries = set_up_sql_operations(ipfs_config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
         except AttributeError:
+            conn, queries = set_up_sql_operations(ipfs_config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
             sleep(60)  # config_value wait on queue ?
 
-    conn.close()
-    Rconn.close()
     logger.info("Peer Monitor shutdown.")
     return
 
 
 def header_chain_maint(
-    conn,
-    queries,
-    Rconn,
-    Rqueries,
+    # conn,
+    # queries,
+    # Rconn,
+    # Rqueries,
     ipfs_header_CID,
     logger,
     url_dict,
@@ -223,7 +233,7 @@ def header_chain_maint(
             header_chain_status_dict["peer_ID"] = peer_ID
             header_chain_status_dict["missing_header_CID"] = ipfs_header_CID
             header_chain_status_dict["message"] = "missing header"
-
+            conn, queries = set_up_sql_operations(config_dict)
             try:
                 add_header_chain_status_entry(
                     conn,
@@ -231,8 +241,10 @@ def header_chain_maint(
                     header_chain_status_dict,
                 )
                 conn.commit()
+                conn.close()
             except IntegrityError:
-                conn.commit()
+                conn.rollback()
+                conn.close()
                 pass
 
             break  # log chain broken
@@ -248,8 +260,10 @@ def header_chain_maint(
         log_dict["pid"] = pid
         log_dict["peer_type"] = "CM"
         log_dict["msg"] = msg
+        conn, queries = set_up_sql_operations(config_dict)
         insert_log_row(conn, queries, log_dict)
         conn.commit()
+        conn.close()
 
         object_type = response_dict["object_type"]
         object_CID = response_dict["object_CID"]
@@ -263,10 +277,11 @@ def header_chain_maint(
             proto_remote_peer_row_dict["version"] = object_CID
             proto_remote_peer_row_dict["local_update_DTS"] = get_DTS()
             proto_remote_peer_row_dict["processing_status"] = "PMP"
-
+            conn, queries = set_up_sql_operations(config_dict)
             try:
                 insert_peer_row(conn, queries, proto_remote_peer_row_dict)
                 conn.commit()
+                conn.close()
                 out_bound.put_nowait("wake up")
 
                 msg = f"Peer {remote_peer_row_dict['peer_ID']} added."
@@ -276,12 +291,17 @@ def header_chain_maint(
                 log_dict["pid"] = pid
                 log_dict["peer_type"] = "CM"
                 log_dict["msg"] = msg
+                conn, queries = set_up_sql_operations(config_dict)
                 insert_log_row(conn, queries, log_dict)
                 conn.commit()
+                conn.close()
 
             except IntegrityError:
+                conn.rollback()
+                conn.close()
                 if object_type == "local_peer_entry":
                     # this will trigger peer maint by npp without change anything but the version, etc.
+                    conn, queries = set_up_sql_operations(config_dict)
                     update_peer_table_status_to_PMP(
                         conn, queries, proto_remote_peer_row_dict
                     )
@@ -297,11 +317,13 @@ def header_chain_maint(
                     log_dict["msg"] = msg
                     insert_log_row(conn, queries, log_dict)
                     conn.commit()
+                    conn.close()
                 else:
                     # peer_row_dict = select_peer_table_entry_by_key(conn, queries, remote_peer_row_dict)
 
                     # from PP to PR to indicate an overlay if not already NPP or NPC  triggers a provider source change
                     proto_remote_peer_row_dict["peer_type"] = "PR"
+                    conn, queries = set_up_sql_operations(config_dict)
                     update_peer_table_status_to_PMP_type_PR(
                         conn, queries, proto_remote_peer_row_dict
                     )
@@ -317,15 +339,18 @@ def header_chain_maint(
                     log_dict["msg"] = msg
                     insert_log_row(conn, queries, log_dict)
                     conn.commit()
-
+                    conn.close()
+        conn, queries = set_up_sql_operations(config_dict)
         try:  # this method adds one extra cat to the process
             response_dict["processing_status"] = get_DTS()
             insert_header_row(conn, queries, response_dict, ipfs_header_CID)
             conn.commit()
+            conn.close()
 
         except IntegrityError:
             # pass will correct missing db components ########this leg shouldn't happen
             conn.rollback()
+            conn.close()
             break
 
         # this method eliminates the cat  abd insert exception and uses a db read instead
@@ -338,19 +363,20 @@ def header_chain_maint(
             header_chain_status_dict["peer_ID"] = peer_ID
             header_chain_status_dict["missing_header_CID"] = ipfs_header_CID
             header_chain_status_dict["message"] = "Root header found"
-
+            conn, queries = set_up_sql_operations(config_dict)
             add_header_chain_status_entry(
                 conn,
                 queries,
                 header_chain_status_dict,
             )
             conn.commit()
+            conn.close()
             break  # log chain complete
-
-        db_header_row = Rqueries.select_header_CID(  # TODO: change to db function
-            Rconn, header_CID=ipfs_header_CID
+        conn, queries = set_up_sql_operations(config_dict)
+        db_header_row = queries.select_header_CID(  # TODO: change to db function
+            conn, header_CID=ipfs_header_CID
         )  # test for next entry
-
+        conn.close()
         if (
             db_header_row is not None
         ):  # If not missing, this will add to the chain until the prior is null

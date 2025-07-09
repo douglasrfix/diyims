@@ -28,6 +28,7 @@ def get_url_dict():
     url_dict["dag_import"] = "http://127.0.0.1:5001/api/v0/dag/import"
     url_dict["name_publish"] = "http://127.0.0.1:5001/api/v0/name/publish"
     url_dict["find_providers"] = "http://127.0.0.1:5001/api/v0/routing/findprovs"
+    url_dict["provide"] = "http://127.0.0.1:5001/api/v0/routing/provide"
     url_dict["find_peer"] = "http://127.0.0.1:5001/api/v0/routing/findpeer"
     url_dict["pin_list"] = "http://127.0.0.1:5001/api/v0/pin/ls"
     url_dict["pin_add"] = "http://127.0.0.1:5001/api/v0/pin/add"
@@ -87,21 +88,24 @@ def publish_main(mode):
     peer_ID = response_dict["ID"]
 
     conn, queries = set_up_sql_operations(config_dict)
-    Rconn, Rqueries = set_up_sql_operations(config_dict)
-    peer_table_row = Rqueries.select_peer_table_local_peer_entry(Rconn)
+    # Rconn, Rqueries = set_up_sql_operations(config_dict)
+    peer_table_row = queries.select_peer_table_local_peer_entry(conn)
     ipns_path = "/ipns/" + peer_table_row["IPNS_name"]
-
+    conn.close()
     while True:
+        conn, queries = set_up_sql_operations(config_dict)
         shutdown_row_dict = select_shutdown_entry(
-            Rconn,
-            Rqueries,
+            conn,
+            queries,
         )
+        conn.close()
         if shutdown_row_dict["enabled"]:
             break
-        query_row = Rqueries.select_last_header(
-            Rconn, peer_ID=peer_ID
+        conn, queries = set_up_sql_operations(config_dict)
+        query_row = queries.select_last_header(
+            conn, peer_ID=peer_ID
         )  # find the header CID of the last header
-
+        conn.close()
         if query_row is not None:
             param = {"arg": ipns_path}
             response, status_code, response_dict = execute_request(
@@ -151,7 +155,6 @@ def publish_main(mode):
                 # test = "False"
                 pass
 
-    Rconn.close()
     logger.info("Publish shutdown.")
     return
 
@@ -417,8 +420,8 @@ def unpack_peer_row_from_cid(peer_row_CID, config_dict):
 
 
 def export_peer_table(
-    conn,
-    queries,
+    # conn,
+    # queries,
     url_dict,
     path_dict,
     config_dict,
@@ -429,8 +432,10 @@ def export_peer_table(
     """
     import json
     from diyims.path_utils import get_unique_file
+    from diyims.database_utils import set_up_sql_operations
     from diyims.requests_utils import execute_request
 
+    conn, queries = set_up_sql_operations(config_dict)
     peer_table_rows = queries.select_peer_table_signature_valid(conn)
     peer_table_dict = {}
     for row in peer_table_rows:
@@ -441,13 +446,13 @@ def export_peer_table(
             peer_dict[key] = row[key]
 
         peer_table_dict[row["peer_ID"]] = peer_dict
-
+    conn.close()
     proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
     param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-    with open(proto_file_path, "w") as write_file:
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_table_dict, write_file, indent=4)
 
     f = open(proto_file_path, "rb")

@@ -36,14 +36,20 @@ def get_network_name():
     return network_name
 
 
-def get_DTS():
+def get_DTS() -> str:
+    """Generates an iso6??? formatted UTC time string
+    suitable for timestamp use.
+
+    Returns:
+        str: UTC datetime.now() in an iso format
+    """
     DTS = datetime.now(timezone.utc).isoformat()
 
     return DTS
 
 
 def get_agent():
-    agent = "0.0.0a112"  # NOTE: How to extract at run time
+    agent = "0.0.0a124"  # NOTE: How to extract at run time
 
     return agent
 
@@ -122,14 +128,17 @@ def clean_up():
     clean_up_tuples, key_dict = select_clean_up_rows_by_date(
         conn, queries, clean_up_dict
     )
+    conn.close()
+
+    conn, queries = set_up_sql_operations_list(config_dict)
     delete_log_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
+    conn.close()
 
+    conn, queries = set_up_sql_operations_list(config_dict)
     delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
     conn.commit()
-
     conn.close()
-    conn, queries = set_up_sql_operations(config_dict)
 
     for inner_tuple in clean_up_tuples:
         DTS = inner_tuple[key_dict["DTS"]]
@@ -151,11 +160,35 @@ def clean_up():
             config_dict=config_dict,
             param=param,
         )
-
+        conn, queries = set_up_sql_operations(config_dict)
         delete_clean_up_row_by_date(conn, queries, clean_up_dict)
 
         conn.commit()
-    conn.close()
+        conn.close()
+
+    network_name = get_network_name()
+
+    param = {
+        "arg": network_name,
+    }
+
+    """
+    response, status_code, response_dict = execute_request(
+        url_key="pin_add",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=config_dict,
+        param=param,
+    )
+    """
+    response, status_code, response_dict = execute_request(
+        url_key="provide",
+        logger=logger,
+        url_dict=url_dict,
+        config_dict=config_dict,
+        param=param,
+    )
+    print(status_code)
 
     return
 
@@ -174,4 +207,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    clean_up()

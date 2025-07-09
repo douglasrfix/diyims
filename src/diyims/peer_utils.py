@@ -88,14 +88,22 @@ def monitor_peer_table_maint():
 
     while True:
         conn, queries = set_up_sql_operations(config_dict)
-        Rconn, Rqueries = set_up_sql_operations(config_dict)
-        peer_table_rows = Rqueries.select_peer_table_processing_status_NPP(Rconn)
+        # Rconn, Rqueries = set_up_sql_operations(config_dict)
+        peer_table_rows = queries.select_peer_table_processing_status_NPP(
+            conn
+        )  # create list
+        peer_list = []
+        for row in peer_table_rows:
+            peer_list.append(row)
+        conn.close()
 
-        for peer in peer_table_rows:  # peer level
+        for peer in peer_list:  # peer level
+            conn, queries = set_up_sql_operations(config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
             peer_row_CID = peer["version"]
@@ -108,10 +116,10 @@ def monitor_peer_table_maint():
                 peer_row_CID,
                 logger,
                 config_dict,
-                conn,
-                queries,
-                Rconn,
-                Rqueries,
+                # conn,
+                # queries,
+                # Rconn,
+                # Rqueries,
                 pid,
                 url_dict,
                 path_dict,
@@ -122,21 +130,24 @@ def monitor_peer_table_maint():
 
         try:
             in_bound.get(timeout=600)  # config value
+            conn, queries = set_up_sql_operations(config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
         except Empty:
+            conn, queries = set_up_sql_operations(config_dict)
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
-        conn.close()
-        Rconn.close()
+
     logger.info("Peer Maintenance shutdown.")
     return
 
@@ -145,10 +156,10 @@ def verify_peer_and_update(
     peer_row_CID,
     logger,
     config_dict,
-    conn,
-    queries,
-    Rconn,
-    Rqueries,
+    # conn,
+    # queries,
+    # Rconn,
+    # Rqueries,
     pid,
     url_dict,
     path_dict,
@@ -191,9 +202,9 @@ def verify_peer_and_update(
         peer_row_dict["version"] = 0
         peer_row_dict["local_update_DTS"] = get_DTS()
 
-        peer_table_entry = select_peer_table_entry_by_key(
-            Rconn, Rqueries, peer_row_dict
-        )
+        conn, queries = set_up_sql_operations(config_dict)
+        peer_table_entry = select_peer_table_entry_by_key(conn, queries, peer_row_dict)
+        conn.close()
         old_origin_value = peer_table_entry["origin_update_DTS"]
         new_origin_value = peer_row_dict["origin_update_DTS"]
 
@@ -202,11 +213,13 @@ def verify_peer_and_update(
         ):
             # TODO: ping peer monitor
             if (old_origin_value < new_origin_value) or old_origin_value == "null":
+                conn, queries = set_up_sql_operations(config_dict)
                 update_peer_table_status_to_NPC(conn, queries, peer_row_dict)
                 conn.commit()
 
                 log_string = f"Peer {peer_row_dict['peer_ID']}  {peer_row_dict['peer_type']} {peer_type} updated."
             else:
+                conn, queries = set_up_sql_operations(config_dict)
                 update_peer_table_status_to_NPC_no_update(conn, queries, peer_row_dict)
                 conn.commit()
 
@@ -218,6 +231,7 @@ def verify_peer_and_update(
             log_dict["pid"] = pid
             log_dict["peer_type"] = "UP"
             log_dict["msg"] = log_string
+            conn, queries = set_up_sql_operations(config_dict)
             insert_log_row(conn, queries, log_dict)
             conn.commit()
 
@@ -229,7 +243,9 @@ def verify_peer_and_update(
 
             param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
 
-            with open(proto_file_path, "w") as write_file:
+            with open(
+                proto_file_path, "w", encoding="utf-8", newline="\n"
+            ) as write_file:
                 json.dump(peer_row_dict, write_file, indent=4)
 
             f = open(proto_file_path, "rb")
@@ -266,15 +282,15 @@ def verify_peer_and_update(
                 config_dict,
                 logger,
                 mode,
-                conn,
-                queries,
+                # conn,
+                # queries,
                 processing_status,
-                Rconn,
-                Rqueries,
+                # Rconn,
+                # Rqueries,
             )
 
     else:
-        log_string = f"Peer {peer_row_dict['peer_entry_CID']} signature not valid."
+        log_string = f"Peer {peer_row_CID} signature not valid."  # How should we update the peer record???
 
         log_dict = refresh_log_dict()
         log_dict["DTS"] = get_DTS()
@@ -282,6 +298,7 @@ def verify_peer_and_update(
         log_dict["pid"] = pid
         log_dict["peer_type"] = "VP"
         log_dict["msg"] = log_string
+        conn, queries = set_up_sql_operations(config_dict)
         insert_log_row(conn, queries, log_dict)
         conn.commit()
 
@@ -341,8 +358,10 @@ def select_local_peer_and_update_metrics():
         DTS = get_DTS()
         peer_table_dict["origin_update_DTS"] = DTS
 
+        conn, queries = set_up_sql_operations(config_dict)
         update_peer_table_metrics(conn, queries, peer_table_dict)
         conn.commit()
+        conn.close()
 
         peer_row_dict = export_local_peer_row(config_dict)
 
@@ -351,7 +370,7 @@ def select_local_peer_and_update_metrics():
         proto_file_path = get_unique_file(proto_path, proto_file)
 
         param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-        with open(proto_file_path, "w") as write_file:
+        with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
             json.dump(peer_row_dict, write_file, indent=4)
 
         f = open(proto_file_path, "rb")
@@ -380,11 +399,11 @@ def select_local_peer_and_update_metrics():
             config_dict,
             logger,
             mode,
-            conn,
-            queries,
+            # conn,
+            # queries,
             processing_status,
-            Rconn,
-            Rqueries,
+            # Rconn,
+            # Rqueries,
         )
 
         # logger.info("Metrics change processed.")
@@ -416,7 +435,7 @@ def select_local_peer_and_update_metrics():
             processing_status
         )
         """
-    conn.close()
+    # conn.close()
 
     return
 

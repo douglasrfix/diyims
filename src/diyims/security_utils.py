@@ -64,7 +64,7 @@ def verify_peer_row_from_cid(peer_row_CID, logger, config_dict):
     file_to_verify = path_dict[
         "sign_file"
     ]  # NOTE: generate unique name via queue server?
-    with open(file_to_verify, "w") as write_file:
+    with open(file_to_verify, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(signing_dict, write_file, indent=4)
 
     verify_dict = {}

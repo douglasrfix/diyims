@@ -17,6 +17,7 @@ removed i.e. unpinned and a garbage collection has run.
 """
 
 import json
+import ipaddress
 import psutil
 from queue import Empty
 from diyims.requests_utils import execute_request
@@ -24,6 +25,7 @@ from datetime import datetime
 from sqlite3 import IntegrityError
 from time import sleep
 from multiprocessing.managers import BaseManager
+from sqlmodel import create_engine, Session, select
 from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
     insert_peer_row,
@@ -32,8 +34,8 @@ from diyims.database_utils import (
     set_up_sql_operations,
     refresh_log_dict,
     insert_log_row,
-    update_peer_table_status_WPW_to_WLR,
-    update_peer_table_version,
+    update_peer_table_status_WLW_to_WLR,
+    # update_peer_table_version,
     update_peer_table_peer_type_BP_to_PP,
     update_peer_table_peer_type_SP_to_PP,
     select_shutdown_entry,
@@ -41,12 +43,19 @@ from diyims.database_utils import (
 from diyims.general_utils import get_network_name, get_shutdown_target, get_DTS
 from diyims.logger_utils import get_logger
 from diyims.config_utils import get_capture_peer_config_dict
+from diyims.path_utils import get_path_dict
+from diyims.sqlmodels import Peer_Address
 
 #  psutil.BELOW_NORMAL_PRIORITY_CLASS,
 #  psutil.NORMAL_PRIORITY_CLASS,
 #  psutil.ABOVE_NORMAL_PRIORITY_CLASS,
 #  psutil.HIGH_PRIORITY_CLASS,
 #  psutil.REALTIME_PRIORITY_CLASS
+
+# class Peer_Address(SQLModel, table=True):
+#    peer_ID: str = Field(primary_key=True)
+#    multiaddress: str = Field(primary_key=True)
+#    insert_timestamp: str | None = None
 
 
 def capture_peer_main(peer_type):
@@ -98,10 +107,6 @@ def capture_peer_main(peer_type):
         queue_server.connect()
         out_bound = queue_server.get_swarm_queue()
 
-    conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-    Uconn, Uqueries = set_up_sql_operations(capture_peer_config_dict)  # +1
-    Rconn, Rqueries = set_up_sql_operations(capture_peer_config_dict)  # +1
-
     capture_interval = 0
     total_found = 0
     total_added = 0
@@ -119,34 +124,39 @@ def capture_peer_main(peer_type):
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = msg
+        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
         insert_log_row(conn, queries, log_dict)
         conn.commit()
-
+        conn.close()
+        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
         shutdown_row_dict = select_shutdown_entry(
-            Rconn,
-            Rqueries,
+            conn,
+            queries,
         )
+        conn.close()
         if shutdown_row_dict["enabled"]:
             break
 
         found, added, promoted, duration, modified = capture_peers(
             logger,
-            conn,
-            queries,
+            # conn,
+            # queries,
             capture_peer_config_dict,
             url_dict,
             out_bound,
             peer_type,
             network_name,
-            Uconn,
-            Uqueries,
-            Rconn,
-            Rqueries,
+            # Uconn,
+            # Uqueries,
+            # Rconn,
+            # Rqueries,
         )
+        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
         shutdown_row_dict = select_shutdown_entry(
-            Rconn,
-            Rqueries,
+            conn,
+            queries,
         )
+        conn.close()
         if shutdown_row_dict["enabled"]:
             break
 
@@ -164,26 +174,26 @@ def capture_peer_main(peer_type):
         log_dict["pid"] = pid
         log_dict["peer_type"] = peer_type
         log_dict["msg"] = msg
+        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
         insert_log_row(conn, queries, log_dict)
         conn.commit()
+        conn.close()
 
         try:
             in_bound.get(
                 timeout=int(capture_peer_config_dict["capture_interval_delay"])
             )
+            conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
         except Empty:
             pass
         current_DT = datetime.now()
-
-    conn.close()
-    Uconn.close()
-    Rconn.close()
 
     log_string = f"{total_found} {peer_type} found, {total_promoted} promoted and {total_added} added in {capture_interval} intervals)"
     logger.info(log_string)
@@ -194,17 +204,17 @@ def capture_peer_main(peer_type):
 
 def capture_peers(
     logger,
-    conn,
-    queries,
+    # conn,
+    # queries,
     capture_peer_config_dict,
     url_dict,
     out_bound,
     peer_type,
     network_name,
-    Uconn,
-    Uqueries,
-    Rconn,
-    Rqueries,
+    # Uconn,
+    # Uqueries,
+    # Rconn,
+    # Rqueries,
 ):
     duration = datetime.fromisoformat(get_DTS())
 
@@ -227,25 +237,26 @@ def capture_peers(
             param={"arg": network_name},
         )
 
-        stop_DTS = get_DTS()
-        start = datetime.fromisoformat(start_DTS)
-        stop = datetime.fromisoformat(stop_DTS)
-        duration = stop - start
+        if status_code == 200:
+            stop_DTS = get_DTS()
+            start = datetime.fromisoformat(start_DTS)
+            stop = datetime.fromisoformat(stop_DTS)
+            duration = stop - start
 
-        found, added, promoted, modified = decode_findprovs_structure(
-            logger,
-            conn,
-            queries,
-            capture_peer_config_dict,
-            url_dict,
-            response,
-            out_bound,
-            Uconn,
-            Uqueries,
-            Rconn,
-            Rqueries,
-            self,
-        )
+            found, added, promoted, modified = decode_findprovs_structure(
+                logger,
+                # conn,
+                # queries,
+                capture_peer_config_dict,
+                url_dict,
+                response,
+                out_bound,
+                # Uconn,
+                # Uqueries,
+                # ,
+                # Rqueries,
+                self,
+            )
 
     elif peer_type == "BP":
         response, status_code, response_dict = execute_request(
@@ -257,14 +268,14 @@ def capture_peers(
         )
 
         found, added, promoted = decode_bitswap_stat_structure(
-            conn,
-            queries,
+            # conn,
+            # queries,
             response,
             out_bound,
-            Uconn,
-            Uqueries,
-            Rconn,
-            Rqueries,
+            # Uconn,
+            # Uqueries,
+            # Rconn,
+            # Rqueries,
         )
 
     elif peer_type == "SP":
@@ -277,14 +288,14 @@ def capture_peers(
         )
 
         found, added, promoted = decode_swarm_structure(
-            conn,
-            queries,
+            # conn,
+            # queries,
             response,
             out_bound,
-            Uconn,
-            Uqueries,
-            Rconn,
-            Rqueries,
+            # Uconn,
+            # Uqueries,
+            # Rconn,
+            # Rqueries,
         )
 
     return found, added, promoted, duration, modified
@@ -292,16 +303,16 @@ def capture_peers(
 
 def decode_findprovs_structure(
     logger,
-    conn,
-    queries,
+    # conn,
+    # queries,
     capture_peer_config_dict,
     url_dict,
     response,
     out_bound,
-    Uconn,
-    Uqueries,
-    Rconn,
-    Rqueries,
+    # Uconn,
+    # Uqueries,
+    # Rconn,
+    # Rqueries,
     self,
 ):
     found = 0
@@ -310,7 +321,7 @@ def decode_findprovs_structure(
     modified = 0
     p = psutil.Process()
     pid = p.pid
-    address_wait_is_enabled = 0
+    address_wait_is_enabled = 1
 
     line_list = []
     for line in response.iter_lines():
@@ -332,22 +343,8 @@ def decode_findprovs_structure(
                 peer_ID = peer_dict["ID"]
                 if self != peer_ID:
                     address_list = peer_dict["Addrs"]
-                    for address in address_list:
-                        if address[:5] == "/ip4/":
-                            if address[:7] != "/ip4/10":
-                                if (
-                                    address[:8] != "/ip4/192"
-                                ):  # 172.16 thru 172.31 #TODO: make optional for other users
-                                    if address[:8] != "/ip4/127":
-                                        index = address.lower().find("/tcp/")
-                                        port_start = index + 5
-                                        port = address[port_start:]
-                                        if port.isnumeric():
-                                            connect_address = (
-                                                address + "/p2p/" + peer_ID
-                                            )
-                                            address_available = True
-                                            break
+                    if capture_provider_addresses(address_list, peer_ID):
+                        address_available = True
 
                     peer_table_dict = refresh_peer_row_from_template()
                     peer_table_dict["peer_ID"] = peer_dict["ID"]
@@ -356,18 +353,21 @@ def decode_findprovs_structure(
 
                     if address_available:
                         peer_table_dict["processing_status"] = "WLR"
-                        peer_table_dict["version"] = connect_address
+                        # peer_table_dict["version"] = connect_address
                     else:
                         # wait for address
                         if address_wait_is_enabled:
-                            peer_table_dict["processing_status"] = "WPW"
+                            peer_table_dict["processing_status"] = "WLW"
                         else:
                             peer_table_dict["processing_status"] = "WLR"
-                        peer_table_dict["version"] = "0"
-
+                        # peer_table_dict["version"] = "0"
+                    conn, queries = set_up_sql_operations(
+                        capture_peer_config_dict
+                    )  # +1
                     try:
                         insert_peer_row(conn, queries, peer_table_dict)
                         conn.commit()
+                        conn.close()
                         # out_bound.put_nowait("wake up")
                         if address_available:
                             modified += 1
@@ -375,31 +375,38 @@ def decode_findprovs_structure(
                         original_peer_type = peer_table_dict["peer_type"]
 
                     except IntegrityError:
+                        # conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
+                        conn.rollback()
                         peer_table_entry = select_peer_table_entry_by_key(
-                            Rconn, Rqueries, peer_table_dict
+                            conn, queries, peer_table_dict
                         )
+                        conn.close()
 
                         original_peer_type = peer_table_entry["peer_type"]
                         peer_table_dict["peer_ID"] = peer_table_entry["peer_id"]
                         commit_peer = 0
-                        if peer_table_entry["processing_status"] == "WPW":
-                            if (
-                                peer_table_entry["version"] == "0"
-                            ):  # exiting entry waiting on address
-                                if address_available:
-                                    # address is available, wait no longer
-                                    # peer_table_dict["processing_status"] = "WLR"
-                                    # peer_table_dict["version"] = connect_address
+                        if peer_table_entry["processing_status"] == "WLW":
+                            # if (
+                            #    peer_table_entry["version"] == "0"
+                            # ):  # exiting entry waiting on address
+                            if address_available:
+                                # address is available, wait no longer
+                                # peer_table_dict["processing_status"] = "WLR"
+                                # peer_table_dict["version"] = connect_address
 
-                                    # WLW -> WLR
-                                    update_peer_table_status_WPW_to_WLR(
-                                        conn, queries, peer_table_dict
-                                    )
-                                    # conn.commit()
+                                # WLW -> WLR
+                                conn, queries = set_up_sql_operations(
+                                    capture_peer_config_dict
+                                )  # +1
+                                update_peer_table_status_WLW_to_WLR(
+                                    conn, queries, peer_table_dict
+                                )
+                                conn.commit()
+                                conn.close()
 
-                                    modified += 1
-                                    commit_peer = 1
-
+                                modified += 1
+                                commit_peer = 1
+                            """
                             else:
                                 if (
                                     peer_table_entry["version"]
@@ -417,15 +424,19 @@ def decode_findprovs_structure(
                                     # conn.commit()
 
                                     modified += 1
-                                    commit_peer = 1
+                                    commit_peer = 1"""
 
                         if original_peer_type == "BP":
                             # promote
                             # BP -> PP
+                            conn, queries = set_up_sql_operations(
+                                capture_peer_config_dict
+                            )  # +1
                             update_peer_table_peer_type_BP_to_PP(
                                 conn, queries, peer_table_dict
                             )
-                            # conn.commit()
+                            conn.commit()
+                            conn.close()
 
                             commit_peer = 1
                             modified += 1
@@ -434,10 +445,14 @@ def decode_findprovs_structure(
                         elif original_peer_type == "SP":
                             # promote
                             # SP -> PP
+                            conn, queries = set_up_sql_operations(
+                                capture_peer_config_dict
+                            )  # +1
                             update_peer_table_peer_type_SP_to_PP(
                                 conn, queries, peer_table_dict
                             )
-                            # conn.commit()
+                            conn.commit()
+                            conn.close()
 
                             commit_peer = 1
                             modified += 1
@@ -453,12 +468,16 @@ def decode_findprovs_structure(
                             log_dict["pid"] = pid
                             log_dict["peer_type"] = "PP"
                             log_dict["msg"] = msg
+                            conn, queries = set_up_sql_operations(
+                                capture_peer_config_dict
+                            )  # +1
                             insert_log_row(conn, queries, log_dict)
                             commit_peer = 1
-                            # conn.commit()
+                            conn.commit()
+                            conn.close()
 
                         if commit_peer:
-                            conn.commit()
+                            # conn.commit()
 
                             commit_peer = 0
 
@@ -481,8 +500,12 @@ def decode_findprovs_structure(
                         log_dict["pid"] = pid
                         log_dict["peer_type"] = "PP"
                         log_dict["msg"] = msg
+                        conn, queries = set_up_sql_operations(
+                            capture_peer_config_dict
+                        )  # +1
                         insert_log_row(conn, queries, log_dict)
                         conn.commit()
+                        conn.close()
 
                     elif original_peer_type == "SP":
                         msg = "put promoted from swarm wake up from PP peer capture"
@@ -492,8 +515,12 @@ def decode_findprovs_structure(
                         log_dict["pid"] = pid
                         log_dict["peer_type"] = "PP"
                         log_dict["msg"] = msg
+                        conn, queries = set_up_sql_operations(
+                            capture_peer_config_dict
+                        )  # +1
                         insert_log_row(conn, queries, log_dict)
                         conn.commit()
+                        conn.close()
 
                 if address_available:
                     break  # break to next provider
@@ -506,22 +533,25 @@ def decode_findprovs_structure(
     log_dict["pid"] = pid
     log_dict["peer_type"] = "PP"
     log_dict["msg"] = log_string
+    conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
     insert_log_row(conn, queries, log_dict)
     conn.commit()
+    conn.close()
 
     return found, added, promoted, modified
 
 
 def decode_bitswap_stat_structure(
-    conn,
-    queries,
+    # conn,
+    # queries,
     r,
     out_bound,
-    Uconn,
-    Uqueries,
-    Rconn,
-    Rqueries,
+    # Uconn,
+    # Uqueries,
+    # Rconn,
+    # Rqueries,
 ):
+    config_dict = get_capture_peer_config_dict()
     found = 0
     added = 0
     promoted = 0
@@ -540,12 +570,15 @@ def decode_bitswap_stat_structure(
             "WLR"  # BP and SP will continue processing until they exceed the
         )
         # zero want list threshold limit
+        conn, queries = set_up_sql_operations(config_dict)  # +1
         try:
             insert_peer_row(conn, queries, peer_table_dict)
             conn.commit()
+            conn.close()
 
             added += 1
         except IntegrityError:
+            conn.close()
             pass
         found += 1
 
@@ -575,15 +608,16 @@ def decode_bitswap_stat_structure(
 
 
 def decode_swarm_structure(
-    conn,
-    queries,
+    # conn,
+    # queries,
     r,
     out_bound,
-    Uconn,
-    Uqueries,
-    Rconn,
-    Rqueries,
+    # Uconn,
+    # Uqueries,
+    # Rconn,
+    # Rqueries,
 ):
+    config_dict = get_capture_peer_config_dict()
     level_zero_dict = json.loads(r.text)
     level_one_list = level_zero_dict["Peers"]
     found = 0
@@ -599,8 +633,10 @@ def decode_swarm_structure(
         peer_table_dict["peer_type"] = "SP"
         peer_table_dict["processing_status"] = "WLR"
         try:
-            insert_peer_row(conn, Uqueries, peer_table_dict)
+            conn, queries = set_up_sql_operations(config_dict)  # +1
+            insert_peer_row(conn, queries, peer_table_dict)
             conn.commit()
+            conn.close()
             added += 1
 
         except IntegrityError:
@@ -631,6 +667,130 @@ def decode_swarm_structure(
     # conn.commit()
 
     return found, added, promoted
+
+
+def capture_provider_addresses(address_list: list, peer_ID: str) -> bool:
+    address_available = False
+
+    if capture_peer_addresses(address_list, peer_ID):
+        address_available = True
+    param = {"arg": peer_ID}
+    response, status_code, response_dict = execute_request(
+        url_key="id",
+        param=param,
+    )
+    if status_code == 200:
+        peer_dict = json.loads(response.text)
+        address_list = peer_dict["Addresses"]
+        if capture_peer_addresses(address_list, peer_ID):
+            address_available = True
+
+    return address_available
+
+
+def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
+    address_available = False
+    for address in address_list:
+        address = address
+        multiaddress = ""
+        suspect_address = False
+        index = address.lower().find(
+            "/p2p-circuit"
+        )  # most often observed in data order
+        if index == -1:
+            index = address.lower().find("/web")
+            if index == -1:
+                index = address.lower().find("/dns")
+                if index == -1:
+                    index = address.lower().find("/tls")  # this might be ok
+                    if index == -1:
+                        ip_version = address[:5]
+                        index = address.lower().find("/", 5)
+                        ip_string = address[5:index]
+                        ip_index = index
+
+                        index = address.lower().find(
+                            "/p2p/", ip_index
+                        )  # if index != to -1 then it is assumed to be multiaddress
+                        if index != -1:
+                            multiaddress = address
+                        else:
+                            index = address.lower().find("/quic-v1", ip_index)
+                            if index != -1:
+                                multiaddress = address + "/p2p/" + peer_ID
+                            else:
+                                if index == -1:
+                                    index = address.lower().find(
+                                        "/tcp/", ip_index
+                                    )  # if index != to -1 then it is assumed to be multiaddress
+                                if (
+                                    index == -1
+                                ):  # probably a findprovs address which are not multiaddress format
+                                    index = address.lower().find("/udp/", ip_index)
+                                if index != -1:
+                                    port_start = index + 5
+                                    port = address[port_start:]
+                                    if port.isnumeric():
+                                        multiaddress = address + "/p2p/" + peer_ID
+                                    else:
+                                        multiaddress = address
+                                        suspect_address = True
+                                if multiaddress != "":
+                                    if ip_version == "/ip4/":
+                                        if ipaddress.IPv4Address(ip_string).is_global:
+                                            insert_timestamp = get_DTS()
+                                            # print(index, ip_version, ip_string, address)
+
+                                            create_peer_address(
+                                                peer_ID,
+                                                multiaddress,
+                                                insert_timestamp,
+                                                suspect_address,
+                                            )
+                                            address_available = True
+
+                                    else:
+                                        if ipaddress.IPv6Address(ip_string).is_global:
+                                            insert_timestamp = get_DTS()
+                                            # print(index, ip_version, ip_string, address)
+                                            create_peer_address(
+                                                peer_ID,
+                                                multiaddress,
+                                                insert_timestamp,
+                                                suspect_address,
+                                            )
+                                            address_available = True
+
+    return address_available
+
+
+def create_peer_address(
+    peer_ID: str, multiaddress: str, insert_timestamp: str, suspect_address: bool
+) -> None:
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+    # session = Session(engine)
+    # statement = text("PRAGMA busy_timeout = 100000;")
+    # session.exec(statement)
+
+    address_row = Peer_Address(
+        peer_ID=peer_ID,
+        multiaddress=multiaddress,
+        insert_timestamp=insert_timestamp,
+        suspect_address=suspect_address,
+    )
+    with Session(engine) as session:
+        statement = select(Peer_Address).where(
+            Peer_Address.peer_ID == peer_ID, Peer_Address.multiaddress == multiaddress
+        )
+        results = session.exec(statement).first()
+        if results is None:
+            session.add(address_row)
+            session.commit()
+    return
 
 
 if __name__ == "__main__":

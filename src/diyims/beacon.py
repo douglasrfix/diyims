@@ -35,8 +35,7 @@ def beacon_main():
     # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
     logging_enabled = 0  # TODO: config
     beacon_config_dict = get_beacon_config_dict()
-    conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-    Rconn, Rqueries = set_up_sql_operations(beacon_config_dict)  # + 1
+
     logger = get_logger(
         beacon_config_dict["log_file"],
         "none",
@@ -74,10 +73,12 @@ def beacon_main():
     in_bound = queue_server.get_beacon_queue()
     while target_DT > current_DT and beacon_interval < max_intervals:
         for _ in range(int(beacon_config_dict["number_of_periods"])):
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
             beacon_CID, want_item_file = create_beacon_CID(
@@ -85,10 +86,10 @@ def beacon_main():
                 beacon_config_dict,
                 self,
                 logging_enabled,
-                conn,
-                queries,
-                Rconn,
-                Rqueries,
+                # conn,
+                # queries,
+                # Rconn,
+                # Rqueries,
             )
 
             satisfy_dict["status"] = "run"
@@ -101,10 +102,12 @@ def beacon_main():
                 )  # wait for satisfy to respond or external shutdown
             except Empty:
                 pass
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
 
@@ -114,18 +117,22 @@ def beacon_main():
             flash_beacon(
                 logger, beacon_config_dict, beacon_CID, logging_enabled
             )  # wait for satisfy to satisfy after a wait period or shutdown
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
 
         for _ in range(int(beacon_config_dict["number_of_periods"])):
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
             beacon_CID, want_item_file = create_beacon_CID(
@@ -133,10 +140,10 @@ def beacon_main():
                 beacon_config_dict,
                 self,
                 logging_enabled,
-                conn,
-                queries,
-                Rconn,
-                Rqueries,
+                # conn,
+                # queries,
+                # Rconn,
+                # Rqueries,
             )
             satisfy_dict["status"] = "run"
             satisfy_dict["wait_time"] = beacon_config_dict["long_period_seconds"]
@@ -148,10 +155,12 @@ def beacon_main():
                 )  # wait for satisfy response or external shutdown
             except Empty:
                 pass
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
 
@@ -159,22 +168,24 @@ def beacon_main():
                 logger.debug(message)
 
             flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled)
+            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
-                Rconn,
-                Rqueries,
+                conn,
+                queries,
             )
+            conn.close()
             if shutdown_row_dict["enabled"]:
                 break
         beacon_interval += 1
         current_DT = datetime.now()
+        conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
         shutdown_row_dict = select_shutdown_entry(
-            Rconn,
-            Rqueries,
+            conn,
+            queries,
         )
+        conn.close()
         if shutdown_row_dict["enabled"]:
             break
-    Rconn.close()
-    conn.close()
 
     satisfy_dict["status"] = "shutdown"
     out_bound.put_nowait(satisfy_dict)
@@ -184,15 +195,22 @@ def beacon_main():
 
 
 def create_beacon_CID(
-    logger, beacon_config_dict, self, logging_enabled, conn, queries, Rconn, Rqueries
+    logger,
+    beacon_config_dict,
+    self,
+    logging_enabled,
+    # conn,
+    # queries,
+    # Rconn, Rqueries
 ):
     url_dict = get_url_dict()
     path_dict = get_path_dict()
     # +1
-    # conn, queries = set_up_sql_operations(beacon_config_dict)
-    header_row = Rqueries.select_first_peer_row_entry_pointer(
-        Rconn, peer_ID=self
+    conn, queries = set_up_sql_operations(beacon_config_dict)
+    header_row = queries.select_first_peer_row_entry_pointer(
+        conn, peer_ID=self
     )  # TODO: drop the pointer
+    conn.close()
 
     want_item_dict = refresh_want_item_dict()  # TODO: rename to template
     want_item_dict["peer_row_CID"] = header_row["object_CID"]
@@ -210,7 +228,7 @@ def create_beacon_CID(
     else:
         param = {"only-hash": "true", "pin": "false", "cid-version": 1}
 
-    with open(want_item_file, "w") as write_file:
+    with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
     f = open(want_item_file, "rb")
@@ -236,9 +254,10 @@ def create_beacon_CID(
     clean_up_dict["DTS"] = get_DTS()
     clean_up_dict["want_item_file"] = str(want_item_file)
     clean_up_dict["beacon_CID"] = beacon_CID
+    conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
     insert_clean_up_row(conn, queries, clean_up_dict)
     conn.commit()
-    # conn.close()  # -1
+    conn.close()  # -1
     return beacon_CID, want_item_file
 
 
@@ -272,7 +291,6 @@ def satisfy_main():
     config_dict = get_satisfy_config_dict()
     logging_enabled = 0
 
-    Rconn, Rqueries = set_up_sql_operations(config_dict)  # + 1
     logger = get_logger(
         config_dict["log_file"],
         "none",
@@ -302,11 +320,11 @@ def satisfy_main():
         except Empty:
             pass
         satisfy_beacon(logger, config_dict, want_item_file, logging_enabled)
-        shutdown_row_dict = select_shutdown_entry(Rconn, Rqueries)
+        conn, queries = set_up_sql_operations(config_dict)  # + 1
+        shutdown_row_dict = select_shutdown_entry(conn, queries)
         if shutdown_row_dict["enabled"]:
             break
-
-    Rconn.close()
+        conn.close()
 
     out_bound.put_nowait(satisfy_dict)
     logger.info("Satisfy shutdown.")

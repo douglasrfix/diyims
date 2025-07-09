@@ -4,6 +4,17 @@
 from hashlib import sha512
 from multiprocessing import Pool
 
+/ip4/71.156.26.185/tcp/45314
+if address[:8] != "/ip4/127":
+                                        index = address.lower().find("/tcp/")
+                                        port_start = index + 5
+                                        port = address[port_start:]
+                                        if port.isnumeric():
+                                            connect_address = (
+                                                address + "/p2p/" + peer_ID
+                                            )
+                                            address_available = True
+                                            break
 
 # hash one word using the SHA algorithm
 def hash_word(word):

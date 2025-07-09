@@ -221,9 +221,9 @@ where peer_ID = :peer_ID and peer_type = "SP" and
 update peer_table set  local_update_DTS = :local_update_DTS, processing_status = "WLR"
 where peer_ID = :peer_ID and  (processing_status = "WLX")
 
--- name: update_peer_table_status_WPW_to_WLR!
-update peer_table set  local_update_DTS = :local_update_DTS, version = :version,  processing_status = "WLR"
-where peer_ID = :peer_ID and  (processing_status = "WPW")
+-- name: update_peer_table_status_WLW_to_WLR!
+update peer_table set  local_update_DTS = :local_update_DTS,  processing_status = "WLR"
+where peer_ID = :peer_ID and  (processing_status = "WLW")
 
 -- name: update_peer_table_status_WLP!
 update peer_table set local_update_DTS = :local_update_DTS, processing_status = "WLP"

@@ -29,6 +29,7 @@ from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
 from diyims.security_utils import sign_file, verify_file
+from sqlmodel import SQLModel, create_engine
 
 
 def create():
@@ -60,6 +61,15 @@ def create():
         raise (CreateSchemaError(e))
 
     conn.close()
+
+    # def create_db_and_tables() -> None:
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+
+    # engine = create_engine(db_url, echo=True)
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
+    SQLModel.metadata.create_all(engine)
     return
 
 
@@ -121,7 +131,7 @@ def init():
     proto_file = path_dict["sign_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
-    with open(proto_file_path, "w") as write_file:
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(signing_dict, write_file, indent=4)
 
     sign_dict = {}
@@ -151,7 +161,7 @@ def init():
     peer_file = proto_file_path
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "false"}
-    with open(peer_file, "w") as write_file:
+    with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
 
     f = open(peer_file, "rb")
@@ -206,7 +216,7 @@ def init():
     peer_row_dict["processing_status"] = "NPC"  # Normal peer processing complete
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
-    with open(peer_file, "w") as write_file:
+    with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
 
     f = open(peer_file, "rb")
@@ -241,11 +251,11 @@ def init():
         config_dict,
         logger,
         mode,
-        conn,
-        queries,
+        # conn,
+        # queries,
         processing_status,
-        Rconn,
-        Rqueries,
+        # Rconn,
+        # Rqueries,
     )
 
     print(f"Header containing the peer_row CID '{header_CID}'")
@@ -271,11 +281,11 @@ def init():
         config_dict,
         logger,
         mode,
-        conn,
-        queries,
+        # conn,
+        # queries,
         processing_status,
-        Rconn,
-        Rqueries,
+        # Rconn,
+        # Rqueries,
     )
 
     add_shutdown_entry(

@@ -24,13 +24,13 @@ def ipfs_header_add(
     config_dict,
     logger,
     mode,
-    conn,
-    queries,
+    # conn,
+    # queries,
     processing_status,
-    Rconn,
-    Rqueries,
+    # Rconn,
+    # Rqueries,
 ):
-    from diyims.database_utils import insert_header_row
+    from diyims.database_utils import insert_header_row, set_up_sql_operations
     from multiprocessing.managers import BaseManager
     from diyims.requests_utils import execute_request
     from diyims.path_utils import get_path_dict, get_unique_file
@@ -48,8 +48,8 @@ def ipfs_header_add(
         )  # NOTE: eventually pass which queue to use
         queue_server.connect()
         publish_queue = queue_server.get_publish_queue()
-
-    query_row = Rqueries.select_last_header(Rconn, peer_ID=peer_ID)
+    conn, queries = set_up_sql_operations(config_dict)
+    query_row = queries.select_last_header(conn, peer_ID=peer_ID)
 
     header_dict = {}
     header_dict["version"] = "0"
@@ -60,6 +60,7 @@ def ipfs_header_add(
         header_dict["prior_header_CID"] = "null"
     else:
         header_dict["prior_header_CID"] = query_row["header_CID"]
+    conn.close()
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = processing_status
 
@@ -69,7 +70,7 @@ def ipfs_header_add(
 
     param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
 
-    with open(proto_file_path, "w") as write_file:
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(header_dict, write_file, indent=4)
 
     f = open(proto_file_path, "rb")
@@ -85,8 +86,10 @@ def ipfs_header_add(
     f.close()
 
     header_CID = response_dict["Hash"]
+    conn, queries = set_up_sql_operations(config_dict)
     insert_header_row(conn, queries, header_dict, header_CID)
     conn.commit()
+    conn.close()
 
     if mode != "init":
         publish_queue.put_nowait("wake up")
@@ -102,12 +105,12 @@ def ipfs_header_update(
     config_dict,
     logger,
     mode,
-    conn,
-    queries,
+    # conn,
+    # queries,
     processing_status,
     header_dict,
 ):
-    from diyims.database_utils import insert_header_row
+    from diyims.database_utils import insert_header_row, set_up_sql_operations
     from multiprocessing.managers import BaseManager
 
     if mode != "init":
@@ -120,9 +123,10 @@ def ipfs_header_update(
         peer_maint_queue = queue_server.get_peer_maint_queue()
 
     # query_row = queries.select_last_header(conn, peer_ID=peer_ID)
-
+    conn, queries = set_up_sql_operations(config_dict)
     insert_header_row(conn, queries, header_dict)
     conn.commit()
+    conn.close()
 
     if mode != "init":
         peer_maint_queue.put_nowait("wake up")

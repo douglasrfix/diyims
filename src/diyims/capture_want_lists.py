@@ -905,7 +905,7 @@ def filter_wantlist(
                 col(Want_List_Table.insert_update_delta) <= largest_delta,
                 col(Want_List_Table.insert_update_delta) >= smallest_delta,
             )
-            .order_by(col(Want_List_Table.insert_update_delta).desc)
+            .order_by(col(Want_List_Table.insert_update_delta).desc())
         )
         results = session.exec(statement).all()
         line_list = []
@@ -932,7 +932,7 @@ def filter_wantlist(
     # print(line_list)
     peer_verified = False
     item_number = -1
-    for list_item in line_list:  # iteration in range ?
+    for list_item in line_list:  # iteration in range rather than list item ?
         item_number += 1
         conn, queries = set_up_sql_operations(config_dict)
 

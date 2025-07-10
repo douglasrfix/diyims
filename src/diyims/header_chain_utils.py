@@ -22,6 +22,7 @@ from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
 from diyims.ipfs_utils import get_url_dict, unpack_peer_row_from_cid
 from diyims.general_utils import get_DTS
+# from rich import print
 
 
 def monitor_peer_publishing():
@@ -54,7 +55,7 @@ def monitor_peer_publishing():
         for row in peer_table_rows:
             peer_list.append(row)
         conn.close()
-
+        #        print(peer_list)
         for peer in peer_list:  # peer level
             conn, queries = set_up_sql_operations(ipfs_config_dict)
             shutdown_row_dict = select_shutdown_entry(
@@ -65,9 +66,9 @@ def monitor_peer_publishing():
             if shutdown_row_dict["enabled"]:
                 break
             if (
-                row["peer_type"] != "LP" and row["processing_status"] == "NPC"
+                peer["peer_type"] != "LP" and peer["processing_status"] == "NPC"
             ):  # this single threads updates to a  remote peer
-                ipns_path = "/ipns/" + row["IPNS_name"]
+                ipns_path = "/ipns/" + peer["IPNS_name"]
 
                 start_DTS = get_DTS()
                 param = {"arg": ipns_path}
@@ -85,7 +86,7 @@ def monitor_peer_publishing():
                     stop = datetime.fromisoformat(stop_DTS)
                     duration = stop - start
 
-                    peer_ID = row["peer_ID"]
+                    peer_ID = peer["peer_ID"]
                     msg = f"In {duration} resolve for {peer_ID}."
                     log_dict = refresh_log_dict()
                     log_dict["DTS"] = get_DTS()

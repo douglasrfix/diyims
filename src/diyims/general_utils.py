@@ -38,7 +38,8 @@ def get_network_name():
 
 def get_DTS() -> str:
     """Generates an iso6??? formatted UTC time string
-    suitable for timestamp use.
+    suitable for timestamp use. if the value is to be passed to a url query string the
+    + in the iso format must be replaced with a %2B
 
     Returns:
         str: UTC datetime.now() in an iso format

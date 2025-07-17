@@ -4,7 +4,7 @@ from sqlmodel import Field, SQLModel
 class Peer_Address(SQLModel, table=True):
     peer_ID: str = Field(primary_key=True)
     multiaddress: str = Field(primary_key=True)
-    insert_timestamp: str | None = None
+    insert_DTS: str | None = None
     suspect_address: bool = Field(default=False)
 
 

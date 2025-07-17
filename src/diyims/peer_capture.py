@@ -738,25 +738,25 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                 if multiaddress != "":
                                     if ip_version == "/ip4/":
                                         if ipaddress.IPv4Address(ip_string).is_global:
-                                            insert_timestamp = get_DTS()
+                                            insert_DTS = get_DTS()
                                             # print(index, ip_version, ip_string, address)
 
                                             create_peer_address(
                                                 peer_ID,
                                                 multiaddress,
-                                                insert_timestamp,
+                                                insert_DTS,
                                                 suspect_address,
                                             )
                                             address_available = True
 
                                     else:
                                         if ipaddress.IPv6Address(ip_string).is_global:
-                                            insert_timestamp = get_DTS()
+                                            insert_DTS = get_DTS()
                                             # print(index, ip_version, ip_string, address)
                                             create_peer_address(
                                                 peer_ID,
                                                 multiaddress,
-                                                insert_timestamp,
+                                                insert_DTS,
                                                 suspect_address,
                                             )
                                             address_available = True
@@ -765,7 +765,7 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
 
 
 def create_peer_address(
-    peer_ID: str, multiaddress: str, insert_timestamp: str, suspect_address: bool
+    peer_ID: str, multiaddress: str, insert_DTS: str, suspect_address: bool
 ) -> None:
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
@@ -779,7 +779,7 @@ def create_peer_address(
     address_row = Peer_Address(
         peer_ID=peer_ID,
         multiaddress=multiaddress,
-        insert_timestamp=insert_timestamp,
+        insert_DTS=insert_DTS,
         suspect_address=suspect_address,
     )
     with Session(engine) as session:

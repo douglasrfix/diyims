@@ -351,11 +351,11 @@ def decode_findprovs_structure(
                     peer_table_dict["local_update_DTS"] = get_DTS()
                     peer_table_dict["peer_type"] = "PP"
 
-                    if address_available:
+                    if address_available:  # set initial value and move on
                         peer_table_dict["processing_status"] = "WLR"
                         # peer_table_dict["version"] = connect_address
                     else:
-                        # wait for address
+                        #  always wait for addresses
                         if address_wait_is_enabled:
                             peer_table_dict["processing_status"] = "WLW"
                         else:
@@ -364,7 +364,7 @@ def decode_findprovs_structure(
                     conn, queries = set_up_sql_operations(
                         capture_peer_config_dict
                     )  # +1
-                    try:
+                    try:  # TODO: test here for existing peer first
                         insert_peer_row(conn, queries, peer_table_dict)
                         conn.commit()
                         conn.close()
@@ -693,10 +693,10 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
     for address in address_list:
         address = address
         multiaddress = ""
-        suspect_address = False
+        address_suspect = False
         index = address.lower().find(
             "/p2p-circuit"
-        )  # most often observed in data order
+        )  # most often observed in data order not really of interest
         if index == -1:
             index = address.lower().find("/web")
             if index == -1:
@@ -734,7 +734,7 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                         multiaddress = address + "/p2p/" + peer_ID
                                     else:
                                         multiaddress = address
-                                        suspect_address = True
+                                        address_suspect = True
                                 if multiaddress != "":
                                     if ip_version == "/ip4/":
                                         if ipaddress.IPv4Address(ip_string).is_global:
@@ -745,7 +745,7 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                                 peer_ID,
                                                 multiaddress,
                                                 insert_DTS,
-                                                suspect_address,
+                                                address_suspect,
                                             )
                                             address_available = True
 
@@ -757,7 +757,7 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                                 peer_ID,
                                                 multiaddress,
                                                 insert_DTS,
-                                                suspect_address,
+                                                address_suspect,
                                             )
                                             address_available = True
 
@@ -765,7 +765,7 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
 
 
 def create_peer_address(
-    peer_ID: str, multiaddress: str, insert_DTS: str, suspect_address: bool
+    peer_ID: str, multiaddress: str, insert_DTS: str, address_suspect: bool
 ) -> None:
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
@@ -780,7 +780,7 @@ def create_peer_address(
         peer_ID=peer_ID,
         multiaddress=multiaddress,
         insert_DTS=insert_DTS,
-        suspect_address=suspect_address,
+        address_suspect=address_suspect,
     )
     with Session(engine) as session:
         statement = select(Peer_Address).where(

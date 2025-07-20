@@ -321,6 +321,7 @@ def decode_findprovs_structure(
     modified = 0
     p = psutil.Process()
     pid = p.pid
+    peer_type = "PP"
     address_wait_is_enabled = 1
 
     line_list = []
@@ -343,13 +344,13 @@ def decode_findprovs_structure(
                 peer_ID = peer_dict["ID"]
                 if self != peer_ID:
                     address_list = peer_dict["Addrs"]
-                    if capture_provider_addresses(address_list, peer_ID):
+                    if capture_provider_addresses(address_list, peer_ID, peer_type):
                         address_available = True
 
                     peer_table_dict = refresh_peer_row_from_template()
                     peer_table_dict["peer_ID"] = peer_dict["ID"]
                     peer_table_dict["local_update_DTS"] = get_DTS()
-                    peer_table_dict["peer_type"] = "PP"
+                    peer_table_dict["peer_type"] = peer_type
 
                     if address_available:  # set initial value and move on
                         peer_table_dict["processing_status"] = "WLR"
@@ -669,10 +670,16 @@ def decode_swarm_structure(
     return found, added, promoted
 
 
-def capture_provider_addresses(address_list: list, peer_ID: str) -> bool:
+def capture_provider_addresses(
+    address_list: list, peer_ID: str, peer_type: str
+) -> bool:
     address_available = False
-
-    if capture_peer_addresses(address_list, peer_ID):
+    address_source = peer_type
+    if capture_peer_addresses(
+        address_list,
+        peer_ID,
+        address_source,
+    ):
         address_available = True
     param = {"arg": peer_ID}
     response, status_code, response_dict = execute_request(
@@ -680,20 +687,30 @@ def capture_provider_addresses(address_list: list, peer_ID: str) -> bool:
         param=param,
     )
     if status_code == 200:
+        address_source = "FP"
         peer_dict = json.loads(response.text)
         address_list = peer_dict["Addresses"]
-        if capture_peer_addresses(address_list, peer_ID):
+        if capture_peer_addresses(
+            address_list,
+            peer_ID,
+            address_source,
+        ):
             address_available = True
 
     return address_available
 
 
-def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
+def capture_peer_addresses(
+    address_list: list, peer_ID: str, address_source: str
+) -> bool:
     address_available = False
     for address in address_list:
-        address = address
-        multiaddress = ""
+        address_string = address
         address_suspect = False
+        address_global = False
+        multiaddress = ""
+        address_type = ""
+
         index = address.lower().find(
             "/p2p-circuit"
         )  # most often observed in data order not really of interest
@@ -737,7 +754,10 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                         address_suspect = True
                                 if multiaddress != "":
                                     if ip_version == "/ip4/":
+                                        address_type = "4"
                                         if ipaddress.IPv4Address(ip_string).is_global:
+                                            address_global = True
+                                            address_available = True
                                             insert_DTS = get_DTS()
                                             # print(index, ip_version, ip_string, address)
 
@@ -746,11 +766,18 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                                 multiaddress,
                                                 insert_DTS,
                                                 address_suspect,
+                                                address_string,
+                                                address_type,
+                                                address_source,
+                                                address_global,
                                             )
                                             address_available = True
 
                                     else:
+                                        address_type = "6"
                                         if ipaddress.IPv6Address(ip_string).is_global:
+                                            address_global = True
+                                            address_available = True
                                             insert_DTS = get_DTS()
                                             # print(index, ip_version, ip_string, address)
                                             create_peer_address(
@@ -758,14 +785,24 @@ def capture_peer_addresses(address_list: list, peer_ID: str) -> bool:
                                                 multiaddress,
                                                 insert_DTS,
                                                 address_suspect,
+                                                address_string,
+                                                address_type,
+                                                address_source,
+                                                address_global,
                                             )
-                                            address_available = True
 
     return address_available
 
 
 def create_peer_address(
-    peer_ID: str, multiaddress: str, insert_DTS: str, address_suspect: bool
+    peer_ID: str,
+    multiaddress: str,
+    insert_DTS: str,
+    address_suspect: bool,
+    address_string: str,
+    address_type: str,
+    address_source: str,
+    address_global: bool,
 ) -> None:
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
@@ -781,11 +818,15 @@ def create_peer_address(
         multiaddress=multiaddress,
         insert_DTS=insert_DTS,
         address_suspect=address_suspect,
+        address_string=address_string,
+        address_type=address_type,
+        address_source=address_source,
+        address_global=address_global,
+    )
+    statement = select(Peer_Address).where(
+        Peer_Address.peer_ID == peer_ID, Peer_Address.address_string == address_string
     )
     with Session(engine) as session:
-        statement = select(Peer_Address).where(
-            Peer_Address.peer_ID == peer_ID, Peer_Address.multiaddress == multiaddress
-        )
         results = session.exec(statement).first()
         if results is None:
             session.add(address_row)

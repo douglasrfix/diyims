@@ -62,7 +62,10 @@ def test() -> None:
     return
 
 
-def capture_provider_addresses(peer_ID: str, address_source: str) -> bool:
+def capture_provider_addresses(
+    peer_ID: str,
+    address_source: str,
+) -> bool:
     address_available = False
 
     # if capture_peer_addresses(address_list, peer_ID):

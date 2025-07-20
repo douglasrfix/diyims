@@ -416,14 +416,16 @@ def peer_connect(peer_ID: str) -> bool:
 
     # engine = create_engine(db_url, echo=True)
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
-    # session = Session(engine)
-    # statement = text("PRAGMA busy_timeout = 100000;")
-    # session.exec(statement)
 
-    statement = select(Peer_Address).where(Peer_Address.peer_ID == peer_ID)
+    # add order by to get freshest address and select for a global address since there my be other types going forward
+    statement = (
+        select(Peer_Address)
+        .where(Peer_Address.peer_ID == peer_ID)
+        .where(Peer_Address.address_global == "1")
+        .order_by(col(Peer_Address.insert_DTS).desc())
+    )
     with Session(engine) as session:
-        results = session.exec(statement).all()  # create a list and close session
-    # session.close()
+        results = session.exec(statement).all()
 
     for peer_address in results:
         param = {"arg": peer_address.multiaddress}

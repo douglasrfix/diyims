@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Details for Header : </h1>
+
+    <div class="Wrap">
+
+      <div class="item">Version : {{ header_detail.version }}</div>
+      <div class="item">Object_CID : {{ header_detail.object_CID }}</div>
+      <div class="item">Object Type : {{ header_detail.object_type }}</div>
+      <div class="item">Insert DTS : {{ header_detail.insert_DTS}}</div>
+      <div class="item">Prior Header CID : {{ header_detail.prior_header_CID}}</div>
+      <div class="item">Header CID : {{ header_detail.header_CID}}</div>
+      <div class="item">Peer ID : {{ header_detail.peer_ID}}</div>
+      <div class="item">Processing Status : {{ header_detail.processing_status}}</div>
+
+	  </div>
+
+
+{% endblock content %}

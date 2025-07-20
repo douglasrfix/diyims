@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Want List Items</h1>
+
+  <div class="Wrap">
+
+    {% if peer_ID is defined  %}
+      {% for want_item in want_list %}
+        <div class="item">definedItem</div>
+        <div class="item"> {{ want_item.peer_ID }} </div>
+
+      {% endfor %}
+    {% else %}
+      {% for want_item in want_list %}
+        <div class="item"> <a href="{{ url_for('html_want_detail') }}?peer_ID={{ want_list.peer_ID  }}&object_CID={{ want_list.object_CID  }}"></a> </div>
+                <div class="item">undefinedItem</div>
+
+        {% endfor %}
+    {% endif %}
+  </div>
+{% endblock content %}

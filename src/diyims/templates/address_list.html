@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <ol class="u">
+
+
+    {% for address in address_list %}
+
+
+        <li><a href="{{ url_for('html_address_detail') }}?multiaddress={{ address.multiaddress  }}">{{ address.multiaddress }}</a></li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

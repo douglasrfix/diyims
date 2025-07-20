@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Discovered Address Detail : {{ multiaddress }}</h1>
+
+    <div class="Wrap">
+
+      <div class="item">Peer ID : {{ address.peer_ID }}</div>
+      <div class="item">Insert DTS : {{ address.insert_DTS }}</div>
+      <div class="item">Suspect Address : {{ address.address_suspect }}</div>
+
+    </div>
+
+{% endblock content %}

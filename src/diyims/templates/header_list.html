@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <ol class="u">
+
+
+    {% for header in header_list %}
+
+        <li><a href="{{ url_for('html_header_detail') }}?header_CID={{ header.header_CID}}">{{ header.header_CID }}</a>
+        : {{ header.peer_ID }}</li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

@@ -1,0 +1,41 @@
+{#{% import "macros.html" as macros with context %}#}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link
+        rel="preload"
+        href="../fonts/Inter-Regular.woff2"
+        as="font"
+        type="font/woff2"
+        crossorigin
+    />
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    {% if mode.dark == 1 %}
+        <link href="{{ url_for('static', path='/dark_styles.css') }}" rel="stylesheet">
+    {% endif %}
+    <title>{% block title %} {{ title }} {% endblock title %}</title>
+</head>
+<nav>
+    <div class="container">
+        {% for menu_item in menu_translate %}
+            {% if loop.last %}
+                <a href="{{ url_for(menu_item) }}" class="last-item">{{ menu_translate.get(menu_item) }}</a>
+            {% else %}
+                <a href="{{ url_for(menu_item) }}" class="item">{{ menu_translate.get(menu_item) }}</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</nav>
+
+<body>
+
+    {% block content %}
+    <h1>Welcome to {{ title }}!</h1>
+    {% endblock content %}
+
+</body>
+
+</html>

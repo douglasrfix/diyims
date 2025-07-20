@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Details for Peer : {{ peer.peer_ID }}</h1>
+
+    <div class="Wrap">
+
+      <div class="item">Processing Status : {{ peer.processing_status }}</div>
+      <div class="item">IPNS Name : {{ peer.IPNS_name }}</div>
+      <div class="item">Verify ID : {{ peer.id }}</div>
+      <div class="item">Verify Signature : {{ peer.signature }}</div>
+      <div class="item">Signature Valid : {{ peer.signature_valid }}</div>
+      <div class="item">Peer Type : {{ peer.peer_type }}</div>
+      <div class="item">Origin Update DTS : {{ peer.origin_update_DTS }}</div>
+      <div class="item">Local Update DTS : {{ peer.local_update_DTS }}</div>
+      <div class="item">Execution Platform : {{ peer.execution_platform }}</div>
+      <div class="item">Python Version : {{ peer.python_version }}</div>
+      <div class="item">IPFS Agent : {{ peer.IPFS_agent }}</div>
+      <div class="item">Peer Agent : {{ peer.agent }}</div>
+      <div class="item">Peer Version : {{ peer.version }}</div>
+
+	  </div>
+
+    {% if peer.peer_type != "LP" %}
+
+      <h1>Discovered Addresses</h1>
+
+      <ol class="u">
+
+        {% for address in address_list %}
+
+          <li><a href="{{ url_for('html_address_detail') }}?multiaddress={{ address.multiaddress  }}">{{ address.multiaddress }}</a></li>
+
+        {% endfor %}
+      </ol>
+
+      <h1>Want List Items</h1>
+
+      <ol class="u">
+
+        {% for item in want_list %}
+
+          <li><a href="{{ url_for('html_want_detail') }}?object_CID={{ item.object_CID  }}">{{ item.object_CID }}</a></li>
+
+        {% endfor %}
+      </ol>
+
+      <h1>Header Chain Status</h1>
+
+      <ol class="u">
+
+
+      {% for header_status in header_status_list %}
+
+        <li><a href="{{ url_for('html_header_status_detail') }}?insert_DTS={{ header_status.insert_DTS | replace('+', '%2B')  }}&peer_ID={{ header_status.peer_ID  }}&missing_header_CID={{ header_status.missing_header_CID}}">
+          {{ header_status.message}}</a> </li>
+
+
+      {% endfor %}
+    </ol>
+
+  {% endif %}
+
+  <h1>Header Chain</h1>
+  <ol class="u">
+
+
+    {% for header in header_list %}
+
+        <li><a href="{{ url_for('html_header_detail') }}?header_CID={{ header.header_CID}}">{{ header.header_CID }}</a>
+        : {{ header.insert_DTS }} : {{header.object_type}} : {{ header.prior_header_CID}}</li>
+
+
+    {% endfor %}
+  </ol>
+
+
+{% endblock content %}

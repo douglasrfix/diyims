@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <ol class="u">
+
+
+    {% for header_status in header_status_list %}
+
+        <li><a href="{{ url_for('html_header_status_detail') }}?insert_DTS={{ header_status.insert_DTS | replace('+', '%2B')  }}&peer_ID={{ header_status.peer_ID  }}&missing_header_CID={{ header_status.missing_header_CID}}">{{ header_status.peer_ID }} :
+        </a>{{ header_status.message}} </li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

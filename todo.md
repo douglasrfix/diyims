@@ -170,3 +170,5 @@
 ## [x]: #39 validate signature when adding a local peer entry via chain maint
 
 ## TODO: #41 add header chain corruption detection
+
+## TODO: #43 capture all addresses for a peer

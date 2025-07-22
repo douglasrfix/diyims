@@ -11,6 +11,7 @@ from diyims.path_utils import get_path_dict
 from diyims.general_utils import get_DTS
 from sqlalchemy.exc import IntegrityError
 from diyims.sqlmodels import Peer_Address
+from diyims.capture_want_lists import peer_connect
 # from sqlalchemy.engine import Engine
 # from sqlalchemy import event
 
@@ -243,5 +244,64 @@ def select_want_list():
     return
 
 
+def close_out_address():
+    # NOTE: add connect and peering
+    provider_peer_ID = "12D3KooWRwJtRqZQcvThkq2dU5ZbrS5zj6grE8rf4swG7NeFC3dH"
+    peer_connect(provider_peer_ID)
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+    disconnected = False
+    peering_removed = False
+
+    statement = select(Peer_Address).where(
+        Peer_Address.peer_ID == provider_peer_ID, Peer_Address.in_use == 1
+    )
+
+    with Session(engine) as session:
+        results = session.exec(statement)
+        address = results.one()
+        provider_address = address.multiaddress
+
+    param = {
+        "arg": provider_address,
+    }
+
+    response, status_code, response_dict = execute_request(
+        url_key="dis_connect",
+        param=param,
+    )
+
+    if status_code == 200:
+        disconnected = True
+
+    param = {
+        "arg": provider_peer_ID,
+    }
+    response, status_code, response_dict = execute_request(
+        url_key="peering_remove",
+        param=param,
+    )
+
+    if status_code == 200:
+        peering_removed = True
+
+    statement = select(Peer_Address).where(
+        Peer_Address.peer_ID == provider_peer_ID, Peer_Address.in_use == 1
+    )
+
+    with Session(engine) as session:
+        results = session.exec(statement)
+        address = results.one()
+        address.in_use = False
+        if peering_removed:
+            address.peering_remove_DTS = get_DTS()
+        if disconnected:
+            address.dis_connect_DTS = get_DTS()
+        session.add(address)
+        session.commit()
+
+
 if __name__ == "__main__":
-    test()
+    close_out_address()

@@ -48,18 +48,22 @@ def execute_request(url_key, **kwargs):
             status_code = 601
             sleep(int(value_dict["connect_retry_delay"]))
             retry += 1
+            r = None
         except ReadTimeout:
             status_code = 602
             retry += 1
+            r = None
         except HTTPError:
             status_code = r.status_code
             break
         except ConnectionError:
             status_code = 603
             retry += 1
+            r = None
 
     if not response_ok:
         response_dict = {}
+        r = None
     else:
         status_code = r.status_code
         try:

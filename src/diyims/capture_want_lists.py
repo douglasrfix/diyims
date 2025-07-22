@@ -1,4 +1,6 @@
 # import json
+# from turtle import update
+# from networkx import adamic_adar_index
 import psutil
 from datetime import datetime, timedelta, timezone
 from time import sleep
@@ -416,38 +418,67 @@ def peer_connect(peer_ID: str) -> bool:
 
     # engine = create_engine(db_url, echo=True)
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
-    # session = Session(engine)
-    # statement = text("PRAGMA busy_timeout = 100000;")
-    # session.exec(statement)
 
-    statement = select(Peer_Address).where(Peer_Address.peer_ID == peer_ID)
+    # add order by to get freshest address and select for a global address since there my be other types going forward
+    statement = (
+        select(Peer_Address)
+        .where(Peer_Address.peer_ID == peer_ID)
+        .where(Peer_Address.in_use == "1")
+    )
+
     with Session(engine) as session:
-        results = session.exec(statement).all()  # create a list and close session
-    # session.close()
+        results = session.exec(statement).first()
+        if results is None:
+            address_in_use = False
+            peer_connected = False
+        else:
+            address_in_use = True
+            peer_connected = True
 
-    for peer_address in results:
-        param = {"arg": peer_address.multiaddress}
-        response, status_code, response_dict = execute_request(
-            url_key="connect",
-            # logger=logger,
-            # url_dict=url_dict,
-            # config_dict=want_list_config_dict,
-            param=param,
+    if address_in_use is False:
+        statement = (
+            select(Peer_Address)
+            .where(Peer_Address.peer_ID == peer_ID)
+            .where(Peer_Address.address_global == "1")
+            .order_by(col(Peer_Address.insert_DTS).desc())
         )
-        if status_code == 200:
+        with Session(engine) as session:
+            results = session.exec(statement).all()
+        peer_connected = False
+        peering_added = False
+        for peer_address in results:
+            param = {"arg": peer_address.multiaddress}
             response, status_code, response_dict = execute_request(
-                url_key="peering_add",
-                # logger=logger,
-                # url_dict=url_dict,
-                # config_dict=want_list_config_dict,
+                url_key="connect",
                 param=param,
             )
+            # if successfully connected update address used
+            if status_code == 200:
+                peer_connected = True
 
-        # print(status_code, peer_address.multiaddress)
+                response, status_code, response_dict = execute_request(
+                    url_key="peering_add",
+                    param=param,
+                )
 
-        if status_code == 200:
-            peer_connected = True
-            break
+                if status_code == 200:
+                    peering_added = True
+
+            if peer_connected:
+                statement = select(Peer_Address).where(
+                    Peer_Address.address_string == peer_address.address_string
+                )
+                with Session(engine) as session:
+                    results = session.exec(statement)
+                    address = results.one()
+                    address.in_use = True
+                    address.connect_DTS = get_DTS()
+                    if peering_added is True:
+                        address.peering_add_DTS = get_DTS()
+                    session.add(address)
+                    session.commit()
+
+                break
 
     return peer_connected
 
@@ -1064,27 +1095,50 @@ def filter_wantlist(
                             if test == 0:
                                 out_bound.put_nowait("wake up")
 
+                            statement = select(Peer_Address).where(
+                                Peer_Address.peer_ID == provider_peer_ID,
+                                Peer_Address.in_use == 1,
+                            )
+
+                            with Session(engine) as session:
+                                results = session.exec(statement)
+                                address = results.one()
+                                provider_address = address.multiaddress
+
                             param = {
                                 "arg": provider_peer_ID,
                             }
 
                             response, status_code, response_dict = execute_request(
                                 url_key="peering_remove",
-                                # logger=logger,
-                                # url_dict=url_dict,
-                                # config_dict=want_list_config_dict,
                                 param=param,
                             )
+
                             if status_code == 200:
-                                response, status_code, response_dict = execute_request(
-                                    url_key="dis_connect",
-                                    # logger=logger,
-                                    # url_dict=url_dict,
-                                    # config_dict=want_list_config_dict,
-                                    param=param,
-                                )
+                                peering_removed = True
+
+                            param = {
+                                "arg": provider_address,
+                            }
+
+                            response, status_code, response_dict = execute_request(
+                                url_key="dis_connect",
+                                param=param,
+                            )
+
                             if status_code == 200:
-                                pass
+                                disconnected = True
+
+                            with Session(engine) as session:
+                                results = session.exec(statement)
+                                address = results.one()
+                                address.in_use = False
+                                if peering_removed:
+                                    address.peering_remove_DTS = get_DTS()
+                                if disconnected:
+                                    address.dis_connect_DTS = get_DTS()
+                                session.add(address)
+                                session.commit()
 
                             """
                             object_CID = peer_row_CID  #remotely generated row

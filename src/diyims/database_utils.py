@@ -40,6 +40,9 @@ def reset_peer_table_status():
     from diyims.py_version_dep import get_sql_str
     import aiosql
     import sqlite3
+    from sqlmodel import create_engine, Session, select
+    from diyims.sqlmodels import Peer_Address
+    from diyims.general_utils import get_DTS
 
     # config_dict = get_want_list_config_dict()
     path_dict = get_path_dict()
@@ -58,6 +61,22 @@ def reset_peer_table_status():
     update_shutdown_enabled_0(conn, queries)
     conn.commit()
     conn.close
+
+    db_url = f"sqlite:///{connect_path}"
+
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+
+    statement = select(Peer_Address).where(Peer_Address.in_use == 1)
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for address in results:
+            address.in_use = False
+            address.reset_DTS = get_DTS()
+            address.connect_DTS = None
+            address.peering_add_DTS = None
+            session.add(address)
+        session.commit()
+
     return
 
 

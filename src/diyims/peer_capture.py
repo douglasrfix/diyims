@@ -758,8 +758,9 @@ def capture_peer_addresses(
                                         if ipaddress.IPv4Address(ip_string).is_global:
                                             address_global = True
                                             address_available = True
+                                            """ remove duplicate code
                                             insert_DTS = get_DTS()
-                                            # print(index, ip_version, ip_string, address)
+
 
                                             create_peer_address(
                                                 peer_ID,
@@ -771,6 +772,7 @@ def capture_peer_addresses(
                                                 address_source,
                                                 address_global,
                                             )
+                                            """
                                             address_available = True
 
                                     else:
@@ -778,18 +780,19 @@ def capture_peer_addresses(
                                         if ipaddress.IPv6Address(ip_string).is_global:
                                             address_global = True
                                             address_available = True
-                                            insert_DTS = get_DTS()
-                                            # print(index, ip_version, ip_string, address)
-                                            create_peer_address(
-                                                peer_ID,
-                                                multiaddress,
-                                                insert_DTS,
-                                                address_suspect,
-                                                address_string,
-                                                address_type,
-                                                address_source,
-                                                address_global,
-                                            )
+
+        # capture every potential address
+        insert_DTS = get_DTS()
+        create_peer_address(
+            peer_ID,
+            multiaddress,
+            insert_DTS,
+            address_suspect,
+            address_string,
+            address_type,
+            address_source,
+            address_global,
+        )
 
     return address_available
 

@@ -28,6 +28,7 @@ class Peer_Address(SQLModel, table=True):
     peering_add_DTS: str | None = None
     dis_connect_DTS: str | None = None
     peering_remove_DTS: str | None = None
+    reset_DTS: str | None = None
 
 
 class Peer_Table(SQLModel, table=True):

@@ -50,7 +50,7 @@ def get_DTS() -> str:
 
 
 def get_agent():
-    agent = "0.0.0a126"  # NOTE: How to extract at run time
+    agent = "0.0.0a127"  # NOTE: How to extract at run time
 
     return agent
 

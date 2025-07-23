@@ -176,3 +176,9 @@
 ## [x]: #45 integrate fastapi
 
 ## TODO: #47 Finish basic templates
+
+## BUG: #48 discovered detail peering remove not being set
+
+## BUG: #49 satisfy_maine line 315 failed when shutdown issued before startup was complete
+
+## BUG: #50 fastapi_app.py", line 421, in html_want_detail, starlette.routing.NoMatchFound: No route exists. selecting want item detail from peer detail

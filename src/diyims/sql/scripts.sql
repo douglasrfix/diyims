@@ -58,18 +58,6 @@ CREATE TABLE "clean_up" (
 	PRIMARY KEY("DTS")
 );
 
-CREATE TABLE "subscription" (
-	"peer_ID"	TEXT,
-	"object_type"	TEXT,
-	"notify_queue"	TEXT,
-	"header_CID"	TEXT
-);
-
-
-CREATE TABLE "shutdown" (
-	"enabled"	INTEGER
-);
-
 
 CREATE TABLE "header_chain_status" (
 	"insert_DTS" TEXT,

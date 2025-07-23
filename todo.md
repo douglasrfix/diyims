@@ -173,4 +173,6 @@
 
 ## [x]: #43 capture all addresses for a peer
 
-## TODO: #45 integrate fastapi
+## [x]: #45 integrate fastapi
+
+## TODO: #47 Finish basic templates

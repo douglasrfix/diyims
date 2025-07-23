@@ -34,13 +34,7 @@ CREATE TABLE "peer_table" (
 
 
 
-CREATE TABLE "log" (
-	"DTS"	TEXT,
-	"process"	TEXT,
-	"pid"	INTEGER,
-	"peer_type"	TEXT,
-	"msg"	TEXT
-);
+
 
 
 

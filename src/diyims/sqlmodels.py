@@ -43,7 +43,7 @@ class Log(SQLModel, table=True):
     process: str | None = None
     pid: int | None = None
     peer_type: str | None = None
-    message: str | None = None
+    msg: str | None = None
 
 
 class Network_Table(SQLModel, table=True):

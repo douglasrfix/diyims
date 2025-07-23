@@ -1,9 +1,5 @@
 import json
 import os
-import sqlite3
-from sqlite3 import Error
-
-import aiosql
 from rich import print
 
 from diyims.database_utils import (
@@ -16,7 +12,6 @@ from diyims.database_utils import (
 )
 from diyims.error_classes import (
     ApplicationNotInstalledError,
-    CreateSchemaError,
     PreExistingInstallationError,
 )
 from diyims.general_utils import get_DTS, get_agent
@@ -24,12 +19,12 @@ from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict, test_ipfs_version, wait_on_ipfs
 from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.platform_utils import get_python_version, test_os_platform
-from diyims.py_version_dep import get_car_path, get_sql_str
+from diyims.py_version_dep import get_car_path
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
 from diyims.security_utils import sign_file, verify_file
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, Session, text
 
 
 def create():
@@ -39,37 +34,18 @@ def create():
     except ApplicationNotInstalledError:
         raise
 
-    sql_str = get_sql_str()
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    connect_path = path_dict["db_file"]
-    conn = sqlite3.connect(connect_path)
-
-    try:
-        queries.create_schema(conn)
-        print("DB Schema creation successful.")
-
-    except Error as e:
-        conn.close()
-        raise (CreateSchemaError(e))
-
-    try:
-        queries.set_pragma(conn)
-        print("DB PRAGMA set successfully.")
-
-    except Error as e:
-        conn.close()
-        raise (CreateSchemaError(e))
-
-    conn.close()
-
-    # def create_db_and_tables() -> None:
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
 
-    # engine = create_engine(db_url, echo=True)
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
     SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        session = Session(engine)
+        statement = text("PRAGMA journal_mode = WAL;")
+        session.exec(statement)
+        print("DB Schema creation successful.")
+
     return
 
 

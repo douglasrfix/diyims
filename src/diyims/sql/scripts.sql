@@ -30,15 +30,7 @@ CREATE TABLE "peer_table" (
 	PRIMARY KEY("peer_ID")
 );
 
-CREATE TABLE "want_list_table" (
-	"peer_ID"	TEXT,
-	"object_CID" TEXT,
-	"insert_DTS"	TEXT,
-	"last_update_DTS" TEXT,
-	"insert_update_delta" INTEGER,
-	"source_peer_type"	TEXT,
-	PRIMARY KEY("peer_ID", "object_CID")
-);
+
 
 
 

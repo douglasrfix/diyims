@@ -1,34 +1,8 @@
 
 -- name: create_schema#
-CREATE TABLE "header_table" (
-	"version" TEXT,
-	"object_CID"	TEXT,
-	"object_type"	TEXT,
-	"insert_DTS"	TEXT,
-	"prior_header_CID"	TEXT,
-	'header_CID' TEXT,
-	"peer_ID" TEXT,
-	"processing_status" TEXT,
-	PRIMARY KEY("header_CID")
-);
 
-CREATE TABLE "peer_table" (
-	"peer_ID"	TEXT,
-	"IPNS_name"	TEXT,
-	"id" TEXT,
-	"signature" TEXT,
-	"signature_valid" INTEGER,
-	"peer_type" TEXT,
-	"origin_update_DTS"	TEXT,
-	"local_update_DTS" TEXT,
-	"execution_platform"	TEXT,
-	"python_version"	TEXT,
-	"IPFS_agent"	TEXT,
-	"processing_status" TEXT,
-	"agent" TEXT,
-	"version"	TEXT,
-	PRIMARY KEY("peer_ID")
-);
+
+
 
 
 

@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from diyims.sqlmodels import Peer_Address, Want_List_Table, Peer_Table
+from importlib.resources import files
 
 
 class Header_Chain_Status(SQLModel, table=True):
@@ -42,13 +43,18 @@ connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
 # static = Path(".\src\\diyims\\static")
 
+
+static_path = files("diyims.static")
+font_path = files("diyims.fonts")
+template_path = files("diyims.templates")
+
 myapp = FastAPI()
 
-myapp.mount("/static", StaticFiles(directory="static"), name="static")
-myapp.mount("/fonts", StaticFiles(directory="fonts"), name="fonts")
+myapp.mount("/static", StaticFiles(directory=static_path), name="static")
+myapp.mount("/fonts", StaticFiles(directory=font_path), name="fonts")
 
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=template_path)
 
 
 @myapp.get("/items/{id}", response_class=HTMLResponse)

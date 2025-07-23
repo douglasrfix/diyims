@@ -20,6 +20,7 @@ from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
 from diyims.peer_capture import capture_peer_main
 from diyims.capture_want_lists import capture_peer_want_lists
+import uvicorn
 # from diyims.test import test
 
 
@@ -30,6 +31,11 @@ app = typer.Typer(
 # app.add_typer(configuration_cli.app, name="config")
 app.add_typer(install_cli.app, name="install-utils")
 app.add_typer(beacon_cli.app, name="beacon-utils")
+
+
+@app.command()
+def run_fastapi():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 @app.command()

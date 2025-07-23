@@ -303,5 +303,13 @@ def close_out_address():
         session.commit()
 
 
+def import_path():
+    from importlib.resources import files
+
+    car_path = files("diyims.templates").joinpath("main.py")
+
+    print(car_path)
+
+
 if __name__ == "__main__":
-    close_out_address()
+    import_path()

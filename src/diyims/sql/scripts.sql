@@ -40,9 +40,7 @@ CREATE TABLE "want_list_table" (
 	PRIMARY KEY("peer_ID", "object_CID")
 );
 
-CREATE TABLE "network_table" (
-	"network_name"	TEXT
-);
+
 
 CREATE TABLE "log" (
 	"DTS"	TEXT,

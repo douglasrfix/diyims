@@ -39,11 +39,20 @@ def create():
     except ApplicationNotInstalledError:
         raise
 
+    # def create_db_and_tables() -> None:
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+
+    # engine = create_engine(db_url, echo=True)
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
+    SQLModel.metadata.create_all(engine)
+
     sql_str = get_sql_str()
     queries = aiosql.from_str(sql_str, "sqlite3")
     connect_path = path_dict["db_file"]
     conn = sqlite3.connect(connect_path)
-
+    """
     try:
         queries.create_schema(conn)
         print("DB Schema creation successful.")
@@ -51,7 +60,7 @@ def create():
     except Error as e:
         conn.close()
         raise (CreateSchemaError(e))
-
+    """
     try:
         queries.set_pragma(conn)
         print("DB PRAGMA set successfully.")
@@ -62,14 +71,6 @@ def create():
 
     conn.close()
 
-    # def create_db_and_tables() -> None:
-    path_dict = get_path_dict()
-    connect_path = path_dict["db_file"]
-    db_url = f"sqlite:///{connect_path}"
-
-    # engine = create_engine(db_url, echo=True)
-    engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
-    SQLModel.metadata.create_all(engine)
     return
 
 

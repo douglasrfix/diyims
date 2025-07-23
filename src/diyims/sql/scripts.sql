@@ -1,27 +1,3 @@
-
--- name: create_schema#
-
-
-
-
-
-
-
-
-
-
-
-
-
-CREATE TABLE "header_chain_status" (
-	"insert_DTS" TEXT,
-	"peer_ID"	TEXT,
-	"missing_header_CID"	TEXT,
-	"message"  TEXT,
-	PRIMARY KEY("insert_DTS", "peer_ID", "missing_header_CID")
-
-);
-
 -- name: set_pragma#
 PRAGMA journal_mode = WAL
 ;

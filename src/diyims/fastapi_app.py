@@ -4,34 +4,21 @@ from fastapi import FastAPI, Request
 # from typing import Annotated
 
 # from sqlmodel import Field, Session, SQLModel, create_engine, select
-from sqlmodel import Session, create_engine, select, col, Field, SQLModel
+from sqlmodel import Session, create_engine, select, col
 from diyims.path_utils import get_path_dict
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from diyims.sqlmodels import Peer_Address, Want_List_Table, Peer_Table
+from diyims.sqlmodels import (
+    Header_Chain_Status,
+    Header_Table,
+    Peer_Address,
+    Peer_Table,
+    Want_List_Table,
+)
 from importlib.resources import files
 
 
-class Header_Chain_Status(SQLModel, table=True):
-    insert_DTS: str = Field(primary_key=True)
-    peer_ID: str = Field(primary_key=True)
-    missing_header_CID: str = Field(primary_key=True)
-    message: str | None = None
-
-
-class Header_Table(SQLModel, table=True):
-    version: str | None = None
-    object_CID: str
-    object_type: str
-    insert_DTS: str
-    prior_header_CID: str | None = None
-    header_CID: str = Field(primary_key=True)
-    peer_ID: str
-    processing_status: str | None = None
-
-
-# from pathlib import Path
 mode = {}
 mode["dark"] = 1
 
@@ -41,8 +28,6 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-# static = Path(".\src\\diyims\\static")
-
 
 static_path = files("diyims.static")
 font_path = files("diyims.fonts")
@@ -52,8 +37,6 @@ myapp = FastAPI()
 
 myapp.mount("/static", StaticFiles(directory=static_path), name="static")
 myapp.mount("/fonts", StaticFiles(directory=font_path), name="fonts")
-
-
 templates = Jinja2Templates(directory=template_path)
 
 

@@ -14,6 +14,42 @@ class Address_Source(str, Enum):
     SWARM_PEER = "SP"
 
 
+class Clean_Up(SQLModel, table=True):
+    DTS: str = Field(primary_key=True)
+    want_item_file: str | None = None
+    beacon_CID: str | None = None
+
+
+class Header_Chain_Status(SQLModel, table=True):
+    insert_DTS: str = Field(primary_key=True)
+    peer_ID: str = Field(primary_key=True)
+    missing_header_CID: str = Field(primary_key=True)
+    message: str | None = None
+
+
+class Header_Table(SQLModel, table=True):
+    version: str | None = None
+    object_CID: str
+    object_type: str
+    insert_DTS: str
+    prior_header_CID: str | None = None
+    header_CID: str = Field(primary_key=True)
+    peer_ID: str
+    processing_status: str | None = None
+
+
+class Log(SQLModel, table=True):
+    DTS: str = Field(primary_key=True)
+    process: str | None = None
+    pid: int | None = None
+    peer_type: str | None = None
+    message: str | None = None
+
+
+class Network_Table(SQLModel, table=True):
+    network_name: str = Field(primary_key=True)
+
+
 class Peer_Address(SQLModel, table=True):
     peer_ID: str = Field(primary_key=True)
     multiaddress: str | None = None
@@ -46,6 +82,17 @@ class Peer_Table(SQLModel, table=True):
     processing_status: str
     agent: str | None = None
     version: str | None = None
+
+
+class Shutdown(SQLModel, table=True):
+    enabled: int = Field(primary_key=True)
+
+
+class Subscription(SQLModel, table=True):
+    peer_ID: str | None = None
+    object_type: str | None = None
+    notify_queue: str | None = None
+    header_CID: str = Field(primary_key=True)
 
 
 class Want_List_Table(SQLModel, table=True):

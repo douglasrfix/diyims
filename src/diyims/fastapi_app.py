@@ -98,7 +98,7 @@ async def html_address_list(request: Request):
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
 
-    statement = select(Peer_Address)
+    statement = select(Peer_Address).order_by(col(Peer_Address.insert_DTS).desc())
     with Session(engine) as session:
         address_list = session.exec(statement).all()
 
@@ -125,8 +125,10 @@ async def html_address_detail(request: Request):
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
 
-    multiaddress = request.query_params.get("multiaddress")
-    statement = select(Peer_Address).where(Peer_Address.multiaddress == multiaddress)
+    address_string = request.query_params.get("address_string")
+    statement = select(Peer_Address).where(
+        Peer_Address.address_string == address_string
+    )
     with Session(engine) as session:
         address = session.exec(statement).first()
 
@@ -138,7 +140,7 @@ async def html_address_detail(request: Request):
             "menu_translate": menu_translate,
             "title": "Address Detail",
             "address": address,
-            "multiaddress": multiaddress,
+            "address_string": address_string,
         },
     )
 
@@ -156,8 +158,8 @@ async def html_header_list(request: Request):
 
     statement = (
         select(Header_Table)
-        .order_by(col(Header_Table.peer_ID))
-        .order_by(col(Header_Table.insert_DTS))
+        .order_by(col(Header_Table.peer_ID).asc())
+        .order_by(col(Header_Table.insert_DTS).desc())
     )
     with Session(engine) as session:
         header_list = session.exec(statement).all()
@@ -213,7 +215,9 @@ async def html_header_status_list(request: Request):
     # menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
 
-    statement = select(Header_Chain_Status)
+    statement = select(Header_Chain_Status).order_by(
+        col(Header_Chain_Status.insert_DTS).asc()
+    )
     with Session(engine) as session:
         header_status_list = session.exec(statement).all()
 
@@ -276,7 +280,11 @@ async def peer_addresses(request: Request):
     menu_translate["user"] = "User"
 
     peer_ID = request.query_params.get("peer_ID")
-    statement = select(Peer_Address).where(Peer_Address.peer_ID == peer_ID)
+    statement = (
+        select(Peer_Address)
+        .where(Peer_Address.peer_ID == peer_ID)
+        .order_by(col(Peer_Address.insert_DTS).asc())
+    )
     with Session(engine) as session:
         address_list = session.exec(statement).all()
 
@@ -304,7 +312,7 @@ async def html_peer_list(request: Request):
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
 
-    statement = select(Peer_Table)
+    statement = select(Peer_Table).order_by(col(Peer_Table.local_update_DTS).desc())
     with Session(engine) as session:
         peer_list = session.exec(statement).all()
 
@@ -337,6 +345,8 @@ async def html_peer_detail(request: Request):
     statement_2 = (
         select(Peer_Address)
         .where(Peer_Address.peer_ID == peer_ID)
+        .order_by(col(Peer_Address.in_use).desc())
+        .order_by(col(Peer_Address.address_global).desc())
         .order_by(col(Peer_Address.insert_DTS).desc())
     )
     statement_3 = (

@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a127"
+version = "0.0.0a131"
 #general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"
@@ -13,7 +13,9 @@ requires-python = ">=3.11.2"
 dependencies = [
     "aiosql>=13.4",
     "email-validator>=2.2.0",
-    "fastapi-cli>=0.0.7",
+    "fastapi-cli>=0.0.8",
+    # fastapi requires manual install on remote
+    "fastapi[standard]>=0.116.1",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "psutil>=7.0.0",
@@ -46,7 +48,6 @@ packages = ["src/diyims"]
 
 [dependency-groups]
 dev = [
-    "fastapi[standard]>=0.115.13",
     "mypy>=1.16.0",
     "pre-commit>=4.2.0",
     "pytest>=8.4.0",

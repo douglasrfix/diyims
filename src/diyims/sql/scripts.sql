@@ -51,12 +51,6 @@ CREATE TABLE "log" (
 );
 
 
-CREATE TABLE "clean_up" (
-	"DTS"	TEXT,
-	"want_item_file"	TEXT,
-	"beacon_CID"	TEXT,
-	PRIMARY KEY("DTS")
-);
 
 
 CREATE TABLE "header_chain_status" (

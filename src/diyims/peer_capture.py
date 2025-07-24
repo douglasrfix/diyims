@@ -706,92 +706,133 @@ def capture_peer_addresses(
     address_available = False
     for address in address_list:
         address_string = address
-        address_suspect = False
+        address_ignored = False
+        ignored_reason = ""
         address_global = False
         multiaddress = ""
         address_type = ""
+        protocol_valid = False
+        available = False
+        port_valid = False
+        multiaddress_valid = False
 
-        index = address.lower().find(
-            "/p2p-circuit"
-        )  # most often observed in data order not really of interest
-        if index == -1:
+        index = address.lower().find("/p2p-circuit")
+        if index != -1:
+            address_ignored = True
+            ignored_reason = "/p2p-circuit"
+
+        if not address_ignored:
+            index = address.lower().find("/webtransport")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/webtransport"
+
+        if not address_ignored:
+            index = address.lower().find("/webrtc-direct")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/webrtc-direct"
+
+        if not address_ignored:
             index = address.lower().find("/web")
-            if index == -1:
-                index = address.lower().find("/dns")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/web"
+
+        if not address_ignored:
+            index = address.lower().find("/dns4")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/dns4"
+
+        if not address_ignored:
+            index = address.lower().find("/dns")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/dns"
+
+        if not address_ignored:
+            index = address.lower().find("/tls")
+            if index != -1:
+                address_ignored = True
+                ignored_reason = "/tls"
+
+        if not address_ignored:
+            ip_version = address[:5]
+            index = address.lower().find("/", 5)
+            ip_index = index
+            ip_string = address[5:index]
+            if ip_version == "/ip4/":
+                address_type = "4"
+                if ipaddress.IPv4Address(ip_string).is_global:
+                    address_global = True
+
+            else:
+                address_type = "6"
+                if ipaddress.IPv6Address(ip_string).is_global:
+                    address_global = True
+
+            index = address.lower().find("/tcp/", ip_index)
+            if index != -1:
+                protocol_valid = True
+                ip_index = index + 5
+
+            if not protocol_valid:
+                index = address.lower().find("/udp/", ip_index)
+                if index != -1:
+                    protocol_valid = True
+                    ip_index = index + 5
+
+            if protocol_valid:
+                index = address.lower().find("/", ip_index)
                 if index == -1:
-                    index = address.lower().find("/tls")  # this might be ok
-                    if index == -1:
-                        ip_version = address[:5]
-                        index = address.lower().find("/", 5)
-                        ip_string = address[5:index]
+                    port_start = ip_index
+                    port = address[port_start:]
+                    if port.isnumeric():
+                        port_valid = True
+                        multiaddress = address + "/p2p/" + peer_ID
+                        multiaddress_valid = True
+
+                if not port_valid:
+                    port_start = ip_index
+                    port_end = index - 1
+                    port = address[port_start:port_end]
+                    if port.isnumeric():
+                        port_valid = True
                         ip_index = index
 
-                        index = address.lower().find(
-                            "/p2p/", ip_index
-                        )  # if index != to -1 then it is assumed to be multiaddress
+                if port_valid:
+                    index = address.lower().find("/quic-v1/", ip_index)
+                    if index == -1:
+                        index = address.lower().find("/quic-v1", ip_index)
                         if index != -1:
-                            multiaddress = address
-                        else:
-                            index = address.lower().find("/quic-v1", ip_index)
-                            if index != -1:
-                                multiaddress = address + "/p2p/" + peer_ID
-                            else:
-                                if index == -1:
-                                    index = address.lower().find(
-                                        "/tcp/", ip_index
-                                    )  # if index != to -1 then it is assumed to be multiaddress
-                                if (
-                                    index == -1
-                                ):  # probably a findprovs address which are not multiaddress format
-                                    index = address.lower().find("/udp/", ip_index)
-                                if index != -1:
-                                    port_start = index + 5
-                                    port = address[port_start:]
-                                    if port.isnumeric():
-                                        multiaddress = address + "/p2p/" + peer_ID
-                                    else:
-                                        multiaddress = address
-                                        address_suspect = True
-                                if multiaddress != "":
-                                    if ip_version == "/ip4/":
-                                        address_type = "4"
-                                        if ipaddress.IPv4Address(ip_string).is_global:
-                                            address_global = True
-                                            address_available = True
-                                            """ remove duplicate code
-                                            insert_DTS = get_DTS()
+                            multiaddress = address + "/p2p/" + peer_ID
+                            multiaddress_valid = True
+                    if not multiaddress_valid:
+                        index = address.lower().find("/p2p/", ip_index)
+                        if index != -1:
+                            ip_index = index + 5
+                            index = address.lower().find("/", ip_index)
+                            if index == -1:
+                                multiaddress = address + peer_ID
+                                multiaddress_valid = True
 
+            if not address_ignored and multiaddress_valid and address_global:
+                available = True
+                address_available = True
 
-                                            create_peer_address(
-                                                peer_ID,
-                                                multiaddress,
-                                                insert_DTS,
-                                                address_suspect,
-                                                address_string,
-                                                address_type,
-                                                address_source,
-                                                address_global,
-                                            )
-                                            """
-                                            address_available = True
-
-                                    else:
-                                        address_type = "6"
-                                        if ipaddress.IPv6Address(ip_string).is_global:
-                                            address_global = True
-                                            address_available = True
-
-        # capture every potential address
         insert_DTS = get_DTS()
         create_peer_address(
             peer_ID,
             multiaddress,
             insert_DTS,
-            address_suspect,
+            address_ignored,
+            ignored_reason,
             address_string,
             address_type,
             address_source,
             address_global,
+            available,
         )
 
     return address_available
@@ -801,30 +842,31 @@ def create_peer_address(
     peer_ID: str,
     multiaddress: str,
     insert_DTS: str,
-    address_suspect: bool,
+    address_ignored: bool,
+    ignored_reason: str,
     address_string: str,
     address_type: str,
     address_source: str,
     address_global: bool,
+    available: bool,
 ) -> None:
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
 
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
-    # session = Session(engine)
-    # statement = text("PRAGMA busy_timeout = 100000;")
-    # session.exec(statement)
 
     address_row = Peer_Address(
         peer_ID=peer_ID,
         multiaddress=multiaddress,
         insert_DTS=insert_DTS,
-        address_suspect=address_suspect,
+        address_ignored=address_ignored,
+        ignored_reason=ignored_reason,
         address_string=address_string,
         address_type=address_type,
         address_source=address_source,
         address_global=address_global,
+        available=available,
     )
     statement = select(Peer_Address).where(
         Peer_Address.peer_ID == peer_ID, Peer_Address.address_string == address_string

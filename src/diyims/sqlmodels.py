@@ -54,7 +54,8 @@ class Peer_Address(SQLModel, table=True):
     peer_ID: str = Field(primary_key=True)
     multiaddress: str | None = None
     insert_DTS: str
-    address_suspect: bool
+    address_ignored: bool
+    ignored_reason: str | None = None
     address_string: str = Field(primary_key=True)
     address_type: str | None = None
     address_source: str
@@ -65,6 +66,7 @@ class Peer_Address(SQLModel, table=True):
     dis_connect_DTS: str | None = None
     peering_remove_DTS: str | None = None
     reset_DTS: str | None = None
+    available: bool
 
 
 class Peer_Table(SQLModel, table=True):

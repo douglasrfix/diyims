@@ -439,7 +439,7 @@ def peer_connect(peer_ID: str) -> bool:
         statement = (
             select(Peer_Address)
             .where(Peer_Address.peer_ID == peer_ID)
-            .where(Peer_Address.address_global == "1")
+            .where(Peer_Address.available == "1")
             .order_by(col(Peer_Address.insert_DTS).desc())
         )
         with Session(engine) as session:

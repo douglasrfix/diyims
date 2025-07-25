@@ -189,4 +189,6 @@
 
 ## TODO: #56 add data and logging to capture connect processing
 
-## BUG: #57 connect logic appears faulty
+## [x]: #57 connect logic appears faulty
+
+## BUG: #60 multi address is created with two peerIDs

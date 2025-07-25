@@ -185,4 +185,6 @@
 
 ## [x]: #51 Address type of FP does not seem to identify global addresses
 
-## BUG: #54 capture_provider_addresses overwrites address_available flag
+## [x]: #54 capture_provider_addresses overwrites address_available flag
+
+## TODO: #56 add data and logging to capture connect processing

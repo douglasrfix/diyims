@@ -385,7 +385,7 @@ def decode_findprovs_structure(
 
                         original_peer_type = peer_table_entry["peer_type"]
                         peer_table_dict["peer_ID"] = peer_table_entry["peer_id"]
-                        commit_peer = 0
+
                         if peer_table_entry["processing_status"] == "WLW":
                             # if (
                             #    peer_table_entry["version"] == "0"
@@ -406,26 +406,6 @@ def decode_findprovs_structure(
                                 conn.close()
 
                                 modified += 1
-                                commit_peer = 1
-                            """
-                            else:
-                                if (
-                                    peer_table_entry["version"]
-                                    != peer_table_dict["version"]
-                                ):
-                                    peer_table_dict["version"] = peer_table_entry[
-                                        "version"
-                                    ]
-
-                                    # provide new address to help connect failing
-
-                                    update_peer_table_version(
-                                        conn, queries, peer_table_dict
-                                    )
-                                    # conn.commit()
-
-                                    modified += 1
-                                    commit_peer = 1"""
 
                         if original_peer_type == "BP":
                             # promote
@@ -439,7 +419,6 @@ def decode_findprovs_structure(
                             conn.commit()
                             conn.close()
 
-                            commit_peer = 1
                             modified += 1
                             promoted += 1
 
@@ -455,7 +434,6 @@ def decode_findprovs_structure(
                             conn.commit()
                             conn.close()
 
-                            commit_peer = 1
                             modified += 1
                             promoted += 1
 
@@ -473,14 +451,8 @@ def decode_findprovs_structure(
                                 capture_peer_config_dict
                             )  # +1
                             insert_log_row(conn, queries, log_dict)
-                            commit_peer = 1
                             conn.commit()
                             conn.close()
-
-                        if commit_peer:
-                            # conn.commit()
-
-                            commit_peer = 0
 
                     if original_peer_type == "PP":
                         msg = "put wake up from PP peer capture"
@@ -674,13 +646,17 @@ def capture_provider_addresses(
     address_list: list, peer_ID: str, peer_type: str
 ) -> bool:
     address_available = False
-    address_source = peer_type
-    if capture_peer_addresses(
+    address_source = "PP"
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+
+    capture_peer_addresses(
         address_list,
         peer_ID,
         address_source,
-    ):
-        address_available = True
+    )
     param = {"arg": peer_ID}
     response, status_code, response_dict = execute_request(
         url_key="id",
@@ -690,11 +666,21 @@ def capture_provider_addresses(
         address_source = "FP"
         peer_dict = json.loads(response.text)
         address_list = peer_dict["Addresses"]
-        if capture_peer_addresses(
+        capture_peer_addresses(
             address_list,
             peer_ID,
             address_source,
-        ):
+        )
+
+    statement = select(Peer_Address).where(
+        Peer_Address.peer_ID == peer_ID,
+        Peer_Address.in_use == 1,
+    )
+    with Session(engine) as session:
+        results = session.exec(statement)
+        if results.first() is None:
+            address_available = False
+        else:
             address_available = True
 
     return address_available
@@ -703,7 +689,6 @@ def capture_provider_addresses(
 def capture_peer_addresses(
     address_list: list, peer_ID: str, address_source: str
 ) -> bool:
-    address_available = False
     for address in address_list:
         address_string = address
         address_ignored = False
@@ -819,7 +804,6 @@ def capture_peer_addresses(
 
             if not address_ignored and multiaddress_valid and address_global:
                 available = True
-                address_available = True
 
         insert_DTS = get_DTS()
         create_peer_address(
@@ -835,7 +819,7 @@ def capture_peer_addresses(
             available,
         )
 
-    return address_available
+    return
 
 
 def create_peer_address(

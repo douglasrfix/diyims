@@ -674,7 +674,7 @@ def capture_provider_addresses(
 
     statement = select(Peer_Address).where(
         Peer_Address.peer_ID == peer_ID,
-        Peer_Address.in_use == 1,
+        Peer_Address.available == 1,
     )
     with Session(engine) as session:
         results = session.exec(statement)

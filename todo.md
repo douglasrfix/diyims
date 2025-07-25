@@ -175,7 +175,7 @@
 
 ## [x]: #45 integrate fastapi
 
-## TODO: #47 Finish basic templates
+## [x]: #47 Finish basic templates
 
 ## BUG: #48 discovered detail peering remove not being set
 
@@ -183,4 +183,6 @@
 
 ## BUG: #50 fastapi_app.py", line 421, in html_want_detail, starlette.routing.NoMatchFound: No route exists. selecting want item detail from peer detail
 
-## BUG: #51 Address type of FP does not seem to identify global addresses
+## [x]: #51 Address type of FP does not seem to identify global addresses
+
+## BUG: #54 capture_provider_addresses overwrites address_available flag

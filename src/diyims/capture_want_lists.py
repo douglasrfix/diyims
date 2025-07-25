@@ -329,7 +329,7 @@ def capture_want_lists_for_peers(
 
     # dual connections avoid locking conflict with the read
 
-    rows_of_peers = queries.select_peers_by_peer_type_status(  # NOTE: where status is WLR set by peer capture or peer = PP
+    rows_of_peers = queries.select_peers_by_peer_type_status(  # NOTE: where status is WLR set by peer capture and reset by want list capture
         conn, peer_type=peer_type
     )
     list_of_peers = []
@@ -433,8 +433,8 @@ def peer_connect(peer_ID: str) -> bool:
             peer_connected = False
         else:
             address_in_use = True
-            peer_connected = True
-
+            peer_connected = True  # still true ? multi connects are ok so should just reuse address, same with peering
+    address_in_use = False  ## temporary
     if address_in_use is False:
         statement = (
             select(Peer_Address)
@@ -473,12 +473,14 @@ def peer_connect(peer_ID: str) -> bool:
                     address = results.one()
                     address.in_use = True
                     address.connect_DTS = get_DTS()
-                    if peering_added is True:
+                    if (
+                        peering_added is True
+                    ):  # may need logic for reuse but different conditions
                         address.peering_add_DTS = get_DTS()
                     session.add(address)
                     session.commit()
 
-                break
+                break  # don't need any more connections
 
     return peer_connected
 
@@ -1054,9 +1056,7 @@ def filter_wantlist(
                         if test_peer_ID != provider_peer_ID:
                             log_string = f"test {test_peer_ID} and {provider_peer_ID} did not match."
                         else:
-                            log_string = (
-                                f"Capture and update to NPP for {provider_peer_ID}."
-                            )
+                            log_string = f"Capture and update to NPP for {provider_peer_ID}."  # This happens later in the code. Bad place for the message
                         conn, queries = set_up_sql_operations(config_dict)  # + 1
                         log_dict = refresh_log_dict()
                         log_dict["DTS"] = get_DTS()
@@ -1084,11 +1084,13 @@ def filter_wantlist(
 
                         if version == 1:
                             conn, queries = set_up_sql_operations(config_dict)  # + 1
-                            peer_row_dict["version"] = provider_peer_row_CID
+                            peer_row_dict["version"] = (
+                                provider_peer_row_CID  # TODO: #58 add data dedicated data element
+                            )
                             peer_row_dict["local_update_DTS"] = get_DTS()
                             update_peer_table_status_to_NPP(  # NOTE: this can be overridden by a PMP from Peer monitoring. This is the first cid
                                 conn, queries, peer_row_dict
-                            )
+                            )  # this updates the verified flag hidden in db utils
                             conn.commit()
                             conn.close()
                             peer_verified = True

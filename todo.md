@@ -188,3 +188,5 @@
 ## [x]: #54 capture_provider_addresses overwrites address_available flag
 
 ## TODO: #56 add data and logging to capture connect processing
+
+## BUG: #57 connect logic appears faulty

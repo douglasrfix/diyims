@@ -769,7 +769,7 @@ def capture_peer_addresses(
                     ip_index = index + 5
 
             if protocol_valid:
-                index = address.lower().find("/", ip_index)
+                index = address.lower().find("/", ip_index)  # naked port
                 if index == -1:
                     port_start = ip_index
                     port = address[port_start:]
@@ -793,13 +793,22 @@ def capture_peer_addresses(
                         if index != -1:
                             multiaddress = address + "/p2p/" + peer_ID
                             multiaddress_valid = True
+                    else:
+                        index = address.lower().find("/p2p/", ip_index)
+                        if index != -1:
+                            ip_index = index + 5
+                            index = address.lower().find("/", ip_index)
+                            if index == -1:
+                                multiaddress = address
+                                multiaddress_valid = True
+
                     if not multiaddress_valid:
                         index = address.lower().find("/p2p/", ip_index)
                         if index != -1:
                             ip_index = index + 5
                             index = address.lower().find("/", ip_index)
                             if index == -1:
-                                multiaddress = address + peer_ID
+                                multiaddress = address
                                 multiaddress_valid = True
 
             if not address_ignored and multiaddress_valid and address_global:

@@ -41,7 +41,7 @@ class Header_Table(SQLModel, table=True):
 class Log(SQLModel, table=True):
     DTS: str = Field(primary_key=True)
     process: str | None = None
-    pid: int | None = None
+    pid: int = Field(primary_key=True)
     peer_type: str | None = None
     msg: str | None = None
 

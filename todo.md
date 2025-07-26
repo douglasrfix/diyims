@@ -181,7 +181,7 @@
 
 ## BUG: #49 satisfy_maine line 315 failed when shutdown issued before startup was complete
 
-## BUG: #50 fastapi_app.py", line 421, in html_want_detail, starlette.routing.NoMatchFound: No route exists. selecting want item detail from peer detail
+## [x]: #50 fastapi_app.py", line 421, in html_want_detail, starlette.routing.NoMatchFound: No route exists. selecting want item detail from peer detail
 
 ## [x]: #51 Address type of FP does not seem to identify global addresses
 
@@ -191,4 +191,6 @@
 
 ## [x]: #57 connect logic appears faulty
 
-## BUG: #60 multi address is created with two peerIDs
+## [x]: #60 multi address is created with two peerIDs
+
+## BUG: #63 requests return code not handled correctly

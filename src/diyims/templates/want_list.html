@@ -13,8 +13,8 @@
       {% endfor %}
     {% else %}
       {% for want_item in want_list %}
-        <div class="item"> <a href="{{ url_for('html_want_detail') }}?peer_ID={{ want_list.peer_ID  }}&object_CID={{ want_list.object_CID  }}"></a> </div>
-                <div class="item">undefinedItem</div>
+
+        <div class="item"> <a href="{{ url_for('html_want_detail') }}?object_CID={{ want_item.object_CID  }}">{{ want_item.object_CID }}</a> </div>
 
         {% endfor %}
     {% endif %}

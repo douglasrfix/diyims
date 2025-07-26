@@ -40,7 +40,8 @@
 
         {% for item in want_list %}
 
-          <li><a href="{{ url_for('html_want_detail') }}?object_CID={{ item.object_CID  }}">{{ item.object_CID }}</a></li>
+          <li><a href="{{ url_for('html_want_detail') }}?peer_ID={{ want_list.peer_ID  }}&object_CID={{ item.object_CID  }}">
+            {{ item.object_CID }}</a></li>
 
         {% endfor %}
       </ol>

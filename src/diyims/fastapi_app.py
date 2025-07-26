@@ -252,7 +252,7 @@ async def html_header_status_detail(request: Request):
 
 
 @myapp.get("/html/peer_address_list/", response_class=HTMLResponse)
-async def peer_addresses(request: Request):
+async def html_peer_address_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
     menu_translate["html_peer_list"] = "Peer List"
@@ -403,7 +403,7 @@ async def html_want_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
     menu_translate["html_peer_list"] = "Peer List"
-    menu_translate["address_list"] = "Address List"
+    menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
     menu_translate["html_header_list"] = "Header List"
     menu_translate["html_header_status_list"] = "Header Status List"
@@ -435,8 +435,8 @@ async def html_peer_want_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
     menu_translate["html_peer_list"] = "Peer List"
-    menu_translate["address_list"] = "Address List"
-    # menu_translate["html_want_list"] = "Want list"
+    menu_translate["html_address_list"] = "Address List"
+    menu_translate["html_want_list"] = "Want list"
     menu_translate["html_header_list"] = "Header List"
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"

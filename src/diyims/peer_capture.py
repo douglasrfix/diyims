@@ -811,8 +811,13 @@ def capture_peer_addresses(
                                 multiaddress = address
                                 multiaddress_valid = True
 
-            if not address_ignored and multiaddress_valid and address_global:
-                available = True
+        # if address_source == "FF":
+        #    multiaddress = address
+        #    multiaddress_valid = True
+        #    available = True
+
+        if not address_ignored and multiaddress_valid and address_global:
+            available = True
 
         insert_DTS = get_DTS()
         create_peer_address(

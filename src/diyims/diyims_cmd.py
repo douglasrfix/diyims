@@ -44,7 +44,17 @@ def danger():
 
 
 @app.command()
-def shutdown():
+def shutdown(
+    roaming: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Set alternate Roaming value.",
+            show_default=False,
+            rich_help_panel="Execution Options",
+        ),
+    ] = "Roaming",
+):
+    os.environ["ROAMING"] = str(roaming)
     shutdown_cmd()
 
 

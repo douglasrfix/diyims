@@ -37,6 +37,7 @@ def create():
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
+    print(db_url)
 
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
     SQLModel.metadata.create_all(engine)

@@ -464,23 +464,26 @@ def peer_connect(peer_ID: str) -> bool:
                 if status_code == 200:
                     peering_added = True
 
-            if peer_connected:
-                statement = select(Peer_Address).where(
-                    Peer_Address.address_string == peer_address.address_string
-                )
-                with Session(engine) as session:
-                    results = session.exec(statement)
-                    address = results.one()
+            statement = select(Peer_Address).where(
+                Peer_Address.address_string == peer_address.address_string
+            )
+            with Session(engine) as session:
+                results = session.exec(statement)
+                address = results.one()
+                if peer_connected:
                     address.in_use = True
                     address.connect_DTS = get_DTS()
                     if (
                         peering_added is True
                     ):  # may need logic for reuse but different conditions
                         address.peering_add_DTS = get_DTS()
-                    session.add(address)
-                    session.commit()
+                else:
+                    address.peering_remove_DTS = get_DTS()
+                session.add(address)
+                session.commit()
 
-                break  # don't need any more connections
+        #    if peer_connected:
+        #        break  # don't need any more connections ?????
 
     return peer_connected
 

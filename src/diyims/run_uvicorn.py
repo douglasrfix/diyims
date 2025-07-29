@@ -3,10 +3,10 @@ def main(roaming: str) -> None:
     import uvicorn
 
     os.environ["ROAMING"] = str(roaming)
-    uvicorn.run("diyims.fastapi_app:myapp", host="127.0.0.0", port=8000)
+    uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
 
     return
 
 
 if __name__ == "__main__":
-    main("RoamingDev")
+    main("Roaming")

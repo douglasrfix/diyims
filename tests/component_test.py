@@ -47,7 +47,7 @@ def test_capture_swarm_peers():
 # @pytest.mark.component
 def test_clean_up():
     """testing clean_up"""
-    command_string = "run-clean-up --roaming='ProdRoaming'"
+    command_string = "run-clean-up --roaming='RoamingDev'"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0

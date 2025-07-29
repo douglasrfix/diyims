@@ -24,26 +24,6 @@ from diyims.database_utils import (
 from diyims.requests_utils import execute_request
 
 
-def run_uvicorn(roaming: str) -> None:
-    import os
-    import uvicorn
-
-    os.environ["ROAMING"] = str(roaming)
-    uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
-
-
-def run_fastapi(roaming: str) -> None:
-    import os
-    import uvicorn
-
-    os.environ["ROAMING"] = str(roaming)
-    uvicorn.run(
-        "diyims.fastapi_app:myapp",
-        host="127.0.0.0",
-        port=8000,
-    )
-
-
 def get_network_name():
     path_dict = get_path_dict()
     sql_str = get_sql_str()
@@ -72,7 +52,7 @@ def get_DTS() -> str:
 
 
 def get_agent():
-    agent = "0.0.0a137"  # NOTE: How to extract at run time
+    agent = "0.0.0a139"  # NOTE: How to extract at run time
 
     return agent
 

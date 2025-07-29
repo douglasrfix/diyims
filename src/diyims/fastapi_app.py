@@ -15,6 +15,7 @@ from diyims.sqlmodels import (
     Peer_Address,
     Peer_Table,
     Want_List_Table,
+    Log,
 )
 from importlib.resources import files
 
@@ -74,6 +75,7 @@ def read_want_list_table():
 async def html_address_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     # menu_translate["html_address_list"] = "Address list"
     menu_translate["html_want_list"] = "Want List"
@@ -101,6 +103,7 @@ async def html_address_list(request: Request):
 async def html_address_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -132,6 +135,7 @@ async def html_address_detail(request: Request):
 async def html_header_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -163,6 +167,7 @@ async def html_header_list(request: Request):
 async def html_header_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -191,6 +196,7 @@ async def html_header_detail(request: Request):
 async def html_header_status_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -220,6 +226,7 @@ async def html_header_status_list(request: Request):
 async def html_header_status_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -251,10 +258,70 @@ async def html_header_status_detail(request: Request):
     )
 
 
+@myapp.get("/html/log_list/", response_class=HTMLResponse)
+async def html_log_list(request: Request):
+    menu_translate = {}
+    menu_translate["root"] = "Home"
+    # menu_translate["html_log_list"] = "Log"
+    menu_translate["html_peer_list"] = "Peer List"
+    menu_translate["html_address_list"] = "Address List"
+    menu_translate["html_want_list"] = "Want List"
+    menu_translate["html_header_list"] = "Header List"
+    menu_translate["html_header_status_list"] = "Header Status List"
+    menu_translate["user"] = "User"
+
+    # peer_ID = request.query_params.get("peer_ID")
+    statement = select(Log).order_by(col(Log.DTS).asc())
+    with Session(engine) as session:
+        log_list = session.exec(statement).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="log_list.html",
+        context={
+            "mode": mode,
+            "menu_translate": menu_translate,
+            "title": "Log Entries",
+            "log_list": log_list,
+        },
+    )
+
+
+@myapp.get("/html/log_detail/", response_class=HTMLResponse)
+async def html_log_detail(request: Request):
+    menu_translate = {}
+    menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
+    menu_translate["html_peer_list"] = "Peer List"
+    menu_translate["html_address_list"] = "Address List"
+    menu_translate["html_want_list"] = "Want List"
+    menu_translate["html_header_list"] = "Header List"
+    menu_translate["html_header_status_list"] = "Header Status List"
+    menu_translate["user"] = "User"
+
+    DTS = request.query_params.get("DTS")
+    pid = request.query_params.get("pid")
+    statement = select(Log).where(Log.DTS == DTS, Log.pid == pid)
+    with Session(engine) as session:
+        log_entry = session.exec(statement).first()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="log_detail.html",
+        context={
+            "mode": mode,
+            "menu_translate": menu_translate,
+            "title": "Log Entry Detail",
+            "log_entry": log_entry,
+        },
+    )
+
+
 @myapp.get("/html/peer_address_list/", response_class=HTMLResponse)
 async def html_peer_address_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -288,6 +355,7 @@ async def html_peer_address_list(request: Request):
 async def html_peer_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     # menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -315,6 +383,7 @@ async def html_peer_list(request: Request):
 async def html_peer_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -375,6 +444,7 @@ async def html_peer_detail(request: Request):
 async def html_want_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     # menu_translate["html_want_list"] = "Want List"
@@ -402,6 +472,7 @@ async def html_want_list(request: Request):
 async def html_want_detail(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -434,6 +505,7 @@ async def html_want_detail(request: Request):
 async def html_peer_want_list(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want list"
@@ -463,6 +535,7 @@ async def html_peer_want_list(request: Request):
 async def user(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"
@@ -486,6 +559,7 @@ async def user(request: Request):
 async def root(request: Request):
     menu_translate = {}
     menu_translate["root"] = "Home"
+    menu_translate["html_log_list"] = "Log"
     menu_translate["html_peer_list"] = "Peer List"
     menu_translate["html_address_list"] = "Address List"
     menu_translate["html_want_list"] = "Want List"

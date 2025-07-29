@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+    <div class="Wrap">
+
+      <div class="item">DTS : {{ log_entry.DTS }}</div>
+      <div class="item">Process : {{ log_entry.process }}</div>
+      <div class="item">PID : {{ log_entry.pid }}</div>
+      <div class="item">Peer Type : {{ log_entry.peer_type }}</div>
+      <div class="item">Message : {{ log_entry.msg }}</div>
+
+    </div>
+
+{% endblock content %}

@@ -5,6 +5,7 @@ from dateutil.parser import parse
 import aiosql
 from pathlib import Path
 
+
 from diyims.path_utils import get_path_dict
 from diyims.py_version_dep import get_sql_str
 from diyims.config_utils import get_clean_up_config_dict, get_shutdown_config_dict
@@ -21,6 +22,26 @@ from diyims.database_utils import (
     update_shutdown_enabled_1,
 )
 from diyims.requests_utils import execute_request
+
+
+def run_uvicorn(roaming: str) -> None:
+    import os
+    import uvicorn
+
+    os.environ["ROAMING"] = str(roaming)
+    uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
+
+
+def run_fastapi(roaming: str) -> None:
+    import os
+    import uvicorn
+
+    os.environ["ROAMING"] = str(roaming)
+    uvicorn.run(
+        "diyims.fastapi_app:myapp",
+        host="127.0.0.0",
+        port=8000,
+    )
 
 
 def get_network_name():
@@ -45,12 +66,13 @@ def get_DTS() -> str:
         str: UTC datetime.now() in an iso format
     """
     DTS = datetime.now(timezone.utc).isoformat()
+    # DTSTemp = DTS.replace('+', '%2B')
 
     return DTS
 
 
 def get_agent():
-    agent = "0.0.0a134"  # NOTE: How to extract at run time
+    agent = "0.0.0a137"  # NOTE: How to extract at run time
 
     return agent
 

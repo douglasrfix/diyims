@@ -15,12 +15,12 @@ from typing_extensions import Annotated
 from diyims import install_cli
 from diyims import beacon_cli
 from diyims.scheduler import scheduler_main
-from diyims.general_utils import clean_up, shutdown_cmd
+from diyims.general_utils import clean_up, shutdown_cmd, exec_fastapi
 from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
 from diyims.peer_capture import capture_peer_main
 from diyims.capture_want_lists import capture_peer_want_lists
-import uvicorn
+
 # from diyims.test import test
 
 
@@ -34,8 +34,18 @@ app.add_typer(beacon_cli.app, name="beacon-utils")
 
 
 @app.command()
-def run_fastapi():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+def run_fastapi(
+    roaming: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Set alternate Roaming value.",
+            show_default=False,
+            rich_help_panel="Execution Options",
+        ),
+    ] = "Roaming",
+):
+    os.environ["ROAMING"] = str(roaming)
+    exec_fastapi()
 
 
 @app.command()

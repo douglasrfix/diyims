@@ -1,5 +1,10 @@
-import uvicorn
+from diyims.general_utils import run_fastapi
+
+
+def main(roaming: str) -> None:
+    run_fastapi(roaming)
+    return
 
 
 if __name__ == "__main__":
-    uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
+    main("ProdRoaming")

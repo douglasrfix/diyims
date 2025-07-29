@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }}</h1>
+  <ol class="u">
+
+
+    {% for log_entry in log_list %}
+
+
+        <li><a href="{{ url_for('html_log_detail') }}?DTS={{ log_entry.DTS | replace('+', '%2B')   }}&pid={{ log_entry.pid  }}">
+          {{ log_entry.DTS }} Message:{{ log_entry.msg}}</a></li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

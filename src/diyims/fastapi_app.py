@@ -18,8 +18,9 @@ from diyims.sqlmodels import (
     Log,
 )
 from importlib.resources import files
+import os
 
-
+roaming = os.environ["ROAMING"]
 mode = {}
 mode["dark"] = 1
 
@@ -91,6 +92,7 @@ async def html_address_list(request: Request):
         request=request,
         name="address_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Address List ",
@@ -122,6 +124,7 @@ async def html_address_detail(request: Request):
         request=request,
         name="address_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Address Detail",
@@ -184,6 +187,7 @@ async def html_header_detail(request: Request):
         request=request,
         name="header_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Header Detail",
@@ -214,6 +218,7 @@ async def html_header_status_list(request: Request):
         request=request,
         name="header_status_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Header Status List ",
@@ -250,6 +255,7 @@ async def html_header_status_detail(request: Request):
         request=request,
         name="header_status_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Header Status Detail",
@@ -279,6 +285,7 @@ async def html_log_list(request: Request):
         request=request,
         name="log_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Log Entries",
@@ -309,6 +316,7 @@ async def html_log_detail(request: Request):
         request=request,
         name="log_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Log Entry Detail",
@@ -342,6 +350,7 @@ async def html_peer_address_list(request: Request):
         request=request,
         name="address_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Peer Addresses",
@@ -371,6 +380,7 @@ async def html_peer_list(request: Request):
         request=request,
         name="peer_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Peer List",
@@ -428,6 +438,7 @@ async def html_peer_detail(request: Request):
         request=request,
         name="peer_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Peer Detail",
@@ -460,6 +471,7 @@ async def html_want_list(request: Request):
         request=request,
         name="want_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Want Item List",
@@ -493,6 +505,7 @@ async def html_want_detail(request: Request):
         request=request,
         name="want_detail.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Want Item Detail",
@@ -522,6 +535,7 @@ async def html_peer_want_list(request: Request):
         request=request,
         name="want_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "peer_ID": peer_ID,
@@ -546,6 +560,7 @@ async def user(request: Request):
     #    addresses = session.exec(select(Peer_Address)).all()
 
     context = {
+        "roaming": roaming,
         "mode": mode,
         "menu_translate": menu_translate,
         "title": "DIYIMS",
@@ -570,6 +585,7 @@ async def root(request: Request):
     #    addresses = session.exec(select(Peer_Address)).all()
 
     context = {
+        "roaming": roaming,
         "mode": mode,
         "menu_translate": menu_translate,
         "title": "DIYIMS",

@@ -1,5 +1,6 @@
+# import os
 from time import sleep
-
+from multiprocessing import Process, set_start_method, freeze_support
 from diyims.beacon import beacon_main, satisfy_main
 from diyims.peer_capture import capture_peer_main
 from diyims.capture_want_lists import capture_peer_want_lists
@@ -13,13 +14,12 @@ from diyims.header_chain_utils import monitor_peer_publishing
 from diyims.peer_utils import monitor_peer_table_maint
 from diyims.general_utils import clean_up
 
-from multiprocessing import Process, set_start_method, freeze_support
 
-
-def scheduler_main():
-    if __name__ != "__main__":
+def scheduler_main(roaming):
+    if roaming != "Roaming":
         freeze_support()
         set_start_method("spawn")
+
     scheduler_config_dict = get_scheduler_config_dict()
     logger = get_logger(scheduler_config_dict["log_file"], "none")
     wait_on_ipfs(logger)
@@ -42,7 +42,10 @@ def scheduler_main():
         reset_peer_table_status_process.join()
         logger.info("Reset peer table status completed.")
 
-        clean_up_process = Process(target=clean_up)
+        clean_up_process = Process(
+            target=clean_up,
+            args=(roaming,),
+        )
         sleep(int(scheduler_config_dict["submit_delay"]))
         clean_up_process.start()
         logger.info("Clean up process started.")

@@ -54,6 +54,21 @@ def shutdown(
 
 
 @app.command()
+def shutdown_dev(
+    roaming: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Set alternate Roaming value.",
+            show_default=False,
+            rich_help_panel="Execution Options",
+        ),
+    ] = "RoamingDev",
+):
+    os.environ["ROAMING"] = str(roaming)
+    shutdown_cmd()
+
+
+@app.command()
 def refresh_name():
     refresh_network_name()
 
@@ -91,11 +106,11 @@ def run_scheduler(
             show_default=False,
             rich_help_panel="Execution Options",
         ),
-    ] = "Roaming",
+    ] = "RoamingDev",
 ):
     os.environ["ROAMING"] = str(roaming)
 
-    scheduler_main()
+    scheduler_main(roaming)
 
 
 @app.command()
@@ -107,11 +122,11 @@ def run_clean_up(
             show_default=False,
             rich_help_panel="Execution Options",
         ),
-    ] = "Roaming",
+    ] = "RoamingDev",
 ):
     os.environ["ROAMING"] = str(roaming)
 
-    clean_up()
+    clean_up(roaming)
 
 
 @app.command()

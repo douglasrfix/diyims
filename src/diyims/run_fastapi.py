@@ -1,9 +1,7 @@
 def main(roaming: str) -> None:
-    import os
-    import uvicorn
+    from diyims.general_utils import exec_fastapi
 
-    os.environ["ROAMING"] = str(roaming)
-    uvicorn.run("diyims.fastapi_app:myapp", host="127.0.0.0", port=8000)
+    exec_fastapi(roaming)
 
     return
 

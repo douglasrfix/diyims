@@ -158,6 +158,7 @@ async def html_header_list(request: Request):
         request=request,
         name="header_list.html",
         context={
+            "roaming": roaming,
             "mode": mode,
             "menu_translate": menu_translate,
             "title": "Header List ",
@@ -556,6 +557,7 @@ async def user(request: Request):
     menu_translate["html_header_list"] = "Header List"
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
+
     # with Session(engine) as session:
     #    addresses = session.exec(select(Peer_Address)).all()
 
@@ -581,6 +583,7 @@ async def root(request: Request):
     menu_translate["html_header_list"] = "Header List"
     menu_translate["html_header_status_list"] = "Header Status List"
     menu_translate["user"] = "User"
+
     # with Session(engine) as session:
     #    addresses = session.exec(select(Peer_Address)).all()
 

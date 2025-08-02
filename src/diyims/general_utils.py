@@ -72,7 +72,7 @@ def get_DTS() -> str:
 
 
 def get_agent():
-    agent = "0.0.0a140"  # NOTE: How to extract at run time
+    agent = "0.0.0a141"  # NOTE: How to extract at run time
 
     return agent
 
@@ -170,7 +170,10 @@ def clean_up(roaming):
         clean_up_dict = refresh_clean_up_dict()
         clean_up_dict["DTS"] = DTS
 
-        Path(want_item_file).unlink()
+        try:
+            Path(want_item_file).unlink()
+        except FileNotFoundError:
+            pass
 
         param = {
             "arg": beacon_CID,
@@ -204,16 +207,16 @@ def clean_up(roaming):
         param=param,
     )
     """
-    response, status_code, response_dict = execute_request(
-        url_key="provide",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
-        param=param,
-    )
+    # response, status_code, response_dict = execute_request(
+    #    url_key="provide",
+    #    logger=logger,
+    #    url_dict=url_dict,
+    #    config_dict=config_dict,
+    #    param=param,
+    # )
     # print(status_code)
 
-    return
+    return 0
 
 
 def test():

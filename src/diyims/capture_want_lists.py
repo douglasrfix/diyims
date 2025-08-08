@@ -45,12 +45,15 @@ from diyims.sqlmodels import Peer_Address, Want_List_Table
 #    insert_timestamp: str | None = None
 
 
-def capture_peer_want_lists(peer_type):  # each peer type runs in its own process
+def capture_peer_want_lists_main(
+    call_stack, peer_type
+):  # each peer type runs in its own process
     freeze_support()
     try:
         set_start_method("spawn")
     except RuntimeError:
         pass
+    call_stack = call_stack + ":capture_peer_want_lists"
     p = psutil.Process()
 
     test = 0
@@ -69,7 +72,10 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
         logger=logger,
         url_dict=url_dict,
         config_dict=want_list_config_dict,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
+
     self = response_dict["ID"]
 
     wait_seconds = int(want_list_config_dict["wait_before_startup"])
@@ -182,6 +188,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
             conn.close()
 
             peers_processed = capture_want_lists_for_peers(
+                call_stack,
                 want_list_config_dict,
                 peer_type,
                 pool,
@@ -308,6 +315,7 @@ def capture_peer_want_lists(peer_type):  # each peer type runs in its own proces
 
 
 def capture_want_lists_for_peers(
+    call_stack,
     want_list_config_dict,
     peer_type,
     pool,
@@ -320,6 +328,7 @@ def capture_want_lists_for_peers(
     # Rconn,
     # Rqueries,
 ):
+    call_stack = call_stack + ":capture_want_lists_for_peers"
     peers_processed = 0
     p = psutil.Process()
     pid = p.pid
@@ -358,7 +367,10 @@ def capture_want_lists_for_peers(
 
         peer_ID = peer_row["peer_ID"]
 
-        if peer_connect(peer_ID):
+        if peer_connect(
+            call_stack,
+            peer_ID,
+        ):
             peer_table_dict = refresh_peer_row_from_template()
             peer_table_dict["peer_ID"] = peer_row["peer_ID"]
             peer_table_dict["peer_type"] = peer_row["peer_type"]
@@ -375,6 +387,7 @@ def capture_want_lists_for_peers(
             pool.apply_async(
                 submitted_capture_peer_want_list_by_id,
                 args=(
+                    call_stack,
                     want_list_config_dict,
                     peer_table_dict,
                     self,
@@ -409,7 +422,11 @@ def capture_want_lists_for_peers(
     return peers_processed
 
 
-def peer_connect(peer_ID: str) -> bool:
+def peer_connect(
+    call_stack: str,
+    peer_ID: str,
+) -> bool:
+    call_stack = call_stack + ":peer_connect"
     peer_connected = False
 
     path_dict = get_path_dict()
@@ -448,17 +465,22 @@ def peer_connect(peer_ID: str) -> bool:
         peering_added = False
         for peer_address in results:
             param = {"arg": peer_address.multiaddress}
+            call_stack_save = call_stack
+            call_stack = call_stack_save + ":1"
             response, status_code, response_dict = execute_request(
                 url_key="connect",
                 param=param,
+                call_stack=call_stack,
             )
             # if successfully connected update address used
             if status_code == 200:
                 peer_connected = True
-
+                call_stack = call_stack_save
+                call_stack = call_stack_save + ":2"
                 response, status_code, response_dict = execute_request(
                     url_key="peering_add",
                     param=param,
+                    call_stack=call_stack,
                 )
 
                 if status_code == 200:
@@ -489,11 +511,13 @@ def peer_connect(peer_ID: str) -> bool:
 
 
 def submitted_capture_peer_want_list_by_id(
+    call_stack,
     want_list_config_dict,
     peer_table_dict,
     self,
     test,
 ):
+    call_stack = call_stack + ":submitted_capture_peer_want_list_by_id"
     p = psutil.Process()
     # path_dict = get_path_dict()
     pid = p.pid
@@ -620,6 +644,7 @@ def submitted_capture_peer_want_list_by_id(
             sleep(wait_seconds)  # sample length config value
 
             found, added, updated = capture_peer_want_list_by_id(
+                call_stack,
                 logger,
                 want_list_config_dict,
                 peer_row_dict,
@@ -682,6 +707,7 @@ def submitted_capture_peer_want_list_by_id(
                 break
             if peer_type == "PP":
                 peer_verified = filter_wantlist(
+                    call_stack,
                     pid,
                     # logger,
                     want_list_config_dict,
@@ -741,6 +767,7 @@ def submitted_capture_peer_want_list_by_id(
 
 
 def capture_peer_want_list_by_id(
+    call_stack,
     logger,
     want_list_config_dict,
     peer_row_dict,
@@ -754,7 +781,7 @@ def capture_peer_want_list_by_id(
     test,
 ):  # This is one sample for a peer
     # url_dict = get_url_dict()
-
+    call_stack = call_stack + ":capture_peer_want_list_by_id"
     found = 0
     added = 0
     updated = 0
@@ -767,6 +794,8 @@ def capture_peer_want_list_by_id(
         url_dict=url_dict,
         config_dict=want_list_config_dict,
         param=param,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     log_string = f"Want list capture for {provider_peer_ID} results {response_dict} completed with {status_code}."
     log_dict = refresh_log_dict()
@@ -884,6 +913,7 @@ def decode_want_list_structure(
 
 
 def filter_wantlist(
+    call_stack,
     pid,
     # logger,
     config_dict,
@@ -901,7 +931,7 @@ def filter_wantlist(
     """
     doc string
     """
-
+    call_stack = call_stack + ":filter_wantlist"
     current_DT = datetime.now(timezone.utc)
     start_off_set = timedelta(hours=1)
     window_duration = timedelta(hours=1)
@@ -1019,7 +1049,9 @@ def filter_wantlist(
                 # url_dict=url_dict,
                 # config_dict=config_dict,
                 param=param,
+                call_stack=call_stack,
                 # timeout=(3.05, 104),
+                http_500_ignore=False,
             )
 
             stop_DTS = get_DTS()
@@ -1053,7 +1085,7 @@ def filter_wantlist(
 
                     if provider_peer_row_CID != "null":
                         test_dictionary = unpack_peer_row_from_cid(
-                            provider_peer_row_CID, config_dict
+                            call_stack, provider_peer_row_CID, config_dict
                         )
                         test_peer_ID = test_dictionary["peer_ID"]
                         if test_peer_ID != provider_peer_ID:
@@ -1113,10 +1145,12 @@ def filter_wantlist(
                             param = {
                                 "arg": provider_peer_ID,
                             }
-
+                            call_stack_save = call_stack
+                            call_stack = call_stack + ":1"
                             response, status_code, response_dict = execute_request(
                                 url_key="peering_remove",
                                 param=param,
+                                call_stack=call_stack,
                             )
 
                             if status_code == 200:
@@ -1125,10 +1159,11 @@ def filter_wantlist(
                             param = {
                                 "arg": provider_address,
                             }
-
+                            call_stack = call_stack_save + ":2"
                             response, status_code, response_dict = execute_request(
                                 url_key="dis_connect",
                                 param=param,
+                                call_stack=call_stack,
                             )
 
                             if status_code == 200:
@@ -1255,4 +1290,4 @@ def extract_peer_row_CID(
 if __name__ == "__main__":
     freeze_support()
     set_start_method("spawn")
-    capture_peer_want_lists("PP")
+    capture_peer_want_lists_main("__main__", "PP")

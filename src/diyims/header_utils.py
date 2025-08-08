@@ -17,6 +17,7 @@
 
 
 def ipfs_header_add(
+    call_stack,
     DTS,
     object_CID,
     object_type,
@@ -39,6 +40,7 @@ def ipfs_header_add(
 
     path_dict = get_path_dict()
     url_dict = get_url_dict()
+    call_stack = call_stack + ":ipfs_header_add"
 
     if mode != "init":
         q_server_port = int(config_dict["q_server_port"])
@@ -75,6 +77,7 @@ def ipfs_header_add(
 
     f = open(proto_file_path, "rb")
     add_file = {"file": f}
+    http_500_ignore = False
     response, status_code, response_dict = execute_request(
         url_key="add",
         logger=logger,
@@ -82,6 +85,8 @@ def ipfs_header_add(
         config_dict=config_dict,
         param=param,
         file=add_file,
+        call_stack=call_stack,
+        http_500_ignore=http_500_ignore,
     )
     f.close()
 

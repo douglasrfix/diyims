@@ -25,10 +25,11 @@ from diyims.general_utils import get_DTS
 # from rich import print
 
 
-def monitor_peer_publishing():
+def monitor_peer_publishing_main(call_stack):
     """
     docstring
     """
+    call_stack = call_stack + ":monitor_peer_publishing"
     test = 0
     p = psutil.Process()
     pid = p.pid
@@ -78,6 +79,7 @@ def monitor_peer_publishing():
                     # url_dict=url_dict,
                     # config_dict=ipfs_config_dict,
                     param=param,  # may need timeout special
+                    call_stack=call_stack,
                 )
 
                 if status_code == 200:
@@ -107,6 +109,7 @@ def monitor_peer_publishing():
                         db_header_row is None
                     ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
                         header_chain_maint(
+                            call_stack,
                             # conn,
                             # Rqueries,
                             # Rconn,
@@ -132,6 +135,7 @@ def monitor_peer_publishing():
                             # print(f"no new entries for {peer_ID}")
                         else:
                             header_chain_maint(
+                                call_stack,
                                 # conn,
                                 # queries,
                                 # Rconn,
@@ -195,6 +199,7 @@ def monitor_peer_publishing():
 
 
 def header_chain_maint(
+    call_stack,
     # conn,
     # queries,
     # Rconn,
@@ -210,7 +215,7 @@ def header_chain_maint(
     """
     docstring
     """
-
+    call_stack = call_stack + ":header_chain_maint"
     # ipfs_config_dict = get_ipfs_config_dict()
     while True:
         start_DTS = get_DTS()
@@ -226,6 +231,7 @@ def header_chain_maint(
             param=param,
             # timeout=(3.05, 120),
             # connect_retries=0,
+            call_stack=call_stack,
         )
 
         if status_code != 200:  # This could be caused by a time out or by a missing CID
@@ -270,7 +276,9 @@ def header_chain_maint(
         object_CID = response_dict["object_CID"]
 
         if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
-            remote_peer_row_dict = unpack_peer_row_from_cid(object_CID, config_dict)
+            remote_peer_row_dict = unpack_peer_row_from_cid(
+                call_stack, object_CID, config_dict
+            )
 
             proto_remote_peer_row_dict = refresh_peer_row_from_template()
             proto_remote_peer_row_dict["peer_ID"] = remote_peer_row_dict["peer_ID"]
@@ -391,4 +399,4 @@ def header_chain_maint(
 
 
 if __name__ == "__main__":
-    monitor_peer_publishing()
+    monitor_peer_publishing_main()

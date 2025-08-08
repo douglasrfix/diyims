@@ -47,7 +47,7 @@ def get_url_dict():
     return url_dict
 
 
-def publish_main(mode):
+def publish_main(call_stack, mode):
     """
     Publish upon request
 
@@ -60,6 +60,7 @@ def publish_main(mode):
     from diyims.database_utils import set_up_sql_operations, select_shutdown_entry
 
     url_dict = get_url_dict()
+    call_stack = call_stack + ":publish_main"
 
     config_dict = get_publish_config_dict()
     logger = get_logger(
@@ -83,6 +84,7 @@ def publish_main(mode):
         logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
+        call_stack=call_stack,
     )
 
     peer_ID = response_dict["ID"]
@@ -114,6 +116,7 @@ def publish_main(mode):
                 url_dict=url_dict,
                 config_dict=config_dict,
                 param=param,
+                call_stack=call_stack,
             )
 
             if status_code == 200:
@@ -139,6 +142,7 @@ def publish_main(mode):
                     url_dict=url_dict,
                     config_dict=config_dict,
                     param=name_publish_arg,
+                    call_stack=call_stack,
                 )
 
                 # logger.info(f"{status_code}.")
@@ -159,13 +163,14 @@ def publish_main(mode):
     return
 
 
-def purge():
+def purge(call_stack):
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
     from diyims.database_utils import set_up_sql_operations
     import requests
 
+    call_stack = call_stack + ":purge"
     ipfs_config_dict = get_ipfs_config_dict()
     peer_type = "none"
     logger = get_logger(ipfs_config_dict["log_file"], peer_type)
@@ -200,6 +205,7 @@ def purge():
                 url_dict=url_dict,
                 config_dict=ipfs_config_dict,
                 param=param,
+                call_stack=call_stack,
             )
 
         elif row["object_CID"] != "null":
@@ -211,6 +217,7 @@ def purge():
                 url_dict=url_dict,
                 config_dict=ipfs_config_dict,
                 param=param,
+                call_stack=call_stack,
             )
 
         param = {"arg": row["header_CID"]}
@@ -221,6 +228,7 @@ def purge():
             url_dict=url_dict,
             config_dict=ipfs_config_dict,
             param=param,
+            call_stack=call_stack,
         )
 
     conn.close()
@@ -265,13 +273,14 @@ def test_ipfs_version():
     return json_dict["AgentVersion"]
 
 
-def force_purge():
+def force_purge(call_stack):
     import json
     import requests
     from diyims.config_utils import get_ipfs_config_dict
     from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
 
+    call_stack = call_stack + ":force_purge"
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
     peer_type = "none"
@@ -290,6 +299,7 @@ def force_purge():
                     url_dict=url_dict,
                     config_dict=ipfs_config_dict,
                     param=param,
+                    call_stack=call_stack,
                 )
 
         except KeyError:
@@ -299,11 +309,12 @@ def force_purge():
         r.raise_for_status()
 
 
-def wait_on_ipfs(logger):
+def wait_on_ipfs(call_stack, logger):  # TODO: redo this logic to use exec
     from time import sleep
     import requests
     from diyims.config_utils import get_ipfs_config_dict
 
+    call_stack = call_stack + "wait_on_ipfs"
     url_dict = get_url_dict()
     ipfs_config_dict = get_ipfs_config_dict()
     i = 0
@@ -324,7 +335,7 @@ def wait_on_ipfs(logger):
     return
 
 
-def refresh_network_name():
+def refresh_network_name(call_stack):
     import requests
     from requests.exceptions import HTTPError
     from diyims.config_utils import get_ipfs_config_dict
@@ -337,6 +348,7 @@ def refresh_network_name():
     )
     from diyims.py_version_dep import get_car_path
 
+    call_stack = call_stack + ":refresh_network_name"
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
     peer_type = "none"
@@ -357,6 +369,7 @@ def refresh_network_name():
             url_dict=url_dict,
             config_dict=ipfs_config_dict,
             param=param,
+            call_stack=call_stack,
         )
     except HTTPError:
         logger.debug(response)
@@ -380,6 +393,7 @@ def refresh_network_name():
         config_dict=ipfs_config_dict,
         param=param,
         file=file,
+        call_stack=call_stack,
     )
     logger.debug("refresh network name completed.")
     conn.close()
@@ -400,9 +414,10 @@ def refresh_network_name():
     return
 
 
-def unpack_peer_row_from_cid(peer_row_CID, config_dict):
+def unpack_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
     from diyims.requests_utils import execute_request
 
+    call_stack = call_stack + "unpack_peer_row_from_cid"
     url_dict = get_url_dict()
     param = {
         "arg": peer_row_CID,
@@ -415,12 +430,14 @@ def unpack_peer_row_from_cid(peer_row_CID, config_dict):
         config_dict=config_dict,
         param=param,
         timeout=(3.05, 27),
+        call_stack=call_stack,
     )
 
     return response_dict
 
 
 def export_peer_table(
+    call_stack,
     # conn,
     # queries,
     url_dict,
@@ -436,6 +453,7 @@ def export_peer_table(
     from diyims.database_utils import set_up_sql_operations
     from diyims.requests_utils import execute_request
 
+    call_stack = call_stack + ":export_peer_table"
     conn, queries = set_up_sql_operations(config_dict)
     peer_table_rows = queries.select_peer_table_signature_valid(conn)
     peer_table_dict = {}
@@ -465,6 +483,7 @@ def export_peer_table(
         config_dict=config_dict,
         file=add_file,
         param=param,
+        call_stack=call_stack,
     )
     f.close()
 
@@ -474,4 +493,4 @@ def export_peer_table(
 
 
 if __name__ == "__main__":
-    refresh_network_name()
+    refresh_network_name("cmd")

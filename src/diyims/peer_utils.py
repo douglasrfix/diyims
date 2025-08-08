@@ -50,11 +50,11 @@ from diyims.security_utils import verify_peer_row_from_cid
 # from diyims.database_utils import refresh_peer_row_from_template
 
 
-def monitor_peer_table_maint():
+def monitor_peer_table_maint(call_stack):
     """
     docstring
     """
-
+    call_stack = call_stack + ":monitor_peer_table_maint"
     p = psutil.Process()
     pid = p.pid
     config_dict = get_metrics_config_dict()
@@ -76,6 +76,8 @@ def monitor_peer_table_maint():
         logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
 
     self = response_dict["ID"]
@@ -113,6 +115,7 @@ def monitor_peer_table_maint():
             # header_CID = header["header_CID"]
 
             verify_peer_and_update(
+                call_stack,
                 peer_row_CID,
                 logger,
                 config_dict,
@@ -153,6 +156,7 @@ def monitor_peer_table_maint():
 
 
 def verify_peer_and_update(
+    call_stack,
     peer_row_CID,
     logger,
     config_dict,
@@ -185,7 +189,7 @@ def verify_peer_and_update(
     Returns:
         _type_: _description_
     """
-
+    call_stack = call_stack + "verify_peer_and_update"
     # peer_row_dict = refresh_peer_row_from_template()
     # peer_row_dict["peer_ID"] = peer_ID
 
@@ -257,6 +261,8 @@ def verify_peer_and_update(
                 config_dict=config_dict,
                 param=param,
                 file=add_file,
+                call_stack=call_stack,
+                http_500_ignore=False,
             )
             f.close()
 
@@ -275,6 +281,7 @@ def verify_peer_and_update(
             processing_status = DTS
 
             ipfs_header_add(
+                call_stack,
                 DTS,
                 object_CID,
                 object_type,
@@ -308,6 +315,7 @@ def verify_peer_and_update(
 def select_local_peer_and_update_metrics():
     """ """
     # TODO: add message
+    call_stack = "select_local_peer_and_update_metrics"
     config_dict = get_metrics_config_dict()
     url_dict = get_url_dict()
     path_dict = get_path_dict()
@@ -382,6 +390,8 @@ def select_local_peer_and_update_metrics():
             config_dict=config_dict,
             file=add_file,
             param=param,
+            call_stack=call_stack,
+            http_500_ignore=False,
         )
         f.close()
 
@@ -392,6 +402,7 @@ def select_local_peer_and_update_metrics():
         processing_status = DTS
 
         ipfs_header_add(
+            call_stack,
             DTS,
             object_CID,
             object_type,

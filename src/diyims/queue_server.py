@@ -7,9 +7,10 @@ from diyims.logger_utils import get_logger
 from diyims.config_utils import get_queue_config_dict
 
 
-def queue_main():
+def queue_main(call_stack):
     # p = psutil.Process()
     # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    call_stack = call_stack + ":queue_main"
     queue_config_dict = get_queue_config_dict()
     logger = get_logger(queue_config_dict["log_file"], "none")
     wait_seconds = int(queue_config_dict["wait_before_startup"])

@@ -34,7 +34,7 @@ def set_up_sql_operations_list(config_dict):
     return conn, queries
 
 
-def reset_peer_table_status():
+def reset_peer_table_status(call_stack):
     # from diyims.config_utils import get_want_list_config_dict
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
@@ -45,6 +45,7 @@ def reset_peer_table_status():
     from diyims.general_utils import get_DTS
 
     # config_dict = get_want_list_config_dict()
+    call_stack = call_stack + ":reset_peer_table_status"
     path_dict = get_path_dict()
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]

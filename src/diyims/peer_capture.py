@@ -58,9 +58,9 @@ from diyims.sqlmodels import Peer_Address
 #    insert_timestamp: str | None = None
 
 
-def capture_peer_main(peer_type):
+def capture_peer_main(call_stack, peer_type):
     p = psutil.Process()
-
+    call_stack = call_stack + ":capture_peer_main"
     pid = p.pid
     capture_peer_config_dict = get_capture_peer_config_dict()
     logger = get_logger(capture_peer_config_dict["log_file"], peer_type)
@@ -138,6 +138,7 @@ def capture_peer_main(peer_type):
             break
 
         found, added, promoted, duration, modified = capture_peers(
+            call_stack,
             logger,
             # conn,
             # queries,
@@ -203,6 +204,7 @@ def capture_peer_main(peer_type):
 
 
 def capture_peers(
+    call_stack,
     logger,
     # conn,
     # queries,
@@ -224,6 +226,8 @@ def capture_peers(
             logger=logger,
             url_dict=url_dict,
             config_dict=capture_peer_config_dict,
+            call_stack=call_stack,
+            http_500_ignore=False,
         )
 
         self = response_dict["ID"]
@@ -235,6 +239,8 @@ def capture_peers(
             url_dict=url_dict,
             config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
+            http_500_ignore=False,
         )
 
         if status_code == 200:
@@ -244,6 +250,7 @@ def capture_peers(
             duration = stop - start
 
             found, added, promoted, modified = decode_findprovs_structure(
+                call_stack,
                 logger,
                 # conn,
                 # queries,
@@ -265,6 +272,7 @@ def capture_peers(
             url_dict=url_dict,
             config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
         )
 
         found, added, promoted = decode_bitswap_stat_structure(
@@ -285,6 +293,7 @@ def capture_peers(
             url_dict=url_dict,
             config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
         )
 
         found, added, promoted = decode_swarm_structure(
@@ -302,6 +311,7 @@ def capture_peers(
 
 
 def decode_findprovs_structure(
+    call_stack,
     logger,
     # conn,
     # queries,
@@ -344,7 +354,9 @@ def decode_findprovs_structure(
                 peer_ID = peer_dict["ID"]
                 if self != peer_ID:
                     address_list = peer_dict["Addrs"]
-                    if capture_provider_addresses(address_list, peer_ID, peer_type):
+                    if capture_provider_addresses(
+                        call_stack, address_list, peer_ID, peer_type
+                    ):
                         address_available = True
 
                     peer_table_dict = refresh_peer_row_from_template()
@@ -643,7 +655,7 @@ def decode_swarm_structure(
 
 
 def capture_provider_addresses(
-    address_list: list, peer_ID: str, peer_type: str
+    call_stack: str, address_list: list, peer_ID: str, peer_type: str
 ) -> bool:
     address_available = False
     address_source = "PP"
@@ -653,6 +665,7 @@ def capture_provider_addresses(
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
     capture_peer_addresses(
+        call_stack,
         address_list,
         peer_ID,
         address_source,
@@ -661,6 +674,8 @@ def capture_provider_addresses(
     response, status_code, response_dict = execute_request(
         url_key="id",
         param=param,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     if status_code == 200:
         address_source = "FP"

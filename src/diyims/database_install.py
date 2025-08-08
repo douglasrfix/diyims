@@ -27,13 +27,14 @@ from diyims.security_utils import sign_file, verify_file
 from sqlmodel import SQLModel, create_engine, Session, text
 
 
-def create():
+def create(call_stack):
     try:
         path_dict = get_path_dict()
 
     except ApplicationNotInstalledError:
         raise
 
+    call_stack = call_stack + ":create"
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
@@ -50,7 +51,8 @@ def create():
     return
 
 
-def init():
+def init(call_stack):
+    call_stack = call_stack + ":init"
     try:
         path_dict = get_path_dict()
 
@@ -97,6 +99,8 @@ def init():
         logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
 
     peer_ID = response_dict["ID"]
@@ -151,6 +155,7 @@ def init():
             config_dict=config_dict,
             file=add_files,
             param=add_params,
+            call_stack=call_stack,
         )
     )
     f.close()
@@ -174,6 +179,8 @@ def init():
         url_dict=url_dict,
         config_dict=config_dict,
         param=name_publish_arg,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
 
     IPNS_name = response_dict["Name"]
@@ -206,6 +213,7 @@ def init():
             config_dict=config_dict,
             file=add_files,
             param=add_params,
+            call_stack=call_stack,
         )
     )
     f.close()
@@ -221,6 +229,7 @@ def init():
     processing_status = DTS
 
     header_CID = ipfs_header_add(
+        call_stack,
         DTS,
         peer_row_CID,
         object_type,
@@ -239,7 +248,7 @@ def init():
     DTS = get_DTS()
 
     network_table_dict = refresh_network_table_from_template()
-    network_table_dict["network_name"] = import_car()  # 3
+    network_table_dict["network_name"] = import_car(call_stack)  # 3
 
     network_name = network_table_dict["network_name"]  # abused table dict entry
     insert_network_row(conn, queries, network_table_dict)
@@ -250,7 +259,8 @@ def init():
 
     mode = "init"
     processing_status = DTS
-    header_CID = ipfs_header_add(  # header for network name
+    header_CID = ipfs_header_add(
+        call_stack,  # header for network name
         DTS,
         object_CID,
         object_type,
@@ -274,7 +284,8 @@ def init():
     return
 
 
-def import_car():
+def import_car(call_stack: str):
+    call_stack = call_stack + ":import_car"
     url_dict = get_url_dict()
     db_init_config_dict = get_db_init_config_dict()
     logger = get_logger(
@@ -298,6 +309,8 @@ def import_car():
         config_dict=db_init_config_dict,
         file=dag_import_files,
         param=dag_import_params,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
 
     imported_CID = response_dict["Root"]["Cid"]["/"]
@@ -312,6 +325,7 @@ def import_car():
         config_dict=db_init_config_dict,
         file=dag_import_files,
         param=pin_add_params,
+        call_stack=call_stack,
     )
 
     return imported_CID

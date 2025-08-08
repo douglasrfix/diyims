@@ -87,9 +87,10 @@ def get_shutdown_target(config_dict):
     return target_DT
 
 
-def shutdown_cmd():
+def shutdown_cmd(call_stack):
     from multiprocessing.managers import BaseManager
 
+    call_stack = call_stack + ":shutdown_cmd"
     config_dict = get_shutdown_config_dict()
     conn, queries = set_up_sql_operations(config_dict)
     update_shutdown_enabled_1(
@@ -133,7 +134,8 @@ def shutdown_cmd():
     return
 
 
-def clean_up(roaming):
+def clean_up(call_stack, roaming):
+    call_stack = call_stack + ":clean_up"
     config_dict = get_clean_up_config_dict()
 
     logger = get_logger(
@@ -185,6 +187,7 @@ def clean_up(roaming):
             url_dict=url_dict,
             config_dict=config_dict,
             param=param,
+            call_stack=call_stack,
         )
         conn, queries = set_up_sql_operations(config_dict)
         delete_clean_up_row_by_date(conn, queries, clean_up_dict)

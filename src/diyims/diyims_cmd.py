@@ -19,7 +19,7 @@ from diyims.general_utils import clean_up, shutdown_cmd
 from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
 from diyims.peer_capture import capture_peer_main
-from diyims.capture_want_lists import capture_peer_want_lists
+from diyims.capture_want_lists import capture_peer_want_lists_main
 
 # from diyims.test import test
 
@@ -35,7 +35,7 @@ app.add_typer(beacon_cli.app, name="beacon-utils")
 
 @app.command()
 def danger():
-    force_purge()
+    force_purge("cmd")
 
 
 @app.command()
@@ -50,7 +50,7 @@ def shutdown(
     ] = "Roaming",
 ):
     os.environ["ROAMING"] = str(roaming)
-    shutdown_cmd()
+    shutdown_cmd("cmd")
 
 
 @app.command()
@@ -65,12 +65,12 @@ def shutdown_dev(
     ] = "RoamingDev",
 ):
     os.environ["ROAMING"] = str(roaming)
-    shutdown_cmd()
+    shutdown_cmd("cmd-dev")
 
 
 @app.command()
 def refresh_name():
-    refresh_network_name()
+    refresh_network_name("cmd")
 
 
 @app.command()
@@ -79,22 +79,22 @@ def ipfs_purge():
     ipfs purge for test cid.
 
     """
-    purge()
+    purge("cmd")
 
 
 @app.command()
 def capture_providers():
-    capture_peer_main("PP")
+    capture_peer_main("cmd", "PP")
 
 
 @app.command()
 def capture_swarm_peers():
-    capture_peer_main("SP")
+    capture_peer_main("cmd", "SP")
 
 
 @app.command()
 def capture_bitswap_peers():
-    capture_peer_main("BP")
+    capture_peer_main("cmd", "BP")
 
 
 @app.command()
@@ -110,7 +110,7 @@ def run_scheduler(
 ):
     os.environ["ROAMING"] = str(roaming)
 
-    scheduler_main(roaming)
+    scheduler_main("cmd", roaming)
 
 
 @app.command()
@@ -126,12 +126,12 @@ def run_clean_up(
 ):
     os.environ["ROAMING"] = str(roaming)
 
-    clean_up(roaming)
+    clean_up("cmd", roaming)
 
 
 @app.command()
 def run_queue_server():
-    queue_main()
+    queue_main("cmd")
 
 
 @app.command()
@@ -140,7 +140,7 @@ def capture_want_lists(
         Optional[str], typer.Option(help="Peer Type", rich_help_panel="Peer Type")
     ] = "PP",
 ):
-    capture_peer_want_lists(peer_type)
+    capture_peer_want_lists_main("cmd", peer_type)
 
 
 @app.command()

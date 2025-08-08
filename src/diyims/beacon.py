@@ -28,11 +28,12 @@ from diyims.database_utils import (
 )
 
 
-def beacon_main():
+def beacon_main(call_stack):
     # import psutil
 
     # p = psutil.Process()
     # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    call_stack = call_stack + "beacon_main"
     logging_enabled = 0  # TODO: config
     beacon_config_dict = get_beacon_config_dict()
 
@@ -47,6 +48,8 @@ def beacon_main():
         logger=logger,
         url_dict=url_dict,
         config_dict=beacon_config_dict,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     self = response_dict["ID"]
 
@@ -82,6 +85,7 @@ def beacon_main():
             if shutdown_row_dict["enabled"]:
                 break
             beacon_CID, want_item_file = create_beacon_CID(
+                call_stack,
                 logger,
                 beacon_config_dict,
                 self,
@@ -115,7 +119,7 @@ def beacon_main():
                 logger.debug(message)
 
             flash_beacon(
-                logger, beacon_config_dict, beacon_CID, logging_enabled
+                call_stack, logger, beacon_config_dict, beacon_CID, logging_enabled
             )  # wait for satisfy to satisfy after a wait period or shutdown
             conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
@@ -136,6 +140,7 @@ def beacon_main():
             if shutdown_row_dict["enabled"]:
                 break
             beacon_CID, want_item_file = create_beacon_CID(
+                call_stack,
                 logger,
                 beacon_config_dict,
                 self,
@@ -167,7 +172,9 @@ def beacon_main():
             if logging_enabled:
                 logger.debug(message)
 
-            flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled)
+            flash_beacon(
+                call_stack, logger, beacon_config_dict, beacon_CID, logging_enabled
+            )
             conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
             shutdown_row_dict = select_shutdown_entry(
                 conn,
@@ -195,6 +202,7 @@ def beacon_main():
 
 
 def create_beacon_CID(
+    call_stack: str,
     logger,
     beacon_config_dict,
     self,
@@ -203,6 +211,7 @@ def create_beacon_CID(
     # queries,
     # Rconn, Rqueries
 ):
+    call_stack = call_stack + ":create_beacon_CID"
     url_dict = get_url_dict()
     path_dict = get_path_dict()
     # +1
@@ -240,6 +249,8 @@ def create_beacon_CID(
         config_dict=beacon_config_dict,
         param=param,
         file=file,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
 
@@ -261,7 +272,8 @@ def create_beacon_CID(
     return beacon_CID, want_item_file
 
 
-def flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled):
+def flash_beacon(call_stack, logger, beacon_config_dict, beacon_CID, logging_enabled):
+    call_stack = call_stack + ":flash_beacon"
     url_dict = get_url_dict()
 
     execute_request(
@@ -272,6 +284,7 @@ def flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled):
         param={
             "arg": beacon_CID,
         },
+        call_stack=call_stack,
     )
     if logging_enabled:
         logger.debug("Flash off")
@@ -279,7 +292,7 @@ def flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled):
     return
 
 
-def satisfy_main():
+def satisfy_main(call_stack):
     """
     Rapid shutdown is initiated from here
     otherwise from beacon.
@@ -288,6 +301,7 @@ def satisfy_main():
 
     # p = psutil.Process()
     # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+    call_stack = call_stack + ":satisfy_main"
     config_dict = get_satisfy_config_dict()
     logging_enabled = 0
 
@@ -319,7 +333,7 @@ def satisfy_main():
             satisfy_dict = in_bound.get(timeout=int(satisfy_dict["wait_time"]))
         except Empty:
             pass
-        satisfy_beacon(logger, config_dict, want_item_file, logging_enabled)
+        satisfy_beacon(call_stack, logger, config_dict, want_item_file, logging_enabled)
         conn, queries = set_up_sql_operations(config_dict)  # + 1
         shutdown_row_dict = select_shutdown_entry(conn, queries)
         if shutdown_row_dict["enabled"]:
@@ -331,7 +345,8 @@ def satisfy_main():
     return
 
 
-def satisfy_beacon(logger, config_dict, want_item_file, logging_enabled):
+def satisfy_beacon(call_stack, logger, config_dict, want_item_file, logging_enabled):
+    call_stack = call_stack + ":satisfy_beacon"
     url_dict = get_url_dict()
 
     param = {"only-hash": "false", "pin": "true", "cid-version": 1}
@@ -345,6 +360,8 @@ def satisfy_beacon(logger, config_dict, want_item_file, logging_enabled):
         config_dict=config_dict,
         param=param,
         file=file,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
     if logging_enabled:

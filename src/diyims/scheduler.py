@@ -3,23 +3,23 @@ from time import sleep
 from multiprocessing import Process, set_start_method, freeze_support
 from diyims.beacon import beacon_main, satisfy_main
 from diyims.peer_capture import capture_peer_main
-from diyims.capture_want_lists import capture_peer_want_lists
+from diyims.capture_want_lists import capture_peer_want_lists_main
 from diyims.ipfs_utils import wait_on_ipfs, publish_main
 from diyims.logger_utils import get_logger, logger_server_main
 from diyims.config_utils import get_scheduler_config_dict
 from diyims.queue_server import queue_main
 from diyims.database_utils import reset_peer_table_status
 from diyims.peer_utils import select_local_peer_and_update_metrics
-from diyims.header_chain_utils import monitor_peer_publishing
+from diyims.header_chain_utils import monitor_peer_publishing_main
 from diyims.peer_utils import monitor_peer_table_maint
 from diyims.general_utils import clean_up
 
 
-def scheduler_main(roaming):
+def scheduler_main(call_stack, roaming):
     if roaming != "Roaming":
         freeze_support()
         set_start_method("spawn")
-
+    call_stack = call_stack + ":scheduler_main"
     scheduler_config_dict = get_scheduler_config_dict()
     logger = get_logger(scheduler_config_dict["log_file"], "none")
     wait_on_ipfs(logger)
@@ -29,13 +29,15 @@ def scheduler_main(roaming):
     logger.info("Scheduler startup.")
     # logger.info("Shutdown is dependent upon the shutdown of the scheduled tasks")
 
-    queue_server_main_process = Process(target=queue_main)  # 1
+    queue_server_main_process = Process(target=queue_main, args=(call_stack,))  # 1
     sleep(int(scheduler_config_dict["submit_delay"]))
     queue_server_main_process.start()
     logger.debug("queue_server_main started.")
 
     if scheduler_config_dict["reset_enable"] == "True":
-        reset_peer_table_status_process = Process(target=reset_peer_table_status)
+        reset_peer_table_status_process = Process(
+            target=reset_peer_table_status, args=(call_stack,)
+        )
         sleep(int(scheduler_config_dict["submit_delay"]))
         reset_peer_table_status_process.start()
         logger.info("Reset peer table status started.")
@@ -44,7 +46,10 @@ def scheduler_main(roaming):
 
         clean_up_process = Process(
             target=clean_up,
-            args=(roaming,),
+            args=(
+                call_stack,
+                roaming,
+            ),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         clean_up_process.start()
@@ -58,27 +63,35 @@ def scheduler_main(roaming):
     ):
         publish_main_process = Process(
             target=publish_main,  # 2
-            args=("Normal",),
+            args=(
+                call_stack,
+                "Normal",
+            ),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         publish_main_process.start()
         logger.debug("publish_main started.")
 
         monitor_peer_publishing_main_process = Process(
-            target=monitor_peer_publishing  # 3
+            target=monitor_peer_publishing_main,  # 3
+            args=(call_stack,),
         )  # 1
         sleep(int(scheduler_config_dict["submit_delay"]))
         monitor_peer_publishing_main_process.start()
         logger.debug("monitor_peer_publishing_main_process started.")
 
-        monitor_peer_table_maint_process = Process(target=monitor_peer_table_maint)  # 4
+        monitor_peer_table_maint_process = Process(
+            target=monitor_peer_table_maint,
+            args=(call_stack,),
+        )  # 4
         sleep(int(scheduler_config_dict["submit_delay"]))
         monitor_peer_table_maint_process.start()
         logger.debug("Monitor peer table maint started.")
 
     if scheduler_config_dict["metrics_enable"] == "True":
         select_local_peer_and_update_metrics_process = Process(
-            target=select_local_peer_and_update_metrics
+            target=select_local_peer_and_update_metrics,
+            args=(call_stack,),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         select_local_peer_and_update_metrics_process.start()
@@ -89,6 +102,7 @@ def scheduler_main(roaming):
     if scheduler_config_dict["beacon_enable"] == "True":
         beacon_main_process = Process(
             target=beacon_main,  # 5
+            args=(call_stack,),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         beacon_main_process.start()
@@ -96,6 +110,7 @@ def scheduler_main(roaming):
 
         satisfy_main_process = Process(
             target=satisfy_main,  # 6
+            args=(call_stack,),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         satisfy_main_process.start()
@@ -115,7 +130,13 @@ def scheduler_main(roaming):
         # sleep(int(scheduler_config_dict["submit_delay"]))
         # capture_provider_want_lists_process.start()
         # logger.info("capture_provider_want_lists started.")
-        capture_provider_process = Process(target=capture_peer_main, args=("PP",))  # 8
+        capture_provider_process = Process(
+            target=capture_peer_main,
+            args=(
+                call_stack,
+                "PP",
+            ),
+        )  # 8
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_provider_process.start()
         logger.debug("capture_provider_main started.")
@@ -135,10 +156,13 @@ def scheduler_main(roaming):
         # sleep(int(scheduler_config_dict["submit_delay"]))
         # capture_bitswap_process.start()
         # logger.info("capture_bitswap_main started.")
-
+        call_stack = "scheduler_main"
         capture_provider_want_lists_process = Process(
-            target=capture_peer_want_lists,
-            args=("PP",),  # 9
+            target=capture_peer_want_lists_main,
+            args=(
+                call_stack,
+                "PP",
+            ),  # 9
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_provider_want_lists_process.start()
@@ -150,12 +174,22 @@ def scheduler_main(roaming):
         logger_server_swarm_process.start()
         logger.debug("logger_server_swarm started.")
         capture_swarm_want_lists_process = Process(
-            target=capture_peer_want_lists, args=("SP",)
+            target=capture_peer_want_lists_main,
+            args=(
+                call_stack,
+                "SP",
+            ),
         )
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_swarm_want_lists_process.start()
         logger.debug("capture_swarm_want_lists started.")
-        capture_swarm_process = Process(target=capture_peer_main, args=("SP",))
+        capture_swarm_process = Process(
+            target=capture_peer_main,
+            args=(
+                call_stack,
+                "SP",
+            ),
+        )
         sleep(int(scheduler_config_dict["submit_delay"]))
         capture_swarm_process.start()
         logger.debug("capture_swarm_main started.")

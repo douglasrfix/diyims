@@ -54,7 +54,10 @@ def execute_request(url_key: str, **kwargs):
     except KeyError:
         call_stack = "execute_request"
 
-    url_dict = get_url_dict()
+    try:
+        url_dict = value_dict["url_dict"]
+    except KeyError:
+        url_dict = get_url_dict()
 
     while retry < int(value_dict["connect_retries"]) and not response_ok:
         if retry > 0:

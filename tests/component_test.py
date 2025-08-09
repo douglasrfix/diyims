@@ -9,6 +9,15 @@ runner = CliRunner()
 
 
 @pytest.mark.component
+def test_beacon():
+    """testing find_providers with native windows install"""
+    command_string = "capture-providers"
+    result = runner.invoke(app, shlex.split(command_string))
+    print(result.stdout.rstrip())
+    assert result.exit_code == 0
+
+
+@pytest.mark.component
 def test_capture_providers():
     """testing find_providers with native windows install"""
     command_string = "capture-providers"

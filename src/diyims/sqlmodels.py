@@ -15,7 +15,9 @@ class Address_Source(str, Enum):
 
 
 class Clean_Up(SQLModel, table=True):
-    DTS: str = Field(primary_key=True)
+    insert_DTS: str = Field(primary_key=True)
+    satisfy_target_DTS: str | None = None
+    status: str | None = None
     want_item_file: str | None = None
     beacon_CID: str | None = None
 
@@ -74,16 +76,17 @@ class Peer_Table(SQLModel, table=True):
     IPNS_name: str | None = None
     id: str | None = None
     signature: str | None = None
-    signature_valid: int | None = None
+    signature_valid: int | None = 0
     peer_type: str
-    origin_update_DTS: str
-    local_update_DTS: str | None = None
+    origin_update_DTS: str | None = None
+    local_update_DTS: str
     execution_platform: str | None = None
     python_version: str | None = None
     IPFS_agent: str | None = None
     processing_status: str
     agent: str | None = None
-    version: str | None = None
+    version: str | None = "0"
+    disabled: int | None = 1
 
 
 class Shutdown(SQLModel, table=True):

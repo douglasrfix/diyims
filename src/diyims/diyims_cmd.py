@@ -18,8 +18,8 @@ from diyims.scheduler import scheduler_main
 from diyims.general_utils import clean_up, shutdown_cmd
 from diyims.ipfs_utils import purge, refresh_network_name, force_purge
 from diyims.queue_server import queue_main
-from diyims.peer_capture import capture_peer_main
-from diyims.capture_want_lists import capture_peer_want_lists_main
+from diyims.provider_capture import provider_capture_main
+from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 # from diyims.test import test
 
@@ -34,7 +34,17 @@ app.add_typer(beacon_cli.app, name="beacon-utils")
 
 
 @app.command()
-def danger():
+def danger(
+    roaming: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Set alternate Roaming value.",
+            show_default=False,
+            rich_help_panel="Execution Options",
+        ),
+    ] = "Roaming",
+):
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     force_purge("cmd")
 
 
@@ -49,7 +59,7 @@ def shutdown(
         ),
     ] = "Roaming",
 ):
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     shutdown_cmd("cmd")
 
 
@@ -64,7 +74,7 @@ def shutdown_dev(
         ),
     ] = "RoamingDev",
 ):
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     shutdown_cmd("cmd-dev")
 
 
@@ -84,17 +94,17 @@ def ipfs_purge():
 
 @app.command()
 def capture_providers():
-    capture_peer_main("cmd", "PP")
+    provider_capture_main("cmd", "PP")
 
 
 @app.command()
 def capture_swarm_peers():
-    capture_peer_main("cmd", "SP")
+    provider_capture_main("cmd", "SP")
 
 
 @app.command()
 def capture_bitswap_peers():
-    capture_peer_main("cmd", "BP")
+    provider_capture_main("cmd", "BP")
 
 
 @app.command()
@@ -108,7 +118,7 @@ def run_scheduler(
         ),
     ] = "RoamingDev",
 ):
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
 
     scheduler_main("cmd", roaming)
 
@@ -124,7 +134,7 @@ def run_clean_up(
         ),
     ] = "RoamingDev",
 ):
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
 
     clean_up("cmd", roaming)
 
@@ -135,12 +145,12 @@ def run_queue_server():
 
 
 @app.command()
-def capture_want_lists(
+def wantlist_capture(
     peer_type: Annotated[
         Optional[str], typer.Option(help="Peer Type", rich_help_panel="Peer Type")
     ] = "PP",
 ):
-    capture_peer_want_lists_main("cmd", peer_type)
+    wantlist_capture_submit_main("cmd", peer_type)
 
 
 @app.command()
@@ -154,6 +164,6 @@ def run_test(
         ),
     ] = "Roaming",
 ):
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
 
     # test()

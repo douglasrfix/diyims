@@ -1,6 +1,6 @@
 from diyims.beacon import beacon_main, satisfy_main
-from diyims.peer_capture import (
-    capture_peer_main,
+from diyims.provider_capture import (
+    provider_capture_main,
 )
 import pytest
 
@@ -22,16 +22,16 @@ def test_satisfy():
 @pytest.mark.mp
 # @pytest.mark.xdist_group(name="group2")
 def test_capture_providers():
-    capture_peer_main("PP")
+    provider_capture_main("PP")
 
 
 @pytest.mark.mp
 # @pytest.mark.xdist_group(name="group2")
 def test_capture_bitswap():
-    capture_peer_main("BP")
+    provider_capture_main("BP")
 
 
 @pytest.mark.mp
 # @pytest.mark.xdist_group(name="group2")
 def test_capture_swarm():
-    capture_peer_main("SP")
+    provider_capture_main("SP")

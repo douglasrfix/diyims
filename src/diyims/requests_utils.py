@@ -10,11 +10,24 @@ This is followed by setting the values to be used by the application.
 from time import sleep
 import json
 import requests
-from requests.exceptions import ConnectionError, HTTPError, ConnectTimeout, ReadTimeout
+import os
+from requests.exceptions import HTTPError, ConnectTimeout, ReadTimeout, RequestException
 from diyims.config_utils import get_request_config_dict, get_url_dict
+from diyims.logger_utils import add_log
 
 
 def execute_request(url_key: str, **kwargs):
+    """
+    execute_request _summary_
+
+    _extended_summary_
+
+    Arguments:
+        url_key {str} -- _description_
+
+    Returns:
+        _type_ -- _description_
+    """
     # get configuration values
     default_dict = get_request_config_dict()
 
@@ -34,7 +47,8 @@ def execute_request(url_key: str, **kwargs):
     value_dict = {**default_dict, **kwargs}
 
     # establish values for operational use
-    retry = -1
+    connect_retry = -1
+    request_retry = -1
     response_ok = False
 
     if value_dict["http_500_ignore"] == "True":
@@ -59,10 +73,26 @@ def execute_request(url_key: str, **kwargs):
     except KeyError:
         url_dict = get_url_dict()
 
-    while retry < int(value_dict["connect_retries"]) and not response_ok:
-        if retry > 0:
-            sleep(int(value_dict["connect_retry_delay"]))
-
+    queues_enabled = bool(value_dict["queues_enabled"])
+    try:
+        queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
+    except KeyError:
+        pass
+    try:
+        component_test = bool(int(os.environ["COMPONENT_TEST"]))
+    except KeyError:
+        component_test = False
+    logging_enabled = bool(value_dict["logging_enabled"])
+    debug_enabled = bool(value_dict["debug_enabled"])
+    dummy = component_test
+    dummy = queues_enabled
+    dummy = debug_enabled
+    dummy = dummy
+    while (
+        connect_retry < int(value_dict["connect_retries"])
+        and request_retry < int(value_dict["request_retries"])
+        and not response_ok
+    ):
         try:
             with requests.post(
                 url=url_dict[url_key],
@@ -74,40 +104,65 @@ def execute_request(url_key: str, **kwargs):
                 r.raise_for_status()
                 status_code = r.status_code
                 response_ok = True
-
-        except ConnectTimeout:
+        except ConnectTimeout as e:
             status_code = 601
+            if logging_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type=f"comm_status {status_code}",
+                    msg=f"{url_key} after {connect_retry} failing with {e}",
+                )
+
             sleep(int(value_dict["connect_retry_delay"]))
-            retry += 1
             r = None
-        except ReadTimeout:
+            connect_retry += 1
+            if connect_retry > 0:
+                sleep(int(value_dict["connect_retry_delay"]))
+        except ReadTimeout as e:
             status_code = 602
-            retry += 1
-            r = None
-        except HTTPError:  # TODO: expand errors handled?
-            if ignore_500:
-                status_code = r.status_code
+            if logging_enabled:
                 add_log(
                     process=call_stack,
                     peer_type=f"http_status {status_code}",
-                    msg=f"{url_key} failed and ignored",
+                    msg=f"{url_key} after {connect_retry} failing with {e}",
                 )
+
+            r = None
+            connect_retry += 1
+            if connect_retry > 0:
+                sleep(int(value_dict["connect_retry_delay"]))
+        except HTTPError as e:
+            status_code = r.status_code
+            if ignore_500:
+                if logging_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type=f"http_status {status_code}",
+                        msg=f"{url_key} ignored after failing with {e}",
+                    )
                 break
             else:
+                if logging_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type=f"http_status {status_code}",
+                        msg=f"{url_key} after {connect_retry} failing with {e}",
+                    )
+                connect_retry += 1
+                if connect_retry > 0:
+                    sleep(int(value_dict["connect_retry_delay"]))
+        except RequestException as e:
+            status_code = 700
+            if logging_enabled:
                 add_log(
                     process=call_stack,
-                    peer_type=f"http_status {status_code}",
-                    msg=f"{url_key} failed and retried",
+                    peer_type=f"comm_status {status_code}",
+                    msg=f"{url_key} after {request_retry} failing with {e}",
                 )
-                sleep(int(value_dict["connect_retry_delay"]))
-                retry += 1  # TODO: this needs its own retry logic
-                status_code = 700
-
-        except ConnectionError:
-            status_code = 603
-            retry += 1
+            request_retry += 1
             r = None
-
+            if connect_retry > 0:
+                sleep(int(value_dict["request_retry_delay"]))
     if not response_ok:
         response_dict = {}
         r = None
@@ -119,29 +174,3 @@ def execute_request(url_key: str, **kwargs):
             response_dict = {}
 
     return r, status_code, response_dict
-
-
-def add_log(process: str, peer_type: str, msg: str):
-    import psutil
-    from diyims.general_utils import get_DTS
-    from diyims.sqlmodels import Log
-    from diyims.path_utils import get_path_dict
-    from sqlmodel import Session, create_engine
-
-    p = psutil.Process()
-    pid = p.pid
-
-    path_dict = get_path_dict()
-    sqlite_file_name = path_dict["db_file"]
-    sqlite_url = f"sqlite:///{sqlite_file_name}"
-
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-
-    log_entry = Log(
-        DTS=get_DTS(), process=process, pid=pid, peer_type=peer_type, msg=msg
-    )
-
-    with Session(engine) as session:
-        session.add(log_entry)
-        session.commit()

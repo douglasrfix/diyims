@@ -20,7 +20,7 @@ from diyims.sqlmodels import (
 from importlib.resources import files
 import os
 
-roaming = os.environ["ROAMING"]
+roaming = os.environ["DIYIMS_ROAMING"]
 mode = {}
 mode["dark"] = 1
 

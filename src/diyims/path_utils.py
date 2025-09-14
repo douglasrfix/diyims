@@ -102,7 +102,7 @@ def get_win32_template_dict():
         xdg_home = Path(os.environ["UserProfile"])
 
     try:
-        Roaming = str(os.environ["ROAMING"])
+        Roaming = str(os.environ["DIYIMS_ROAMING"])
     except KeyError:
         Roaming = "Roaming"
 

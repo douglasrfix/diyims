@@ -13,19 +13,23 @@ from diyims.path_utils import (
 
 def config_install():
     get_scheduler_config_dict()
-    get_publish_config_dict()
+
     get_beacon_config_dict()
-    get_satisfy_config_dict()
-    get_capture_peer_config_dict()
+    get_provider_capture_config_dict()
     get_want_list_config_dict()
-    get_queue_config_dict()
+    get_peer_table_maint_config_dict()
+    get_publish_config_dict()
+    get_peer_monitor_config_dict()
+    get_clean_up_config_dict()
+    get_metrics_config_dict()
+
     get_logger_config_dict()
     get_logger_server_config_dict()
     get_ipfs_config_dict()
     get_request_config_dict()
-    get_clean_up_config_dict()
+
     get_db_init_config_dict()
-    get_metrics_config_dict()
+    get_queue_config_dict()
 
     return
 
@@ -45,126 +49,68 @@ def get_beacon_config_dict():
 
     try:
         beacon_config_dict = {}
-        beacon_config_dict["long_period_seconds"] = parser["Beacon"][
-            "long_period_seconds"
-        ]
-        beacon_config_dict["short_period_seconds"] = parser["Beacon"][
-            "short_period_seconds"
+        beacon_config_dict["wait_time"] = parser["Beacon"]["wait_time"]
+        beacon_config_dict["beacon_length_seconds"] = parser["Beacon"][
+            "beacon_length_seconds"
         ]
         beacon_config_dict["number_of_periods"] = parser["Beacon"]["number_of_periods"]
-        beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
         beacon_config_dict["wait_before_startup"] = parser["Beacon"][
             "wait_before_startup"
-        ]
-        beacon_config_dict["beacon_pin_enabled"] = parser["Beacon"][
-            "beacon_pin_enabled"
         ]
         beacon_config_dict["max_intervals"] = parser["Beacon"]["max_intervals"]
         beacon_config_dict["shutdown_time"] = parser["Beacon"]["shutdown_time"]
         beacon_config_dict["q_server_port"] = parser["Beacon"]["q_server_port"]
-        beacon_config_dict["log_file"] = parser["Beacon"]["log_file"]
         beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
 
         beacon_config_dict["connect_retries"] = parser["Beacon"]["connect_retries"]
         beacon_config_dict["connect_retry_delay"] = parser["Beacon"][
             "connect_retry_delay"
         ]
+        beacon_config_dict["queues_enabled"] = parser["Beacon"]["queues_enabled"]
+        beacon_config_dict["logging_enabled"] = parser["Beacon"]["logging_enabled"]
+        beacon_config_dict["debug_enabled"] = parser["Beacon"]["debug_enabled"]
+
     except KeyError:
         parser["Beacon"] = {}
-        parser["Beacon"]["long_period_seconds"] = "300"
-        parser["Beacon"]["short_period_seconds"] = "300"
+        parser["Beacon"]["wait_time"] = "30"
+        parser["Beacon"]["beacon_length_seconds"] = "300"
         parser["Beacon"]["number_of_periods"] = "5"
-        parser["Beacon"]["sql_timeout"] = "60"
         parser["Beacon"]["wait_before_startup"] = "0"
-        parser["Beacon"]["beacon_pin_enabled"] = "0"
         parser["Beacon"]["max_intervals"] = "9999"
         parser["Beacon"]["shutdown_time"] = "99:99:99"
         parser["Beacon"]["q_server_port"] = "50000"
         parser["Beacon"]["sql_timeout"] = "60"
-        parser["Beacon"]["log_file"] = "beacon.log"
         parser["Beacon"]["connect_retries"] = "30"
         parser["Beacon"]["connect_retry_delay"] = "10"
+        parser["Beacon"]["queues_enabled"] = "1"
+        parser["Beacon"]["logging_enabled"] = "0"
+        parser["Beacon"]["debug_enabled"] = "1"
+
         with open(config_file, "w") as configfile:
             parser.write(configfile)
 
         beacon_config_dict = {}
-        beacon_config_dict["long_period_seconds"] = parser["Beacon"][
-            "long_period_seconds"
-        ]
-        beacon_config_dict["short_period_seconds"] = parser["Beacon"][
-            "short_period_seconds"
+        beacon_config_dict["wait_time"] = parser["Beacon"]["wait_time"]
+        beacon_config_dict["beacon_length_seconds"] = parser["Beacon"][
+            "beacon_length_seconds"
         ]
         beacon_config_dict["number_of_periods"] = parser["Beacon"]["number_of_periods"]
-        beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
         beacon_config_dict["wait_before_startup"] = parser["Beacon"][
             "wait_before_startup"
-        ]
-        beacon_config_dict["beacon_pin_enabled"] = parser["Beacon"][
-            "beacon_pin_enabled"
         ]
         beacon_config_dict["max_intervals"] = parser["Beacon"]["max_intervals"]
         beacon_config_dict["shutdown_time"] = parser["Beacon"]["shutdown_time"]
         beacon_config_dict["q_server_port"] = parser["Beacon"]["q_server_port"]
-        beacon_config_dict["log_file"] = parser["Beacon"]["log_file"]
         beacon_config_dict["sql_timeout"] = parser["Beacon"]["sql_timeout"]
         beacon_config_dict["connect_retries"] = parser["Beacon"]["connect_retries"]
         beacon_config_dict["connect_retry_delay"] = parser["Beacon"][
             "connect_retry_delay"
         ]
+        beacon_config_dict["queues_enabled"] = parser["Beacon"]["queues_enabled"]
+        beacon_config_dict["logging_enabled"] = parser["Beacon"]["logging_enabled"]
+        beacon_config_dict["debug_enabled"] = parser["Beacon"]["debug_enabled"]
 
     return beacon_config_dict
-
-
-def get_satisfy_config_dict():
-    install_dict = get_install_template_dict()
-
-    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
-    parser = configparser.ConfigParser()
-
-    try:
-        with open(config_file, "r") as configfile:
-            parser.read_file(configfile)
-
-    except FileNotFoundError:
-        raise ApplicationNotInstalledError(" ")
-
-    try:
-        satisfy_config_dict = {}
-        satisfy_config_dict["wait_before_startup"] = parser["Satisfy"][
-            "wait_before_startup"
-        ]
-        satisfy_config_dict["q_server_port"] = parser["Satisfy"]["q_server_port"]
-        satisfy_config_dict["sql_timeout"] = parser["Satisfy"]["sql_timeout"]
-        satisfy_config_dict["log_file"] = parser["Satisfy"]["log_file"]
-        satisfy_config_dict["connect_retries"] = parser["Satisfy"]["connect_retries"]
-        satisfy_config_dict["connect_retry_delay"] = parser["Satisfy"][
-            "connect_retry_delay"
-        ]
-
-    except KeyError:
-        parser["Satisfy"] = {}
-        parser["Satisfy"]["wait_before_startup"] = "0"
-        parser["Satisfy"]["q_server_port"] = "50000"
-        parser["Satisfy"]["sql_timeout"] = "60"
-        parser["Satisfy"]["log_file"] = "satisfy.log"
-        parser["Satisfy"]["connect_retries"] = "30"
-        parser["Satisfy"]["connect_retry_delay"] = "10"
-        with open(config_file, "w") as configfile:
-            parser.write(configfile)
-
-        satisfy_config_dict = {}
-        satisfy_config_dict["wait_before_startup"] = parser["Satisfy"][
-            "wait_before_startup"
-        ]
-        satisfy_config_dict["q_server_port"] = parser["Satisfy"]["q_server_port"]
-        satisfy_config_dict["sql_timeout"] = parser["Satisfy"]["sql_timeout"]
-        satisfy_config_dict["log_file"] = parser["Satisfy"]["log_file"]
-        satisfy_config_dict["connect_retries"] = parser["Satisfy"]["connect_retries"]
-        satisfy_config_dict["connect_retry_delay"] = parser["Satisfy"][
-            "connect_retry_delay"
-        ]
-
-    return satisfy_config_dict
 
 
 def get_scheduler_config_dict():
@@ -182,12 +128,21 @@ def get_scheduler_config_dict():
 
     try:
         scheduler_config_dict = {}
-        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
         scheduler_config_dict["reset_enable"] = parser["Scheduler"]["reset_enable"]
         scheduler_config_dict["metrics_enable"] = parser["Scheduler"]["metrics_enable"]
         scheduler_config_dict["beacon_enable"] = parser["Scheduler"]["beacon_enable"]
         scheduler_config_dict["provider_enable"] = parser["Scheduler"][
             "provider_enable"
+        ]
+        scheduler_config_dict["wantlist_enable"] = parser["Scheduler"][
+            "wantlist_enable"
+        ]
+        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
+        scheduler_config_dict["peer_maint_enable"] = parser["Scheduler"][
+            "peer_maint_enable"
+        ]
+        scheduler_config_dict["remote_monitor_enable"] = parser["Scheduler"][
+            "remote_monitor_enable"
         ]
         scheduler_config_dict["bitswap_enable"] = parser["Scheduler"]["bitswap_enable"]
         scheduler_config_dict["swarm_enable"] = parser["Scheduler"]["swarm_enable"]
@@ -197,33 +152,52 @@ def get_scheduler_config_dict():
         scheduler_config_dict["wait_before_startup"] = parser["Scheduler"][
             "wait_before_startup"
         ]
-        scheduler_config_dict["log_file"] = parser["Scheduler"]["log_file"]
+        scheduler_config_dict["queues_enabled"] = parser["Scheduler"]["queues_enabled"]
+        scheduler_config_dict["logging_enabled"] = parser["Scheduler"][
+            "logging_enabled"
+        ]
+        scheduler_config_dict["debug_enabled"] = parser["Scheduler"]["debug_enabled"]
 
     except KeyError:
         parser["Scheduler"] = {}
-        parser["Scheduler"]["publish_enable"] = "True"
         parser["Scheduler"]["reset_enable"] = "True"
         parser["Scheduler"]["metrics_enable"] = "True"
         parser["Scheduler"]["beacon_enable"] = "True"
         parser["Scheduler"]["provider_enable"] = "True"
+        parser["Scheduler"]["wantlist_enable"] = "True"
+        parser["Scheduler"]["publish_enable"] = "True"
+        parser["Scheduler"]["peer_maint_enable"] = "True"
+        parser["Scheduler"]["remote_monitor_enable"] = "True"
         parser["Scheduler"]["bitswap_enable"] = "True"
         parser["Scheduler"]["swarm_enable"] = "False"
         parser["Scheduler"]["submit_delay"] = "15"
         parser["Scheduler"]["worker_pool"] = "9"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
-        parser["Scheduler"]["log_file"] = "scheduler.log"
+        parser["Scheduler"]["queues_enabled"] = "1"
+        parser["Scheduler"]["logging_enabled"] = "0"
+        parser["Scheduler"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
 
         scheduler_config_dict = {}
-        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
+
         scheduler_config_dict["reset_enable"] = parser["Scheduler"]["reset_enable"]
         scheduler_config_dict["metrics_enable"] = parser["Scheduler"]["metrics_enable"]
         scheduler_config_dict["beacon_enable"] = parser["Scheduler"]["beacon_enable"]
         scheduler_config_dict["provider_enable"] = parser["Scheduler"][
             "provider_enable"
+        ]
+        scheduler_config_dict["wantlist_enable"] = parser["Scheduler"][
+            "wantlist_enable"
+        ]
+        scheduler_config_dict["publish_enable"] = parser["Scheduler"]["publish_enable"]
+        scheduler_config_dict["peer_maint_enable"] = parser["Scheduler"][
+            "peer_maint_enable"
+        ]
+        scheduler_config_dict["remote_monitor_enable"] = parser["Scheduler"][
+            "remote_monitor_enable"
         ]
         scheduler_config_dict["bitswap_enable"] = parser["Scheduler"]["bitswap_enable"]
         scheduler_config_dict["swarm_enable"] = parser["Scheduler"]["swarm_enable"]
@@ -233,7 +207,11 @@ def get_scheduler_config_dict():
         scheduler_config_dict["wait_before_startup"] = parser["Scheduler"][
             "wait_before_startup"
         ]
-        scheduler_config_dict["log_file"] = parser["Scheduler"]["log_file"]
+        scheduler_config_dict["queues_enabled"] = parser["Scheduler"]["queues_enabled"]
+        scheduler_config_dict["logging_enabled"] = parser["Scheduler"][
+            "logging_enabled"
+        ]
+        scheduler_config_dict["debug_enabled"] = parser["Scheduler"]["debug_enabled"]
 
     return scheduler_config_dict
 
@@ -411,6 +389,13 @@ def get_request_config_dict():
         request_config_dict["connect_retry_delay"] = parser["Request"][
             "connect_retry_delay"
         ]
+        request_config_dict["request_retries"] = parser["Request"]["request_retries"]
+        request_config_dict["request_retry_delay"] = parser["Request"][
+            "request_retry_delay"
+        ]
+        request_config_dict["queues_enabled"] = parser["Request"]["queues_enabled"]
+        request_config_dict["logging_enabled"] = parser["Request"]["logging_enabled"]
+        request_config_dict["debug_enabled"] = parser["Request"]["debug_enabled"]
 
     except KeyError:
         parser["Request"] = {}
@@ -419,6 +404,11 @@ def get_request_config_dict():
         parser["Request"]["read_timeout"] = "120"
         parser["Request"]["connect_retries"] = "30"
         parser["Request"]["connect_retry_delay"] = "10"
+        parser["Request"]["request_retries"] = "2"
+        parser["Request"]["request_retry_delay"] = "10"
+        parser["Request"]["queues_enabled"] = "1"
+        parser["Request"]["logging_enabled"] = "0"
+        parser["Request"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -431,11 +421,18 @@ def get_request_config_dict():
         request_config_dict["connect_retry_delay"] = parser["Request"][
             "connect_retry_delay"
         ]
+        request_config_dict["request_retries"] = parser["Request"]["request_retries"]
+        request_config_dict["request_retry_delay"] = parser["Request"][
+            "request_retry_delay"
+        ]
+        request_config_dict["queues_enabled"] = parser["Request"]["queues_enabled"]
+        request_config_dict["logging_enabled"] = parser["Request"]["logging_enabled"]
+        request_config_dict["debug_enabled"] = parser["Request"]["debug_enabled"]
 
     return request_config_dict
 
 
-def get_capture_peer_config_dict():
+def get_provider_capture_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -449,73 +446,95 @@ def get_capture_peer_config_dict():
         raise ApplicationNotInstalledError(" ")
 
     try:
-        capture_peer_config_dict = {}
-        capture_peer_config_dict["capture_interval_delay"] = parser["Capture_Peer"][
-            "capture_interval_delay"
+        provider_capture_config_dict = {}
+        provider_capture_config_dict["capture_interval_delay"] = parser[
+            "Provider_Capture"
+        ]["capture_interval_delay"]
+        provider_capture_config_dict["sql_timeout"] = parser["Provider_Capture"][
+            "sql_timeout"
         ]
-        capture_peer_config_dict["sql_timeout"] = parser["Capture_Peer"]["sql_timeout"]
-        capture_peer_config_dict["wait_before_startup"] = parser["Capture_Peer"][
-            "wait_before_startup"
-        ]
-        capture_peer_config_dict["max_intervals"] = parser["Capture_Peer"][
+        provider_capture_config_dict["wait_before_startup"] = parser[
+            "Provider_Capture"
+        ]["wait_before_startup"]
+        provider_capture_config_dict["max_intervals"] = parser["Provider_Capture"][
             "max_intervals"
         ]
-        capture_peer_config_dict["shutdown_time"] = parser["Capture_Peer"][
+        provider_capture_config_dict["shutdown_time"] = parser["Provider_Capture"][
             "shutdown_time"
         ]
-        capture_peer_config_dict["q_server_port"] = parser["Capture_Peer"][
+        provider_capture_config_dict["q_server_port"] = parser["Provider_Capture"][
             "q_server_port"
         ]
-        capture_peer_config_dict["log_file"] = parser["Capture_Peer"]["log_file"]
-        capture_peer_config_dict["connect_retries"] = parser["Capture_Peer"][
+        provider_capture_config_dict["connect_retries"] = parser["Provider_Capture"][
             "connect_retries"
         ]
-        capture_peer_config_dict["connect_retry_delay"] = parser["Capture_Peer"][
-            "connect_retry_delay"
+        provider_capture_config_dict["connect_retry_delay"] = parser[
+            "Provider_Capture"
+        ]["connect_retry_delay"]
+        provider_capture_config_dict["queues_enabled"] = parser["Provider_Capture"][
+            "queues_enabled"
+        ]
+        provider_capture_config_dict["logging_enabled"] = parser["Provider_Capture"][
+            "logging_enabled"
+        ]
+        provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
+            "debug_enabled"
         ]
 
     except KeyError:
-        parser["Capture_Peer"] = {}
-        parser["Capture_Peer"]["capture_interval_delay"] = "600"
-        parser["Capture_Peer"]["sql_timeout"] = "60"
-        parser["Capture_Peer"]["wait_before_startup"] = "0"
-        parser["Capture_Peer"]["max_intervals"] = "9999"
-        parser["Capture_Peer"]["shutdown_time"] = "99:99:99"
-        parser["Capture_Peer"]["q_server_port"] = "50000"
-        parser["Capture_Peer"]["log_file"] = "capture_peer.log"
-        parser["Capture_Peer"]["connect_retries"] = "30"
-        parser["Capture_Peer"]["connect_retry_delay"] = "10"
+        parser["Provider_Capture"] = {}
+        parser["Provider_Capture"]["capture_interval_delay"] = "600"
+        parser["Provider_Capture"]["sql_timeout"] = "60"
+        parser["Provider_Capture"]["wait_before_startup"] = "0"
+        parser["Provider_Capture"]["max_intervals"] = "9999"
+        parser["Provider_Capture"]["shutdown_time"] = "99:99:99"
+        parser["Provider_Capture"]["q_server_port"] = "50000"
+        parser["Provider_Capture"]["connect_retries"] = "30"
+        parser["Provider_Capture"]["connect_retry_delay"] = "10"
+        parser["Provider_Capture"]["queues_enabled"] = "1"
+        parser["Provider_Capture"]["logging_enabled"] = "0"
+        parser["Provider_Capture"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
 
-        capture_peer_config_dict = {}
+        provider_capture_config_dict = {}
 
-        capture_peer_config_dict["capture_interval_delay"] = parser["Capture_Peer"][
-            "capture_interval_delay"
+        provider_capture_config_dict["capture_interval_delay"] = parser[
+            "Provider_Capture"
+        ]["capture_interval_delay"]
+        provider_capture_config_dict["sql_timeout"] = parser["Provider_Capture"][
+            "sql_timeout"
         ]
-        capture_peer_config_dict["sql_timeout"] = parser["Capture_Peer"]["sql_timeout"]
-        capture_peer_config_dict["wait_before_startup"] = parser["Capture_Peer"][
-            "wait_before_startup"
-        ]
-        capture_peer_config_dict["max_intervals"] = parser["Capture_Peer"][
+        provider_capture_config_dict["wait_before_startup"] = parser[
+            "Provider_Capture"
+        ]["wait_before_startup"]
+        provider_capture_config_dict["max_intervals"] = parser["Provider_Capture"][
             "max_intervals"
         ]
-        capture_peer_config_dict["shutdown_time"] = parser["Capture_Peer"][
+        provider_capture_config_dict["shutdown_time"] = parser["Provider_Capture"][
             "shutdown_time"
         ]
-        capture_peer_config_dict["q_server_port"] = parser["Capture_Peer"][
+        provider_capture_config_dict["q_server_port"] = parser["Provider_Capture"][
             "q_server_port"
         ]
-        capture_peer_config_dict["log_file"] = parser["Capture_Peer"]["log_file"]
-        capture_peer_config_dict["connect_retries"] = parser["Capture_Peer"][
+        provider_capture_config_dict["connect_retries"] = parser["Provider_Capture"][
             "connect_retries"
         ]
-        capture_peer_config_dict["connect_retry_delay"] = parser["Capture_Peer"][
-            "connect_retry_delay"
+        provider_capture_config_dict["connect_retry_delay"] = parser[
+            "Provider_Capture"
+        ]["connect_retry_delay"]
+        provider_capture_config_dict["queues_enabled"] = parser["Provider_Capture"][
+            "queues_enabled"
+        ]
+        provider_capture_config_dict["logging_enabled"] = parser["Provider_Capture"][
+            "logging_enabled"
+        ]
+        provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
+            "debug_enabled"
         ]
 
-    return capture_peer_config_dict
+    return provider_capture_config_dict
 
 
 def get_logger_config_dict():
@@ -657,16 +676,18 @@ def get_want_list_config_dict():
         want_list_config_dict["max_intervals"] = parser["Want_List"]["max_intervals"]
         want_list_config_dict["shutdown_time"] = parser["Want_List"]["shutdown_time"]
         want_list_config_dict["q_server_port"] = parser["Want_List"]["q_server_port"]
-        want_list_config_dict["server_log_file"] = parser["Want_List"][
-            "server_log_file"
-        ]
-        want_list_config_dict["log_file"] = parser["Want_List"]["log_file"]
+        want_list_config_dict["single_thread"] = parser["Want_List"]["single_thread"]
         want_list_config_dict["connect_retries"] = parser["Want_List"][
             "connect_retries"
         ]
         want_list_config_dict["connect_retry_delay"] = parser["Want_List"][
             "connect_retry_delay"
         ]
+        want_list_config_dict["queues_enabled"] = parser["Want_List"]["queues_enabled"]
+        want_list_config_dict["logging_enabled"] = parser["Want_List"][
+            "logging_enabled"
+        ]
+        want_list_config_dict["debug_enabled"] = parser["Want_List"]["debug_enabled"]
 
     except KeyError:
         parser["Want_List"] = {}
@@ -686,11 +707,13 @@ def get_want_list_config_dict():
         parser["Want_List"]["wait_before_startup"] = "0"
         parser["Want_List"]["max_intervals"] = "9999"
         parser["Want_List"]["shutdown_time"] = "99:99:99"
+        parser["Want_List"]["single_thread"] = "1"
         parser["Want_List"]["q_server_port"] = "50000"
-        parser["Want_List"]["server_log_file"] = "server.log"
-        parser["Want_List"]["log_file"] = "want_list.log"
         parser["Want_List"]["connect_retries"] = "30"
         parser["Want_List"]["connect_retry_delay"] = "10"
+        parser["Want_List"]["queues_enabled"] = "1"
+        parser["Want_List"]["logging_enabled"] = "0"
+        parser["Want_List"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -737,16 +760,18 @@ def get_want_list_config_dict():
         want_list_config_dict["max_intervals"] = parser["Want_List"]["max_intervals"]
         want_list_config_dict["shutdown_time"] = parser["Want_List"]["shutdown_time"]
         want_list_config_dict["q_server_port"] = parser["Want_List"]["q_server_port"]
-        want_list_config_dict["server_log_file"] = parser["Want_List"][
-            "server_log_file"
-        ]
-        want_list_config_dict["log_file"] = parser["Want_List"]["log_file"]
+        want_list_config_dict["single_thread"] = parser["Want_List"]["single_thread"]
         want_list_config_dict["connect_retries"] = parser["Want_List"][
             "connect_retries"
         ]
         want_list_config_dict["connect_retry_delay"] = parser["Want_List"][
             "connect_retry_delay"
         ]
+        want_list_config_dict["queues_enabled"] = parser["Want_List"]["queues_enabled"]
+        want_list_config_dict["logging_enabled"] = parser["Want_List"][
+            "logging_enabled"
+        ]
+        want_list_config_dict["debug_enabled"] = parser["Want_List"]["debug_enabled"]
 
     return want_list_config_dict
 
@@ -859,21 +884,29 @@ def get_publish_config_dict():
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
         publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
+        publish_config_dict["wait_before_startup"] = parser["Publish"][
+            "wait_before_startup"
+        ]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][
             "connect_retry_delay"
         ]
-        publish_config_dict["log_file"] = parser["Publish"]["log_file"]
+        publish_config_dict["queues_enabled"] = parser["Publish"]["queues_enabled"]
+        publish_config_dict["logging_enabled"] = parser["Publish"]["logging_enabled"]
+        publish_config_dict["debug_enabled"] = parser["Publish"]["debug_enabled"]
 
     except KeyError:
         parser["Publish"] = {}
-        parser["Publish"]["wait_time"] = "300"
+        parser["Publish"]["wait_time"] = "600"
         parser["Publish"]["sql_timeout"] = "60"
+        parser["Publish"]["wait_before_startup"] = "0"
         parser["Publish"]["q_server_port"] = "50000"
         parser["Publish"]["connect_retries"] = "30"
         parser["Publish"]["connect_retry_delay"] = "10"
-        parser["Publish"]["log_file"] = "db_init.log"
+        parser["Publish"]["queues_enabled"] = "1"
+        parser["Publish"]["logging_enabled"] = "0"
+        parser["Publish"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -881,13 +914,18 @@ def get_publish_config_dict():
         publish_config_dict = {}
         publish_config_dict["wait_time"] = parser["Publish"]["wait_time"]
         publish_config_dict["sql_timeout"] = parser["Publish"]["sql_timeout"]
+        publish_config_dict["wait_before_startup"] = parser["Publish"][
+            "wait_before_startup"
+        ]
         publish_config_dict["q_server_port"] = parser["Publish"]["q_server_port"]
         publish_config_dict["connect_retries"] = parser["Publish"]["connect_retries"]
         publish_config_dict["connect_retry_delay"] = parser["Publish"][
             "connect_retry_delay"
         ]
 
-        publish_config_dict["log_file"] = parser["Publish"]["log_file"]
+        publish_config_dict["queues_enabled"] = parser["Publish"]["queues_enabled"]
+        publish_config_dict["logging_enabled"] = parser["Publish"]["logging_enabled"]
+        publish_config_dict["debug_enabled"] = parser["Publish"]["debug_enabled"]
 
     return publish_config_dict
 
@@ -907,33 +945,249 @@ def get_metrics_config_dict():
 
     try:
         metrics_config_dict = {}
+        metrics_config_dict["wait_time"] = parser["Metrics"]["wait_time"]
+        metrics_config_dict["wait_before_startup"] = parser["Metrics"][
+            "wait_before_startup"
+        ]
         metrics_config_dict["sql_timeout"] = parser["Metrics"]["sql_timeout"]
         metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
         metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
         metrics_config_dict["connect_retry_delay"] = parser["Metrics"][
             "connect_retry_delay"
         ]
-        metrics_config_dict["log_file"] = parser["Metrics"]["log_file"]
+        metrics_config_dict["queues_enabled"] = parser["Metrics"]["queues_enabled"]
+        metrics_config_dict["logging_enabled"] = parser["Metrics"]["logging_enabled"]
+        metrics_config_dict["debug_enabled"] = parser["Metrics"]["debug_enabled"]
 
     except KeyError:
         parser["Metrics"] = {}
+        parser["Metrics"]["wait_time"] = "30"
+        parser["Metrics"]["wait_before_startup"] = "0"
         parser["Metrics"]["sql_timeout"] = "60"
         parser["Metrics"]["q_server_port"] = "50000"
         parser["Metrics"]["connect_retries"] = "30"
         parser["Metrics"]["connect_retry_delay"] = "10"
-        parser["Metrics"]["log_file"] = "metrics.log"
+        parser["Metrics"]["queues_enabled"] = "1"
+        parser["Metrics"]["logging_enabled"] = "0"
+        parser["Metrics"]["debug_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
 
         metrics_config_dict = {}
+        metrics_config_dict["wait_time"] = parser["Metrics"]["wait_time"]
+        metrics_config_dict["wait_before_startup"] = parser["Metrics"][
+            "wait_before_startup"
+        ]
         metrics_config_dict["sql_timeout"] = parser["Metrics"]["sql_timeout"]
         metrics_config_dict["q_server_port"] = parser["Metrics"]["q_server_port"]
         metrics_config_dict["connect_retries"] = parser["Metrics"]["connect_retries"]
         metrics_config_dict["connect_retry_delay"] = parser["Metrics"][
             "connect_retry_delay"
         ]
-
-        metrics_config_dict["log_file"] = parser["Metrics"]["log_file"]
+        metrics_config_dict["queues_enabled"] = parser["Metrics"]["queues_enabled"]
+        metrics_config_dict["logging_enabled"] = parser["Metrics"]["logging_enabled"]
+        metrics_config_dict["debug_enabled"] = parser["Metrics"]["debug_enabled"]
 
     return metrics_config_dict
+
+
+def get_peer_table_maint_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        peer_table_maint_config_dict = {}
+        peer_table_maint_config_dict["wait_time"] = parser["Peer_Table_Maintenance"][
+            "wait_time"
+        ]
+        peer_table_maint_config_dict["wait_before_startup"] = parser[
+            "Peer_Table_Maintenance"
+        ]["wait_before_startup"]
+        peer_table_maint_config_dict["sql_timeout"] = parser["Peer_Table_Maintenance"][
+            "sql_timeout"
+        ]
+        peer_table_maint_config_dict["q_server_port"] = parser[
+            "Peer_Table_Maintenance"
+        ]["q_server_port"]
+        peer_table_maint_config_dict["connect_retries"] = parser[
+            "Peer_Table_Maintenance"
+        ]["connect_retries"]
+        peer_table_maint_config_dict["connect_retry_delay"] = parser[
+            "Peer_Table_Maintenance"
+        ]["connect_retry_delay"]
+        peer_table_maint_config_dict["queues_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["queues_enabled"]
+        peer_table_maint_config_dict["logging_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["logging_enabled"]
+        peer_table_maint_config_dict["debug_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["debug_enabled"]
+
+    except KeyError:
+        parser["Peer_Table_Maintenance"] = {}
+        parser["Peer_Table_Maintenance"]["wait_time"] = "600"
+        parser["Peer_Table_Maintenance"]["wait_before_startup"] = "0"
+        parser["Peer_Table_Maintenance"]["sql_timeout"] = "60"
+        parser["Peer_Table_Maintenance"]["q_server_port"] = "50000"
+        parser["Peer_Table_Maintenance"]["connect_retries"] = "30"
+        parser["Peer_Table_Maintenance"]["connect_retry_delay"] = "10"
+        parser["Peer_Table_Maintenance"]["queues_enabled"] = "1"
+        parser["Peer_Table_Maintenance"]["logging_enabled"] = "0"
+        parser["Peer_Table_Maintenance"]["debug_enabled"] = "1"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        peer_table_maint_config_dict = {}
+        peer_table_maint_config_dict["wait_time"] = parser["Peer_Table_Maintenance"][
+            "wait_time"
+        ]
+        peer_table_maint_config_dict["wait_before_startup"] = parser[
+            "Peer_Table_Maintenance"
+        ]["wait_before_startup"]
+        peer_table_maint_config_dict["sql_timeout"] = parser["Peer_Table_Maintenance"][
+            "sql_timeout"
+        ]
+        peer_table_maint_config_dict["q_server_port"] = parser[
+            "Peer_Table_Maintenance"
+        ]["q_server_port"]
+        peer_table_maint_config_dict["connect_retries"] = parser[
+            "Peer_Table_Maintenance"
+        ]["connect_retries"]
+        peer_table_maint_config_dict["connect_retry_delay"] = parser[
+            "Peer_Table_Maintenance"
+        ]["connect_retry_delay"]
+        peer_table_maint_config_dict["queues_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["queues_enabled"]
+        peer_table_maint_config_dict["logging_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["logging_enabled"]
+        peer_table_maint_config_dict["debug_enabled"] = parser[
+            "Peer_Table_Maintenance"
+        ]["debug_enabled"]
+
+    return peer_table_maint_config_dict
+
+
+def get_peer_monitor_config_dict():
+    install_dict = get_install_template_dict()
+
+    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
+    parser = configparser.ConfigParser()
+
+    try:
+        with open(config_file, "r") as configfile:
+            parser.read_file(configfile)
+
+    except FileNotFoundError:
+        raise ApplicationNotInstalledError(" ")
+
+    try:
+        peer_monitor_config_dict = {}
+        peer_monitor_config_dict["wait_time"] = parser["Peer_Monitor"]["wait_time"]
+        peer_monitor_config_dict["beacon_length_seconds"] = parser["Peer_Monitor"][
+            "beacon_length_seconds"
+        ]
+        peer_monitor_config_dict["number_of_periods"] = parser["Peer_Monitor"][
+            "number_of_periods"
+        ]
+        peer_monitor_config_dict["wait_before_startup"] = parser["Peer_Monitor"][
+            "wait_before_startup"
+        ]
+        peer_monitor_config_dict["max_intervals"] = parser["Peer_Monitor"][
+            "max_intervals"
+        ]
+        peer_monitor_config_dict["shutdown_time"] = parser["Peer_Monitor"][
+            "shutdown_time"
+        ]
+        peer_monitor_config_dict["q_server_port"] = parser["Peer_Monitor"][
+            "q_server_port"
+        ]
+        peer_monitor_config_dict["sql_timeout"] = parser["Peer_Monitor"]["sql_timeout"]
+
+        peer_monitor_config_dict["connect_retries"] = parser["Peer_Monitor"][
+            "connect_retries"
+        ]
+        peer_monitor_config_dict["connect_retry_delay"] = parser["Peer_Monitor"][
+            "connect_retry_delay"
+        ]
+        peer_monitor_config_dict["queues_enabled"] = parser["Peer_Monitor"][
+            "queues_enabled"
+        ]
+        peer_monitor_config_dict["logging_enabled"] = parser["Peer_Monitor"][
+            "logging_enabled"
+        ]
+        peer_monitor_config_dict["debug_enabled"] = parser["Peer_Monitor"][
+            "debug_enabled"
+        ]
+
+    except KeyError:
+        parser["Peer_Monitor"] = {}
+        parser["Peer_Monitor"]["wait_time"] = "600"
+        parser["Peer_Monitor"]["beacon_length_seconds"] = "300"
+        parser["Peer_Monitor"]["number_of_periods"] = "5"
+        parser["Peer_Monitor"]["wait_before_startup"] = "0"
+        parser["Peer_Monitor"]["max_intervals"] = "9999"
+        parser["Peer_Monitor"]["shutdown_time"] = "99:99:99"
+        parser["Peer_Monitor"]["q_server_port"] = "50000"
+        parser["Peer_Monitor"]["sql_timeout"] = "60"
+        parser["Peer_Monitor"]["connect_retries"] = "30"
+        parser["Peer_Monitor"]["connect_retry_delay"] = "10"
+        parser["Peer_Monitor"]["queues_enabled"] = "1"
+        parser["Peer_Monitor"]["logging_enabled"] = "0"
+        parser["Peer_Monitor"]["debug_enabled"] = "1"
+
+        with open(config_file, "w") as configfile:
+            parser.write(configfile)
+
+        peer_monitor_config_dict = {}
+        peer_monitor_config_dict["wait_time"] = parser["Peer_Monitor"]["wait_time"]
+        peer_monitor_config_dict["beacon_length_seconds"] = parser["Peer_Monitor"][
+            "beacon_length_seconds"
+        ]
+        peer_monitor_config_dict["number_of_periods"] = parser["Peer_Monitor"][
+            "number_of_periods"
+        ]
+        peer_monitor_config_dict["wait_before_startup"] = parser["Peer_Monitor"][
+            "wait_before_startup"
+        ]
+        peer_monitor_config_dict["max_intervals"] = parser["Peer_Monitor"][
+            "max_intervals"
+        ]
+        peer_monitor_config_dict["shutdown_time"] = parser["Peer_Monitor"][
+            "shutdown_time"
+        ]
+        peer_monitor_config_dict["q_server_port"] = parser["Peer_Monitor"][
+            "q_server_port"
+        ]
+        peer_monitor_config_dict["sql_timeout"] = parser["Peer_Monitor"]["sql_timeout"]
+        peer_monitor_config_dict["connect_retries"] = parser["Peer_Monitor"][
+            "connect_retries"
+        ]
+        peer_monitor_config_dict["connect_retry_delay"] = parser["Peer_Monitor"][
+            "connect_retry_delay"
+        ]
+        peer_monitor_config_dict["queues_enabled"] = parser["Peer_Monitor"][
+            "queues_enabled"
+        ]
+        peer_monitor_config_dict["logging_enabled"] = parser["Peer_Monitor"][
+            "logging_enabled"
+        ]
+        peer_monitor_config_dict["debug_enabled"] = parser["Peer_Monitor"][
+            "debug_enabled"
+        ]
+
+    return peer_monitor_config_dict

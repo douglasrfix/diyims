@@ -40,18 +40,18 @@ WHERE object_type = :object_type
 
 -- name: select_clean_up_rows_by_date
 SELECT
-	DTS,
+	insert_DTS,
 	want_item_file,
 	beacon_CID
 
 FROM
    clean_up
 
-where DTS <= :DTS
+where insert_DTS <= :insert_DTS
 
 -- name: insert_clean_up_row!
-insert into clean_up (DTS, want_item_file, beacon_CID)
-values (:DTS, :want_item_file, :beacon_CID);
+insert into clean_up (insert_DTS, want_item_file, beacon_CID)
+values (:insert_DTS, :want_item_file, :beacon_CID);
 
 -- name: delete_clean_up_row_by_date!
 DELETE
@@ -59,7 +59,7 @@ DELETE
 FROM
    clean_up
 
-where DTS <= :DTS
+where insert_DTS <= :insert_DTS
 
 
 -- name: delete_log_rows_by_date!
@@ -70,7 +70,6 @@ FROM
 	log
 
 where DTS <= :DTS
-
 
 -- name: delete_want_list_table_rows_by_date!
 DELETE
@@ -88,10 +87,10 @@ values (:DTS, :process, :pid, :peer_type, :msg);
 -- name: insert_peer_row!
 insert into peer_table (peer_ID, IPNS_name, id, signature, signature_valid, peer_type,
 	 origin_update_DTS, local_update_DTS, execution_platform, python_version,
-		IPFS_agent, processing_status, agent, version)
+		IPFS_agent, processing_status, agent, version, disabled)
 values (:peer_ID, :IPNS_name, :id, :signature, :signature_valid, :peer_type, :origin_update_DTS, :local_update_DTS,
 		:execution_platform, :python_version, :IPFS_agent, :processing_status,
-		:agent, :version);
+		:agent, :version, :disabled);
 
 -- name: update_peer_row_by_key_status!
 update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
@@ -133,7 +132,7 @@ update peer_table set  local_update_DTS = :local_update_DTS, processing_status =
 where peer_ID = :peer_ID and  (processing_status = "WLX")
 
 -- name: update_peer_table_status_WLW_to_WLR!
-update peer_table set  local_update_DTS = :local_update_DTS,  processing_status = "WLR"
+update peer_table set  local_update_DTS = :local_update_DTS,  processing_status = "WLR", disabled = 0
 where peer_ID = :peer_ID and  (processing_status = "WLW")
 
 -- name: update_peer_table_status_WLP!
@@ -166,14 +165,14 @@ where peer_ID = :peer_ID and (processing_status = "WLR" or processing_status = "
 -- used by peer utils
 update peer_table set IPNS_name = :IPNS_name, id = :id, signature = :signature,
 	signature_valid = :signature_valid, origin_update_DTS = :origin_update_DTS, local_update_DTS = :local_update_DTS,
-	 execution_platform = :execution_platform, python_version = :python_version, agent = :agent, version = :version,
+	 execution_platform = :execution_platform, python_version = :python_version, agent = :agent,
 		IPFS_agent = :IPFS_agent, processing_status = "NPC"
 where peer_ID = :peer_ID
 
 
 -- name: update_peer_table_status_to_NPC_no_update!
 -- used by peer utils
-update peer_table set local_update_DTS = :local_update_DTS, version = :version, processing_status = "NPC"
+update peer_table set local_update_DTS = :local_update_DTS, processing_status = "NPC"
 where peer_ID = :peer_ID
 
 
@@ -208,7 +207,7 @@ SELECT
 FROM
    peer_table
 
-where peer_type = :peer_type and (processing_status = "WLR")
+where peer_type = :peer_type and (processing_status = "WLR" and disabled = 0)
 ORDER BY
 
 	local_update_DTS ASC

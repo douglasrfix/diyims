@@ -1,6 +1,6 @@
 import shlex
 
-import pytest
+# import pytest
 from typer.testing import CliRunner
 
 from diyims.diyims_cmd import app
@@ -8,16 +8,25 @@ from diyims.diyims_cmd import app
 runner = CliRunner()
 
 
-@pytest.mark.component
+# @pytest.mark.component
 def test_beacon():
     """testing find_providers with native windows install"""
-    command_string = "capture-providers"
+    command_string = "beacon-utils beacon-execution"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0
 
 
-@pytest.mark.component
+# @pytest.mark.component
+def test_satisfy():
+    """testing find_providers with native windows install"""
+    command_string = "beacon-utils satisfy-execution"
+    result = runner.invoke(app, shlex.split(command_string))
+    print(result.stdout.rstrip())
+    assert result.exit_code == 0
+
+
+# @pytest.mark.component
 def test_capture_providers():
     """testing find_providers with native windows install"""
     command_string = "capture-providers"
@@ -26,7 +35,7 @@ def test_capture_providers():
     assert result.exit_code == 0
 
 
-@pytest.mark.component
+# @pytest.mark.component
 def test_capture_want_lists():
     """testing find_providers with native windows install"""
     command_string = "capture-want-lists --peer-type 'BP'"
@@ -35,7 +44,7 @@ def test_capture_want_lists():
     assert result.exit_code == 0
 
 
-@pytest.mark.component
+# @pytest.mark.component
 def test_capture_bitswap_peers():
     """testing find_providers with native windows install"""
     command_string = "capture-bitswap-peers"
@@ -44,7 +53,7 @@ def test_capture_bitswap_peers():
     assert result.exit_code == 0
 
 
-@pytest.mark.component
+# @pytest.mark.component
 def test_capture_swarm_peers():
     """testing find_providers with native windows install"""
     command_string = "capture-swarm-peers"

@@ -189,3 +189,20 @@ def decode_findpeer_structure(
 
 if __name__ == "__main__":
     main()
+
+addopts =
+    -m component
+    -n 10
+    --dist load
+    -rA
+    -vv
+    --capture=tee-sys
+    --cov=diyims
+    --cov-append
+    --cov-report=term-missing
+    --basetemp=C:\\Users\\dougl\\diyims\\tmp
+
+markers =
+    setup
+    component
+    mp

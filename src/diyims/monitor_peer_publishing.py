@@ -1,39 +1,31 @@
 from datetime import datetime
 from time import sleep
-
-# import psutil
 import os
 from queue import Empty
 from multiprocessing.managers import BaseManager
 from multiprocessing import set_start_method, freeze_support
 from sqlite3 import IntegrityError
-from diyims.config_utils import get_beacon_config_dict
+from diyims.config_utils import get_peer_monitor_config_dict
 from diyims.database_utils import (
     insert_peer_row,
     set_up_sql_operations,
     insert_header_row,
-    # refresh_log_dict,
-    # insert_log_row,
     refresh_peer_row_from_template,
-    # select_peer_table_entry_by_key,
     update_peer_table_status_to_PMP,
     update_peer_table_status_to_PMP_type_PR,
-    # select_shutdown_entry,
     add_header_chain_status_entry,
 )
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import add_log
 from diyims.ipfs_utils import unpack_peer_row_from_cid
-from diyims.general_utils import get_DTS, shutdown_query
+from diyims.general_utils import get_DTS, shutdown_query, set_controls
 from diyims.path_utils import get_path_dict
-
-# from sqlalchemy.exc import NoResultFound
 from sqlmodel import create_engine, Session, select
 from diyims.sqlmodels import Peer_Table
 # from rich import print
 
 
-def monitor_peer_publishing_main(call_stack):
+def monitor_peer_publishing_main(call_stack: str) -> None:
     """
     docstring
     """
@@ -43,57 +35,26 @@ def monitor_peer_publishing_main(call_stack):
             set_start_method("spawn")
         except RuntimeError:
             pass
-    config_dict = get_beacon_config_dict()
+    call_stack = call_stack + ":monitor_peer_publishing"
+    config_dict = get_peer_monitor_config_dict()
     wait_time = int(config_dict["wait_time"])
-    call_stack = call_stack + ":remote_peer_monitor"
-    queues_enabled = bool(config_dict["queues_enabled"])
-    try:
-        queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
-    except KeyError:
-        pass
-    try:
-        component_test = bool(int(os.environ["COMPONENT_TEST"]))
-    except KeyError:
-        component_test = False
-
-    logging_enabled = bool(config_dict["logging_enabled"])
-    debug_enabled = bool(config_dict["debug_enabled"])
-
     path_dict = get_path_dict()
+    SetControlsReturn = set_controls(call_stack, config_dict)
+
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
 
-    if logging_enabled:
-        if queues_enabled:
-            add_log(
-                process=call_stack,
-                peer_type="status",
-                msg="Queues enabled",
-            )
-        if debug_enabled:
-            add_log(
-                process=call_stack,
-                peer_type="status",
-                msg="Debug enabled",
-            )
-        if component_test:
-            add_log(
-                process=call_stack,
-                peer_type="status",
-                msg="Component test enabled",
-            )
-
     wait_before_startup = int(config_dict["wait_before_startup"])
-    if logging_enabled:
+    if SetControlsReturn.logging_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
             msg=f"Waiting for {wait_before_startup} seconds before startup.",
         )
     sleep(wait_before_startup)
-    if logging_enabled:
+    if SetControlsReturn.logging_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -102,7 +63,7 @@ def monitor_peer_publishing_main(call_stack):
 
     status_code = 200
 
-    if queues_enabled:
+    if SetControlsReturn.queues_enabled:
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
         queue_server.register("get_peer_maint_queue")
@@ -111,7 +72,7 @@ def monitor_peer_publishing_main(call_stack):
         out_bound = queue_server.get_peer_maint_queue()
         in_bound = queue_server.get_remote_monitor_queue()
     else:
-        out_bound = ""
+        out_bound = None
 
     statement_1 = (
         select(Peer_Table)
@@ -142,9 +103,20 @@ def monitor_peer_publishing_main(call_stack):
                     url_key="resolve",
                     param=param,
                     call_stack=call_stack,
-                    connect_retries=0,  # disable peer on first resolve failure
+                    connect_retries=0,  # disable peer on first resolve failure #TODO: when to retry?????
                     http_500_ignore=False,
                 )
+                if SetControlsReturn.metrics_enabled:
+                    stop_DTS = get_DTS()
+                    start = datetime.fromisoformat(start_DTS)
+                    stop = datetime.fromisoformat(stop_DTS)
+                    duration = stop - start
+                    add_log(
+                        process=call_stack,
+                        peer_type="status",
+                        msg=f"Resolve completed in {duration} seconds with {status_code}.",
+                    )
+
                 if status_code != 200:
                     statement_2 = select(Peer_Table).where(
                         Peer_Table.peer_ID == peer.peer_ID
@@ -155,80 +127,90 @@ def monitor_peer_publishing_main(call_stack):
                         current_peer.disabled = 1
                         session.add(current_peer)
                         session.commit()
-                    if logging_enabled:
+                    if SetControlsReturn.logging_enabled:
                         add_log(
                             process=call_stack,
                             peer_type="Error",
-                            msg="Resolve failed and peer disabled.",
+                            msg=f"Resolve for {peer.peer_ID} failed and peer disabled.",
                         )
 
                 if status_code == 200:
-                    stop_DTS = get_DTS()
-                    start = datetime.fromisoformat(start_DTS)
-                    stop = datetime.fromisoformat(stop_DTS)
-                    duration = stop - start
-
                     peer_ID = peer.peer_ID
-                    msg = f"In {duration} resolve for {peer_ID}."
-                    if logging_enabled:
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg=msg,
-                        )
 
                     conn, queries = set_up_sql_operations(config_dict)
                     ipfs_header_CID = response_dict["Path"][6:]  # header cid in publish
-                    db_header_row = queries.select_last_header(  # TODO: change to function and name to newest header
-                        conn, peer_ID=peer_ID
-                    )  # last published cid that was processed
+                    # last published cid that was processed
+                    db_header_row = queries.select_last_header(conn, peer_ID=peer_ID)
                     conn.close()
                     if (
                         db_header_row is None
                     ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
+                        start_DTS = get_DTS()
                         status_code = header_chain_maint(
                             call_stack,
                             ipfs_header_CID,
                             config_dict,
                             out_bound,
                             peer_ID,
-                            logging_enabled,
+                            SetControlsReturn.logging_enabled,
                         )  # add one or more headers
+                        if SetControlsReturn.metrics_enabled:
+                            stop_DTS = get_DTS()
+                            start = datetime.fromisoformat(start_DTS)
+                            stop = datetime.fromisoformat(stop_DTS)
+                            duration = stop - start
+                            add_log(
+                                process=call_stack,
+                                peer_type="status",
+                                msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
+                            )
                         if status_code != 200:
                             add_log(
                                 process=call_stack,
                                 peer_type="Error",
-                                msg="Remote Monitor Panic.",
+                                msg=f"Remote Monitor Panic {status_code}.",
                             )
                     else:
                         most_recent_db_header = db_header_row["header_CID"]
                         # if we have a null cid a head of chain we should only process current entries
-                        # if we hav e a gap whe should process the current entry and follow the chain tito see if we can fill the gap
-                        # if we find the null entry we should delete any gap entry
+                        # if we have a gap whe should process the current entry and follow the chain to see if we can fill the gap
+                        # if we find the null entry we should delete any gap entry ??
                         if (
                             most_recent_db_header == ipfs_header_CID
-                        ):  # nothing new #TODO: we should check for an existing gap and retry if there is one
+                        ):  # nothing new #TODO: we should check for an existing gap and retry if there is one, could be expensive
                             pass
                             # print(f"no new entries for {peer_ID}")
                         else:
+                            start_DTS = get_DTS()
                             status_code = header_chain_maint(
                                 call_stack,
                                 ipfs_header_CID,
                                 config_dict,
                                 out_bound,
                                 peer_ID,
+                                SetControlsReturn.logging_enabled,
                             )  # add one or more headers
+                            if SetControlsReturn.metrics_enabled:
+                                stop_DTS = get_DTS()
+                                start = datetime.fromisoformat(start_DTS)
+                                stop = datetime.fromisoformat(stop_DTS)
+                                duration = stop - start
+                                add_log(
+                                    process=call_stack,
+                                    peer_type="status",
+                                    msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
+                                )
 
                             if status_code != 200:
                                 add_log(
                                     process=call_stack,
                                     peer_type="Error",
-                                    msg="Remote Monitor Panic.",
+                                    msg=f"Remote Monitor Panic with {status_code}.",
                                 )
                             # this assumes an in order arrival sequence dht delivers a best value as the most current
 
-        try:
-            if queues_enabled:
+        try:  # peer list completed
+            if SetControlsReturn.queues_enabled:
                 in_bound.get(
                     timeout=wait_time  # config value
                 )  # comes from peer capture process
@@ -244,18 +226,13 @@ def monitor_peer_publishing_main(call_stack):
             if shutdown_query(call_stack):
                 break
 
-        except AttributeError:
-            sleep(wait_time)  # config_value wait on queue ?
-            if shutdown_query(call_stack):
-                break
-    if logging_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Remote Peer Monitor complete.",
-        )
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg=f"Remote Peer Monitor complete with {status_code}.",
+    )
 
-    return status_code
+    return
 
 
 def header_chain_maint(
@@ -334,6 +311,8 @@ def header_chain_maint(
             proto_remote_peer_row_dict["version"] = object_CID
             proto_remote_peer_row_dict["local_update_DTS"] = get_DTS()
             proto_remote_peer_row_dict["processing_status"] = "PMP"
+            proto_remote_peer_row_dict["disabled"] = "0"
+
             conn, queries = set_up_sql_operations(config_dict)
             try:
                 insert_peer_row(conn, queries, proto_remote_peer_row_dict)
@@ -446,7 +425,6 @@ if __name__ == "__main__":
     freeze_support()
     set_start_method("spawn")
 
-    os.environ["DIYIMS_ROAMING"] = "RoamingDev"
     os.environ["COMPONENT_TEST"] = "1"
     os.environ["QUEUES_ENABLED"] = "0"
     monitor_peer_publishing_main("__main__")

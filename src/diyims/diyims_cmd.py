@@ -116,7 +116,7 @@ def run_scheduler(
             show_default=False,
             rich_help_panel="Execution Options",
         ),
-    ] = "RoamingDev",
+    ] = "Roaming",
 ):
     os.environ["DIYIMS_ROAMING"] = str(roaming)
 
@@ -132,7 +132,7 @@ def run_clean_up(
             show_default=False,
             rich_help_panel="Execution Options",
         ),
-    ] = "RoamingDev",
+    ] = "Roaming",
 ):
     os.environ["DIYIMS_ROAMING"] = str(roaming)
 

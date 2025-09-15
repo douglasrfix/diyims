@@ -1,353 +1,351 @@
 """
-The beacon length should stand out from regular traffic.(2)
-This will be? measured by capturing stats from the swarm (1)
-The stats captured will also be used to create timing information (3)
-    will be used to load test the system as well as test for beacon distortion.
+Beacon creates a unique CID that is used to generate a item in a nodes wantlist.
 """
 
-# import logging
-from queue import Empty
-
-# import psutil
-import json
-from diyims.requests_utils import execute_request
-from datetime import datetime
+# "Beacon creates a temporary wantlist item to allow a remote peer the ability
+# to discover and access the local peer's communication and verification information.
+# """
 from time import sleep
-from multiprocessing.managers import BaseManager
-from diyims.ipfs_utils import get_url_dict
-from diyims.general_utils import get_DTS, get_shutdown_target
-from diyims.want_item_utils import refresh_want_item_dict
-from diyims.path_utils import get_path_dict, get_unique_file
-from diyims.config_utils import get_beacon_config_dict, get_satisfy_config_dict
-from diyims.logger_utils import get_logger
-from diyims.database_utils import (
-    set_up_sql_operations,
-    refresh_clean_up_dict,
-    insert_clean_up_row,
-    select_shutdown_entry,
+from datetime import datetime, timedelta
+from multiprocessing import Process, set_start_method, freeze_support
+
+# from diyims.class_imports import SetSelfReturn
+from diyims.requests_utils import execute_request
+from diyims.config_utils import get_beacon_config_dict
+from diyims.logger_utils import add_log
+from diyims.general_utils import (
+    get_shutdown_target,
+    shutdown_query,
+    set_controls,
+    set_self,
 )
+from diyims.satisfy import satisfy_main
+import json
+from sqlalchemy.exc import NoResultFound
+from sqlmodel import create_engine, Session, select, col
+from diyims.sqlmodels import Clean_Up, Header_Table
+from diyims.path_utils import get_path_dict, get_unique_file
+from diyims.general_utils import get_DTS
 
 
-def beacon_main():
-    # import psutil
+def beacon_main(call_stack: str) -> None:
+    """
+    beacon_main _summary_
 
-    # p = psutil.Process()
-    # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
-    logging_enabled = 0  # TODO: config
-    beacon_config_dict = get_beacon_config_dict()
+    _extended_summary_
 
-    logger = get_logger(
-        beacon_config_dict["log_file"],
-        "none",
+    Arguments:
+        call_stack {str} -- _description_
+
+    Returns:
+        str -- _description_
+    """
+
+    if __name__ != "__main__":
+        freeze_support()
+        try:
+            set_start_method("spawn")
+        except RuntimeError:
+            pass
+
+    call_stack = call_stack + ":beacon_main"
+    config_dict = get_beacon_config_dict()
+    path_dict = get_path_dict()
+    SetControlsReturn = set_controls(call_stack, config_dict)
+    SetSelfReturn = set_self()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+    status_code = 200
+    statement = (
+        select(Header_Table)
+        .where(Header_Table.peer_ID == SetSelfReturn.self)
+        .where(Header_Table.object_type == "local_peer_entry")
+        .order_by(col(Header_Table.insert_DTS).asc())
+    )
+    with Session(engine) as session:
+        results = session.exec(statement)
+        header_row = results.first()
+    peer_row_CID = header_row.object_CID
+
+    wait_before_startup = int(config_dict["wait_before_startup"])
+    if SetControlsReturn.logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Waiting for {wait_before_startup} seconds before startup.",
+        )
+    sleep(wait_before_startup)
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Beacon main startup.",
     )
 
-    url_dict = get_url_dict()
-    response, status_code, response_dict = execute_request(
-        url_key="id",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=beacon_config_dict,
-    )
-    self = response_dict["ID"]
-
-    wait_seconds = int(beacon_config_dict["wait_before_startup"])
-    logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
-    sleep(wait_seconds)  # Config value
-    logger.info("Beacon startup.")
-    # target_DT = get_shutdown_target(beacon_config_dict)
-    # purge_want_items()
-    # logger.info("Purge want item files complete")
-    target_DT = get_shutdown_target(beacon_config_dict)
+    interval = 0
+    target_DT = get_shutdown_target(config_dict)
     current_DT = datetime.now()
 
-    max_intervals = int(beacon_config_dict["max_intervals"])
-    logger.debug(f"Shutdown target {target_DT} or {max_intervals} intervals.")
-    beacon_interval = 0
-    satisfy_dict = {}
-    q_server_port = int(beacon_config_dict["q_server_port"])
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    queue_server.register("get_satisfy_queue")
-    queue_server.register("get_beacon_queue")
-    queue_server.connect()
-    out_bound = queue_server.get_satisfy_queue()
-    in_bound = queue_server.get_beacon_queue()
-    while target_DT > current_DT and beacon_interval < max_intervals:
-        for _ in range(int(beacon_config_dict["number_of_periods"])):
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-            beacon_CID, want_item_file = create_beacon_CID(
-                logger,
-                beacon_config_dict,
-                self,
-                logging_enabled,
-                # conn,
-                # queries,
-                # Rconn,
-                # Rqueries,
-            )
-
-            satisfy_dict["status"] = "run"
-            satisfy_dict["wait_time"] = beacon_config_dict["short_period_seconds"]
-            satisfy_dict["want_item_file"] = want_item_file
-            out_bound.put_nowait(satisfy_dict)
-            try:
-                message = (
-                    in_bound.get()
-                )  # wait for satisfy to respond or external shutdown
-            except Empty:
-                pass
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-
-            if logging_enabled:
-                logger.debug(message)
-
-            flash_beacon(
-                logger, beacon_config_dict, beacon_CID, logging_enabled
-            )  # wait for satisfy to satisfy after a wait period or shutdown
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-
-        for _ in range(int(beacon_config_dict["number_of_periods"])):
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-            beacon_CID, want_item_file = create_beacon_CID(
-                logger,
-                beacon_config_dict,
-                self,
-                logging_enabled,
-                # conn,
-                # queries,
-                # Rconn,
-                # Rqueries,
-            )
-            satisfy_dict["status"] = "run"
-            satisfy_dict["wait_time"] = beacon_config_dict["long_period_seconds"]
-            satisfy_dict["want_item_file"] = want_item_file
-            out_bound.put_nowait(satisfy_dict)
-            try:
-                message = (
-                    in_bound.get()
-                )  # wait for satisfy response or external shutdown
-            except Empty:
-                pass
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-
-            if logging_enabled:
-                logger.debug(message)
-
-            flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled)
-            conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-        beacon_interval += 1
-        current_DT = datetime.now()
-        conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-        shutdown_row_dict = select_shutdown_entry(
-            conn,
-            queries,
+    max_intervals = int(config_dict["max_intervals"])
+    if SetControlsReturn.logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Shutdown target {target_DT} or {max_intervals} intervals.",
         )
-        conn.close()
-        if shutdown_row_dict["enabled"]:
+
+    while target_DT > current_DT and interval < max_intervals and status_code == 200:
+        if shutdown_query(call_stack):  # exit while loop
+            break
+        for _ in range(int(config_dict["number_of_periods"])):
+            if shutdown_query(call_stack):
+                break  # exit for loop
+
+            status_code, beacon_CID, want_item_file = create_beacon_CID(
+                call_stack,
+                SetControlsReturn.logging_enabled,
+                SetControlsReturn.debug_enabled,
+                config_dict,
+                peer_row_CID,
+                path_dict,
+                engine,
+            )
+
+            if shutdown_query(call_stack):
+                break
+
+            if status_code == 200:
+                satisfy_main_process = Process(target=satisfy_main, args=(call_stack,))
+                satisfy_main_process.start()
+
+                status_code = flash_beacon(  # flash waits on satisfy_main
+                    call_stack,
+                    SetControlsReturn.logging_enabled,
+                    SetControlsReturn.debug_enabled,
+                    SetControlsReturn.component_test,
+                    config_dict,
+                    beacon_CID,
+                )
+
+                if status_code != 200:
+                    if SetControlsReturn.debug_enabled:
+                        add_log(
+                            process=call_stack,
+                            peer_type="error",
+                            msg=f"Beacon Panic from flash beacon with {status_code}.",
+                        )
+                    break  # beacon will end and cleanup satisfy
+
+                satisfy_main_process.join()  # wait for satisfy to end
+
+            else:
+                if SetControlsReturn.debug_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type="Error",
+                        msg=f"Beacon Panic from create beacon with {status_code}.",
+                    )
+                break
+
+        if status_code == 200:
+            interval += 1
+            current_DT = datetime.now()
+        else:
             break
 
-    satisfy_dict["status"] = "shutdown"
-    out_bound.put_nowait(satisfy_dict)
-
-    logger.info("Beacon shutdown.")
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg=f"Beacon shutdown with {status_code}.",
+    )
     return
 
 
 def create_beacon_CID(
-    logger,
-    beacon_config_dict,
-    self,
-    logging_enabled,
-    # conn,
-    # queries,
-    # Rconn, Rqueries
-):
-    url_dict = get_url_dict()
-    path_dict = get_path_dict()
-    # +1
-    conn, queries = set_up_sql_operations(beacon_config_dict)
-    header_row = queries.select_first_peer_row_entry_pointer(
-        conn, peer_ID=self
-    )  # TODO: drop the pointer
-    conn.close()
+    call_stack: str,
+    logging_enabled: bool,
+    debug_enabled: bool,
+    config_dict: str,
+    peer_row_CID: str,
+    path_dict: dict,
+    engine: str,
+) -> tuple[str, str, str]:
+    """
+    create_beacon_CID _summary_
 
-    want_item_dict = refresh_want_item_dict()  # TODO: rename to template
-    want_item_dict["peer_row_CID"] = header_row["object_CID"]
+    _extended_summary_
+
+    Arguments:
+        call_stack {str} -- _description_
+        logging_enabled {bool} -- _description_
+        debug_enabled {bool} -- _description_
+        config_dict {str} -- _description_
+        peer_row_CID {str} -- _description_
+        path_dict {dict} -- _description_
+        engine {str} -- _description_
+
+    Returns:
+        tuple[str, str, str] -- _description_
+    """
+
+    call_stack = call_stack + ":create_beacon_CID"
+
+    satisfy_wait_seconds = int(
+        config_dict["beacon_length_seconds"]
+    )  # This will be used to define the duration of the want_item on the want list.
+    satisfy_timedelta = timedelta(seconds=satisfy_wait_seconds)
+
+    want_item_dict = {}
+    want_item_dict["peer_row_CID"] = peer_row_CID
     want_item_dict["DTS"] = get_DTS()
-    # -1
-    # conn.close()
+
     want_item_path = path_dict["want_item_path"]
     proto_item_file = path_dict["want_item_file"]
-    want_item_file = get_unique_file(want_item_path, proto_item_file)
+    want_item_file_path = get_unique_file(want_item_path, proto_item_file)
+    want_item_file = str(want_item_file_path)
 
-    beacon_pin_enabled = int(beacon_config_dict["beacon_pin_enabled"])
-
-    if beacon_pin_enabled:
-        param = {"only-hash": "true", "pin": "true", "cid-version": 1}
-    else:
-        param = {"only-hash": "true", "pin": "false", "cid-version": 1}
-
-    with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(want_item_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
-    f = open(want_item_file, "rb")
+    f = open(want_item_file_path, "rb")
     file = {"file": f}
+    param = {"only-hash": "true", "pin": "false", "cid-version": 1}
     response, status_code, response_dict = execute_request(
         url_key="add",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=beacon_config_dict,
         param=param,
         file=file,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
 
-    # json_dict = json.loads(response.text)
-    first_peer_table_entry_CID = response_dict["Hash"]
-    beacon_CID = first_peer_table_entry_CID
-    if logging_enabled:
-        logger.debug(f"Create {beacon_CID}")
-    # +1
-    # conn, queries = set_up_sql_operations(beacon_config_dict)
-    clean_up_dict = refresh_clean_up_dict()  # TODO: rename template``
-    clean_up_dict["DTS"] = get_DTS()
-    clean_up_dict["want_item_file"] = str(want_item_file)
-    clean_up_dict["beacon_CID"] = beacon_CID
-    conn, queries = set_up_sql_operations(beacon_config_dict)  # + 1
-    insert_clean_up_row(conn, queries, clean_up_dict)
-    conn.commit()
-    conn.close()  # -1
-    return beacon_CID, want_item_file
+    if status_code == 200:
+        beacon_CID = response_dict["Hash"]
+
+        statement = select(Clean_Up).where(Clean_Up.status == "new")
+        with Session(engine) as session:
+            results = session.exec(statement)
+            try:
+                clean_up = results.one()
+                one_available = True
+                clean_up.status = "old"
+            except NoResultFound:
+                one_available = False
+
+        insert_DTS = get_DTS()
+        insert_datetime = datetime.fromisoformat(insert_DTS)
+        satisfy_target_DTS = insert_datetime + satisfy_timedelta
+        clean_up_entry = Clean_Up(
+            insert_DTS=insert_DTS,
+            satisfy_target_DTS=satisfy_target_DTS,
+            status="new",
+            want_item_file=want_item_file,
+            beacon_CID=beacon_CID,
+        )
+
+        with Session(engine) as session:
+            if one_available:
+                session.add(clean_up)
+            session.add(clean_up_entry)
+            session.commit()
+        if logging_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg=f"Create {beacon_CID}",
+            )
+    else:
+        want_item_file = None
+        beacon_CID = None
+        if debug_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="error",
+                msg=f"Beacon not created ipfs add failed with {status_code} for peer table row CID {peer_row_CID}",
+            )
+    return status_code, beacon_CID, want_item_file
 
 
-def flash_beacon(logger, beacon_config_dict, beacon_CID, logging_enabled):
-    url_dict = get_url_dict()
-
-    execute_request(
-        url_key="get",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=beacon_config_dict,
-        param={
-            "arg": beacon_CID,
-        },
-    )
-    if logging_enabled:
-        logger.debug("Flash off")
-
-    return
-
-
-def satisfy_main():
+def flash_beacon(
+    call_stack: str,
+    logging_enabled: bool,
+    debug_enabled: bool,
+    component_test: bool,
+    config_dict: str,
+    beacon_CID: str,
+) -> str:
     """
-    Rapid shutdown is initiated from here
-    otherwise from beacon.
+    flash_beacon _summary_
+
+    _extended_summary_
+
+    Arguments:
+        call_stack {str} -- _description_
+        logging_enabled {bool} -- _description_
+        debug_enabled {bool} -- _description_
+        component_test {bool} -- _description_
+        config_dict {str} -- _description_
+        beacon_CID {str} -- _description_
+
+    Returns:
+        str -- _description_
     """
-    # import psutil
 
-    # p = psutil.Process()
-    # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
-    config_dict = get_satisfy_config_dict()
-    logging_enabled = 0
-
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
-
-    wait_seconds = int(config_dict["wait_before_startup"])
-    logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
-    sleep(wait_seconds)  # config value
-    logger.info("Satisfy startup.")
-    # logger.info("Shutdown signal comes from Beacon.")
-
-    q_server_port = int(config_dict["q_server_port"])
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    queue_server.register("get_satisfy_queue")
-    queue_server.register("get_beacon_queue")
-    queue_server.connect()
-    in_bound = queue_server.get_satisfy_queue()
-    out_bound = queue_server.get_beacon_queue()
-    satisfy_dict = (
-        in_bound.get()
-    )  # wait for beacon to provide a wait time ans a beacon_cid
-    while satisfy_dict["status"] == "run":
-        want_item_file = satisfy_dict["want_item_file"]
-        out_bound.put_nowait(satisfy_dict)
-        try:
-            satisfy_dict = in_bound.get(timeout=int(satisfy_dict["wait_time"]))
-        except Empty:
-            pass
-        satisfy_beacon(logger, config_dict, want_item_file, logging_enabled)
-        conn, queries = set_up_sql_operations(config_dict)  # + 1
-        shutdown_row_dict = select_shutdown_entry(conn, queries)
-        if shutdown_row_dict["enabled"]:
-            break
-        conn.close()
-
-    out_bound.put_nowait(satisfy_dict)
-    logger.info("Satisfy shutdown.")
-    return
-
-
-def satisfy_beacon(logger, config_dict, want_item_file, logging_enabled):
-    url_dict = get_url_dict()
-
-    param = {"only-hash": "false", "pin": "true", "cid-version": 1}
-
-    f = open(want_item_file, "rb")
-    file = {"file": f}
-    execute_request(
-        url_key="add",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
-        param=param,
-        file=file,
-    )
-    f.close()
+    call_stack = call_stack + ":flash_beacon"
+    status_code = 200
     if logging_enabled:
-        logger.debug(f"Satisfy {want_item_file}")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Flash on.",
+        )
 
-    return
+    if component_test:
+        sleep(int(config_dict["beacon_length_seconds"]))
+        status_code = 200
+
+    else:
+        response, status_code, response_dict = execute_request(  # wait for satisfy
+            url_key="get",
+            param={
+                "arg": beacon_CID,
+            },
+            timeout=(
+                3.05,
+                310,
+            ),  # control time out to avoid retries should this be calculated???????
+            call_stack=call_stack,
+        )
+        if status_code != 200:
+            if debug_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="Error",
+                    msg=f"Beacon flash panic, ipfs get failed with {status_code} for {beacon_CID}.",
+                )
+
+    if logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Flash off.",
+        )
+
+    return status_code
+
+
+if __name__ == "__main__":
+    from multiprocessing import set_start_method, freeze_support
+    import os
+
+    freeze_support()
+    set_start_method("spawn")
+
+    os.environ["DIYIMS_ROAMING"] = "RoamingDev"
+    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["QUEUES_ENABLED"] = "0"
+
+    status_code = beacon_main(
+        "__main__",
+    )

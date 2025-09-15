@@ -1,205 +1,257 @@
 # import os
 from time import sleep
 from multiprocessing import Process, set_start_method, freeze_support
-from diyims.beacon import beacon_main, satisfy_main
-from diyims.peer_capture import capture_peer_main
-from diyims.capture_want_lists import capture_peer_want_lists
-from diyims.ipfs_utils import wait_on_ipfs, publish_main
-from diyims.logger_utils import get_logger, logger_server_main
+from diyims.beacon import beacon_main
+from diyims.provider_capture import provider_capture_main
+from diyims.wantlist_capture_submit import wantlist_capture_submit_main
+from diyims.ipfs_utils import wait_on_ipfs
+from diyims.logger_utils import add_log
 from diyims.config_utils import get_scheduler_config_dict
 from diyims.queue_server import queue_main
 from diyims.database_utils import reset_peer_table_status
 from diyims.peer_utils import select_local_peer_and_update_metrics
-from diyims.header_chain_utils import monitor_peer_publishing
-from diyims.peer_utils import monitor_peer_table_maint
-from diyims.general_utils import clean_up
+from diyims.monitor_peer_publishing import monitor_peer_publishing_main
+from diyims.peer_maintenance import peer_maintenance_main
+from diyims.general_utils import clean_up, reset_shutdown, set_controls
+from diyims.publish import publish_main
 
 
-def scheduler_main(roaming):
-    if roaming != "Roaming":
+def scheduler_main(call_stack, roaming):
+    if __name__ != "__main__":
         freeze_support()
         set_start_method("spawn")
 
-    scheduler_config_dict = get_scheduler_config_dict()
-    logger = get_logger(scheduler_config_dict["log_file"], "none")
-    wait_on_ipfs(logger)
-    wait_seconds = int(scheduler_config_dict["wait_before_startup"])
-    logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
+    call_stack = call_stack + ":scheduler_main"
+    config_dict = get_scheduler_config_dict()
+    SetControlsReturn = set_controls(call_stack, config_dict)
+
+    wait_on_ipfs(call_stack)
+    wait_seconds = int(config_dict["wait_before_startup"])
+    if SetControlsReturn.logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Waiting for {wait_seconds} seconds before startup.",
+        )
     sleep(wait_seconds)  # config value
-    logger.info("Scheduler startup.")
-    # logger.info("Shutdown is dependent upon the shutdown of the scheduled tasks")
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Scheduler startup.",
+    )
 
-    queue_server_main_process = Process(target=queue_main)  # 1
-    sleep(int(scheduler_config_dict["submit_delay"]))
+    queue_server_main_process = Process(target=queue_main, args=(call_stack,))
+    sleep(int(config_dict["submit_delay"]))
     queue_server_main_process.start()
-    logger.debug("queue_server_main started.")
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Queue Server startup.",
+    )
 
-    if scheduler_config_dict["reset_enable"] == "True":
-        reset_peer_table_status_process = Process(target=reset_peer_table_status)
-        sleep(int(scheduler_config_dict["submit_delay"]))
+    if config_dict["reset_enable"] == "True":
+        reset_peer_table_status_process = Process(
+            target=reset_peer_table_status, args=(call_stack,)
+        )
+        sleep(int(config_dict["submit_delay"]))
         reset_peer_table_status_process.start()
-        logger.info("Reset peer table status started.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Peer table reset startup.",
+        )
         reset_peer_table_status_process.join()
-        logger.info("Reset peer table status completed.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Peer table reset complete.",
+        )
 
         clean_up_process = Process(
             target=clean_up,
-            args=(roaming,),
+            args=(
+                call_stack,
+                roaming,
+            ),
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
+        sleep(int(config_dict["submit_delay"]))
         clean_up_process.start()
-        logger.info("Clean up process started.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Clean up startup.",
+        )
         clean_up_process.join()
-        logger.info("Clean up process completed.")
-
-    if (
-        scheduler_config_dict["publish_enable"] == "True"
-        or scheduler_config_dict["publish_enable"] == "Only"
-    ):
-        publish_main_process = Process(
-            target=publish_main,  # 2
-            args=("Normal",),
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Clean up complete.",
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        publish_main_process.start()
-        logger.debug("publish_main started.")
 
-        monitor_peer_publishing_main_process = Process(
-            target=monitor_peer_publishing  # 3
-        )  # 1
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        monitor_peer_publishing_main_process.start()
-        logger.debug("monitor_peer_publishing_main_process started.")
-
-        monitor_peer_table_maint_process = Process(target=monitor_peer_table_maint)  # 4
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        monitor_peer_table_maint_process.start()
-        logger.debug("Monitor peer table maint started.")
-
-    if scheduler_config_dict["metrics_enable"] == "True":
+    if config_dict["metrics_enable"] == "True":
         select_local_peer_and_update_metrics_process = Process(
-            target=select_local_peer_and_update_metrics
+            target=select_local_peer_and_update_metrics,
+            args=(call_stack,),
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
+        sleep(int(config_dict["submit_delay"]))
         select_local_peer_and_update_metrics_process.start()
-        logger.debug("update metrics started.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Metrics update startup.",
+        )
         select_local_peer_and_update_metrics_process.join()
-        logger.debug("update metrics completed.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Metrics update complete.",
+        )
 
-    if scheduler_config_dict["beacon_enable"] == "True":
+    if config_dict["beacon_enable"] == "True":
         beacon_main_process = Process(
-            target=beacon_main,  # 5
+            target=beacon_main,
+            args=(call_stack,),
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
+        sleep(int(config_dict["submit_delay"]))
         beacon_main_process.start()
-        logger.debug("Beacon_main started.")
-
-        satisfy_main_process = Process(
-            target=satisfy_main,  # 6
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Beacon startup.",
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        satisfy_main_process.start()
-        logger.debug("Satisfy_main started.")
 
-    if scheduler_config_dict["provider_enable"] == "True":
-        logger_server_provider_process = Process(
-            target=logger_server_main,
-            args=("PP",),  # 7
+    if config_dict["provider_enable"] == "True":
+        capture_provider_process = Process(
+            target=provider_capture_main,
+            args=(
+                call_stack,
+                "PP",
+            ),
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        logger_server_provider_process.start()
-        logger.debug("logger_server_provider started.")
-        # capture_provider_want_lists_process = Process(  # 5
-        #    target=capture_peer_want_lists, args=("PP",)
-        # )
-        # sleep(int(scheduler_config_dict["submit_delay"]))
-        # capture_provider_want_lists_process.start()
-        # logger.info("capture_provider_want_lists started.")
-        capture_provider_process = Process(target=capture_peer_main, args=("PP",))  # 8
-        sleep(int(scheduler_config_dict["submit_delay"]))
+        sleep(int(config_dict["submit_delay"]))
         capture_provider_process.start()
-        logger.debug("capture_provider_main started.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Provider Capture startup.",
+        )
 
-    if scheduler_config_dict["bitswap_enable"] == "True":  # TODO: proper names
-        # logger_server_bitswap_process = Process(target=logger_server_main, args=("BP",))
-        # sleep(int(scheduler_config_dict["submit_delay"]))
-        # logger_server_bitswap_process.start()
-        # logger.debug("logger_server_bitswap started.")
-        # capture_bitswap_want_lists_process = Process(
-        #    target=capture_peer_want_lists, args=("BP",)
-        # )
-        # sleep(int(scheduler_config_dict["submit_delay"]))
-        # capture_bitswap_want_lists_process.start()
-        # logger.info("capture_bitswap_want_lists started.")
-        # capture_bitswap_process = Process(target=capture_peer_main, args=("BP",))
-        # sleep(int(scheduler_config_dict["submit_delay"]))
-        # capture_bitswap_process.start()
-        # logger.info("capture_bitswap_main started.")
-
+    if config_dict["wantlist_enable"] == "True":
         capture_provider_want_lists_process = Process(
-            target=capture_peer_want_lists,
-            args=("PP",),  # 9
+            target=wantlist_capture_submit_main,
+            args=(
+                call_stack,
+                "PP",
+            ),
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
+        sleep(int(config_dict["submit_delay"]))
         capture_provider_want_lists_process.start()
-        logger.debug("capture_provider_want_lists started.")
-
-    if scheduler_config_dict["swarm_enable"] == "True":
-        logger_server_swarm_process = Process(target=logger_server_main, args=("SP",))
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        logger_server_swarm_process.start()
-        logger.debug("logger_server_swarm started.")
-        capture_swarm_want_lists_process = Process(
-            target=capture_peer_want_lists, args=("SP",)
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Want List Capture startup.",
         )
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        capture_swarm_want_lists_process.start()
-        logger.debug("capture_swarm_want_lists started.")
-        capture_swarm_process = Process(target=capture_peer_main, args=("SP",))
-        sleep(int(scheduler_config_dict["submit_delay"]))
-        capture_swarm_process.start()
-        logger.debug("capture_swarm_main started.")
 
-    if scheduler_config_dict["publish_enable"] == "Only":
-        publish_main_process.join()
-        monitor_peer_publishing_main_process.join()
-        monitor_peer_table_maint_process.join()
+    if config_dict["peer_maint_enable"] == "True":
+        peer_table_maintenance_process = Process(
+            target=peer_maintenance_main,
+            args=(call_stack,),
+        )
+        sleep(int(config_dict["submit_delay"]))
+        peer_table_maintenance_process.start()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Peer Maintenance startup.",
+        )
 
-    if scheduler_config_dict["beacon_enable"] == "True":
+    if config_dict["publish_enable"] == "True":
+        publish_main_process = Process(
+            target=publish_main,
+            args=(
+                call_stack,
+                "Normal",
+            ),
+        )
+        sleep(int(config_dict["submit_delay"]))
+        publish_main_process.start()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Publish startup.",
+        )
+
+    if config_dict["remote_monitor_enable"] == "True":
+        monitor_peer_publishing_main_process = Process(
+            target=monitor_peer_publishing_main,
+            args=(call_stack,),
+        )
+        sleep(int(config_dict["submit_delay"]))
+        monitor_peer_publishing_main_process.start()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Remote Monitor startup.",
+        )
+
+    if config_dict["beacon_enable"] == "True":
         beacon_main_process.join()
-        satisfy_main_process.join()
-    if scheduler_config_dict["provider_enable"] == "True":
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Beacon completed.",
+        )
+    if config_dict["provider_enable"] == "True":
         capture_provider_process.join()
-        # capture_provider_want_lists_process.join()
-    if scheduler_config_dict["bitswap_enable"] == "True":
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Provider Capture completed.",
+        )
+    if config_dict["wantlist_enable"] == "True":
         capture_provider_want_lists_process.join()
-        # capture_provider_process.join()
-        # capture_bitswap_process.join()
-        # capture_bitswap_want_lists_process.join()
-    if scheduler_config_dict["swarm_enable"] == "True":
-        capture_swarm_process.join()
-        capture_swarm_want_lists_process.join()
-
-    if scheduler_config_dict["publish_enable"] == "True":
-        # logger.info("issuing terminate of publish.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Want List Capture completed.",
+        )
+    if config_dict["peer_maint_enable"] == "True":
+        peer_table_maintenance_process.join()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Peer Maintenance completed.",
+        )
+    if config_dict["publish_enable"] == "True":
         publish_main_process.join()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Publish completed.",
+        )
+    if config_dict["remote_monitor_enable"] == "True":
         monitor_peer_publishing_main_process.join()
-        monitor_peer_table_maint_process.join()
-
-    if scheduler_config_dict["provider_enable"] == "True":
-        logger.debug("issuing terminate of logger_server_provider .")
-        logger_server_provider_process.terminate()
-    if scheduler_config_dict["bitswap_enable"] == "True":
-        logger.debug("issuing terminate of logger_server_bitswap .")
-        # logger_server_bitswap_process.terminate()
-    if scheduler_config_dict["swarm_enable"] == "True":
-        logger.debug("issuing terminate of logger_server_swarm .")
-        logger_server_swarm_process.terminate()
-
-    logger.info("Issuing terminate of Queue Server .")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Remote Monitor completed.",
+        )
     queue_server_main_process.terminate()
 
-    logger.info("Scheduler shutdown.")
+    # logger.info("Scheduler shutdown.")
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Queue Server terminated.",
+    )
+
+    reset_shutdown(call_stack)
+
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Scheduler completed.",
+    )
 
     return
 
@@ -207,4 +259,8 @@ def scheduler_main(roaming):
 if __name__ == "__main__":
     freeze_support()
     set_start_method("spawn")
-    scheduler_main()
+    # monkeypatch.setenv("DIYIMS_ROAMING", "RoamingDev")
+    scheduler_main(
+        "cmd",
+        "RoamingDev",
+    )

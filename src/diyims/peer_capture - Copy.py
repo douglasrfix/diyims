@@ -16,6 +16,7 @@ removed i.e. unpinned and a garbage collection has run.
 
 """
 
+import os
 import json
 import ipaddress
 import psutil
@@ -25,26 +26,33 @@ from datetime import datetime
 from sqlite3 import IntegrityError
 from time import sleep
 from multiprocessing.managers import BaseManager
+from multiprocessing import set_start_method, freeze_support
 from sqlmodel import create_engine, Session, select
-from diyims.ipfs_utils import get_url_dict
+
+# from diyims.ipfs_utils import get_url_dict
 from diyims.database_utils import (
     insert_peer_row,
     refresh_peer_row_from_template,
-    select_peer_table_entry_by_key,
+    # select_peer_table_entry_by_key,
     set_up_sql_operations,
     refresh_log_dict,
-    insert_log_row,
-    update_peer_table_status_WLW_to_WLR,
+    # insert_log_row,
+    # update_peer_table_status_WLW_to_WLR,
     # update_peer_table_version,
     update_peer_table_peer_type_BP_to_PP,
     update_peer_table_peer_type_SP_to_PP,
-    select_shutdown_entry,
 )
-from diyims.general_utils import get_network_name, get_shutdown_target, get_DTS
-from diyims.logger_utils import get_logger
-from diyims.config_utils import get_capture_peer_config_dict
+from diyims.general_utils import (
+    get_network_name,
+    get_shutdown_target,
+    get_DTS,
+    shutdown_query,
+)
+from diyims.logger_utils import add_log
+from diyims.config_utils import get_provider_capture_config_dict
 from diyims.path_utils import get_path_dict
-from diyims.sqlmodels import Peer_Address
+from diyims.sqlmodels import Peer_Address, Peer_Table
+from sqlalchemy.exc import NoResultFound
 
 #  psutil.BELOW_NORMAL_PRIORITY_CLASS,
 #  psutil.NORMAL_PRIORITY_CLASS,
@@ -58,184 +66,245 @@ from diyims.sqlmodels import Peer_Address
 #    insert_timestamp: str | None = None
 
 
-def capture_peer_main(peer_type):
-    p = psutil.Process()
+def provider_capture_main(call_stack, peer_type):
+    if __name__ != "__main__":
+        freeze_support()
+        try:
+            set_start_method("spawn")
+        except RuntimeError:
+            pass
+    call_stack = call_stack + ":provider_capture_main"
+    config_dict = get_provider_capture_config_dict()
+    queues_enabled = bool(int(config_dict["queues_enabled"]))
+    try:
+        queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
+    except KeyError:
+        pass
+    try:
+        component_test = bool(int(os.environ["COMPONENT_TEST"]))
+    except KeyError:
+        component_test = False
 
-    pid = p.pid
-    capture_peer_config_dict = get_capture_peer_config_dict()
-    logger = get_logger(capture_peer_config_dict["log_file"], peer_type)
-    wait_seconds = int(capture_peer_config_dict["wait_before_startup"])
-    logger.debug(f"Waiting for {wait_seconds} seconds before startup.")
-    sleep(wait_seconds)  # config value
-    if peer_type == "PP":
-        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    logging_enabled = bool(int(config_dict["logging_enabled"]))
+    debug_enabled = bool(int(config_dict["debug_enabled"]))
 
-        logger.info("Provider Capture startup.")
-    elif peer_type == "BP":
-        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    if logging_enabled:
+        if queues_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Queues enabled",
+            )
+        if debug_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Debug enabled",
+            )
+        if component_test:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Component test enabled",
+            )
 
-        logger.info("Startup of Bitswap Capture.")
-    elif peer_type == "SP":
-        # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+    wait_before_startup = int(config_dict["wait_before_startup"])
+    if logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Waiting for {wait_before_startup} seconds before startup.",
+        )
+    sleep(wait_before_startup)
 
-        logger.info("Startup of Swarm Capture.")
-    interval_length = int(capture_peer_config_dict["capture_interval_delay"])
-    target_DT = get_shutdown_target(capture_peer_config_dict)
-    max_intervals = int(capture_peer_config_dict["max_intervals"])
-    logger.debug(
-        f"Shutdown target {target_DT} or {max_intervals} intervals of {interval_length} seconds."
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Capture Provider startup.",
     )
-    url_dict = get_url_dict()
+
+    # if peer_type == "PP":
+    # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+
+    # logger.info("Provider Capture startup.")
+    # elif peer_type == "BP":
+    # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+
+    # logger.info("Startup of Bitswap Capture.")
+    # elif peer_type == "SP":
+    # p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)  # TODO: put in config
+
+    # logger.info("Startup of Swarm Capture.")
+
+    target_DT = get_shutdown_target(config_dict)
+    max_intervals = int(config_dict["max_intervals"])
+    if logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Shutdown target {target_DT} or {max_intervals} intervals.",
+        )
+
     network_name = get_network_name()
-    q_server_port = int(capture_peer_config_dict["q_server_port"])
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
 
-    if peer_type == "PP":
-        queue_server.register("get_want_list_queue")
-        queue_server.register("get_provider_queue")
-        queue_server.connect()
-        out_bound = queue_server.get_want_list_queue()
-        in_bound = queue_server.get_provider_queue()
+    if queues_enabled:
+        q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
 
-    elif peer_type == "BP":
-        queue_server.register("get_bitswap_queue")
-        queue_server.connect()
-        out_bound = queue_server.get_bitswap_queue()
+        if peer_type == "PP":
+            queue_server.register("get_want_list_queue")
+            queue_server.register("get_provider_queue")
+            queue_server.connect()
+            out_bound = queue_server.get_want_list_queue()
+            in_bound = queue_server.get_provider_queue()
 
-    elif peer_type == "SP":
-        queue_server.register("get_swarm_queue")
-        queue_server.connect()
-        out_bound = queue_server.get_swarm_queue()
+        elif peer_type == "BP":
+            queue_server.register("get_bitswap_queue")
+            queue_server.connect()
+            out_bound = queue_server.get_bitswap_queue()
+
+        elif peer_type == "SP":
+            queue_server.register("get_swarm_queue")
+            queue_server.connect()
+            out_bound = queue_server.get_swarm_queue()
+    else:
+        out_bound = ""
 
     capture_interval = 0
     total_found = 0
     total_added = 0
     total_promoted = 0
+
     current_DT = datetime.now()
     while target_DT > current_DT and capture_interval < max_intervals:
         capture_interval += 1
-        # logger.debug(f"Start of Interval {capture_interval}")
+
         msg = f"Start of peer capture interval {capture_interval}"
-        log_dict = (
-            refresh_log_dict()
-        )  # TODO: rename template  maybe create a function to condense this
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peer_capture_main-1"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = peer_type
-        log_dict["msg"] = msg
-        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
-        conn.close()
-        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-        shutdown_row_dict = select_shutdown_entry(
-            conn,
-            queries,
-        )
-        conn.close()
-        if shutdown_row_dict["enabled"]:
+        if logging_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg=msg,
+            )
+        if shutdown_query(call_stack):
             break
 
-        found, added, promoted, duration, modified = capture_peers(
-            logger,
-            # conn,
-            # queries,
-            capture_peer_config_dict,
-            url_dict,
-            out_bound,
-            peer_type,
-            network_name,
-            # Uconn,
-            # Uqueries,
-            # Rconn,
-            # Rqueries,
+        status_code, found, added, promoted, duration, released, modified = (
+            capture_peers(
+                call_stack,
+                config_dict,
+                queues_enabled,
+                peer_type,
+                network_name,
+                out_bound,
+                logging_enabled,
+            )
         )
-        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-        shutdown_row_dict = select_shutdown_entry(
-            conn,
-            queries,
-        )
-        conn.close()
-        if shutdown_row_dict["enabled"]:
+
+        if status_code != 200:
+            if logging_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg="Capture peers failed.",
+                )
+
+        if shutdown_query(call_stack):
             break
 
         total_found += found
         total_added += added
         total_promoted += promoted
 
-        if modified > 0:
-            out_bound.put_nowait("wake up")
+        if released > 0:
+            if queues_enabled:
+                out_bound.put_nowait("wake up")
 
-        msg = f"Interval {capture_interval} complete with find provider duration {duration}."
-        log_dict = refresh_log_dict()
-        log_dict["DTS"] = get_DTS()
-        log_dict["process"] = "peer_capture_main-2"
-        log_dict["pid"] = pid
-        log_dict["peer_type"] = peer_type
-        log_dict["msg"] = msg
-        conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-        insert_log_row(conn, queries, log_dict)
-        conn.commit()
-        conn.close()
+        msg = f"Interval {capture_interval} complete with find provider duration {duration} and {released} released."
+        if logging_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg=msg,
+            )
 
-        try:
-            in_bound.get(
-                timeout=int(capture_peer_config_dict["capture_interval_delay"])
-            )
-            conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-            shutdown_row_dict = select_shutdown_entry(
-                conn,
-                queries,
-            )
-            conn.close()
-            if shutdown_row_dict["enabled"]:
-                break
-        except Empty:
-            pass
+        if queues_enabled:
+            try:
+                in_bound.get(timeout=int(config_dict["capture_interval_delay"]))
+            except Empty:
+                pass
+        else:
+            sleep(int(config_dict["capture_interval_delay"]))
+
+        if shutdown_query(call_stack):
+            break
         current_DT = datetime.now()
 
-    log_string = f"{total_found} {peer_type} found, {total_promoted} promoted and {total_added} added in {capture_interval} intervals)"
-    logger.info(log_string)
+    if logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"{total_found} {peer_type} found, {total_promoted} promoted and {total_added} added in {capture_interval} intervals)",
+        )
 
-    logger.info("Provider Capture shutdown.")
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Capture Providers complete.",
+    )
     return
 
 
 def capture_peers(
-    logger,
-    # conn,
-    # queries,
-    capture_peer_config_dict,
-    url_dict,
-    out_bound,
+    call_stack,
+    config_dict,
+    queues_enabled,
     peer_type,
     network_name,
-    # Uconn,
-    # Uqueries,
-    # Rconn,
-    # Rqueries,
+    out_bound: str,
+    logging_enabled: bool,
 ):
     duration = datetime.fromisoformat(get_DTS())
+    call_stack = call_stack + ":capture_peers"
+    found = 0
+    added = 0
+    promoted = 0
+    released = 0
+    modified = 0
 
     if peer_type == "PP":
         response, status_code, response_dict = execute_request(
             url_key="id",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=capture_peer_config_dict,
+            call_stack=call_stack,
+            http_500_ignore=False,
         )
+        if status_code == 200:
+            self = response_dict["ID"]  # TODO: replace with LP
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="Error",
+                msg="Capture Peers self ID failed with ignore.",
+            )
 
-        self = response_dict["ID"]
+            return status_code, found, added, promoted, duration, released, modified
+
         start_DTS = get_DTS()
 
         response, status_code, response_dict = execute_request(
             url_key="find_providers",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
+            http_500_ignore=False,
         )
+        if status_code != 200 and status_code != 500:
+            add_log(
+                process=call_stack,
+                peer_type="Error",
+                msg="Capture Peers find providers failed.",
+            )
+
+            return status_code, found, added, promoted, duration, released, modified
 
         if status_code == 200:
             stop_DTS = get_DTS()
@@ -243,30 +312,31 @@ def capture_peers(
             stop = datetime.fromisoformat(stop_DTS)
             duration = stop - start
 
-            found, added, promoted, modified = decode_findprovs_structure(
-                logger,
-                # conn,
-                # queries,
-                capture_peer_config_dict,
-                url_dict,
-                response,
-                out_bound,
-                # Uconn,
-                # Uqueries,
-                # ,
-                # Rqueries,
-                self,
+            status_code, found, added, promoted, released, modified = (
+                decode_findprovs_structure(
+                    call_stack,
+                    config_dict,
+                    queues_enabled,
+                    response,
+                    self,
+                    out_bound,
+                    logging_enabled,
+                )
             )
+            if status_code != 200:
+                add_log(
+                    process=call_stack,
+                    peer_type="Error",
+                    msg="Capture Peers from decode findprovs failed.",
+                )
 
     elif peer_type == "BP":
         response, status_code, response_dict = execute_request(
             url_key="bitswap_stat",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
         )
-
+        # TODO: 700 Later
         found, added, promoted = decode_bitswap_stat_structure(
             # conn,
             # queries,
@@ -276,17 +346,16 @@ def capture_peers(
             # Uqueries,
             # Rconn,
             # Rqueries,
+            queues_enabled,
         )
 
     elif peer_type == "SP":
         response, status_code, response_dict = execute_request(
             url_key="swarm_peers",
-            logger=logger,
-            url_dict=url_dict,
-            config_dict=capture_peer_config_dict,
             param={"arg": network_name},
+            call_stack=call_stack,
         )
-
+        # TODO: 700 later
         found, added, promoted = decode_swarm_structure(
             # conn,
             # queries,
@@ -296,33 +365,33 @@ def capture_peers(
             # Uqueries,
             # Rconn,
             # Rqueries,
+            queues_enabled,
         )
 
-    return found, added, promoted, duration, modified
+    return status_code, found, added, promoted, duration, released, modified
 
 
 def decode_findprovs_structure(
-    logger,
-    # conn,
-    # queries,
-    capture_peer_config_dict,
-    url_dict,
+    call_stack,
+    config_dict,
+    queues_enabled,
     response,
-    out_bound,
-    # Uconn,
-    # Uqueries,
-    # Rconn,
-    # Rqueries,
     self,
+    out_bound: str,
+    logging_enabled: bool,
 ):
+    status_code = 200
     found = 0
     added = 0
     promoted = 0
     modified = 0
-    p = psutil.Process()
-    pid = p.pid
+    released = 0
     peer_type = "PP"
-    address_wait_is_enabled = 1
+    # address_wait_is_enabled = 1
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
     line_list = []
     for line in response.iter_lines():
@@ -344,75 +413,75 @@ def decode_findprovs_structure(
                 peer_ID = peer_dict["ID"]
                 if self != peer_ID:
                     address_list = peer_dict["Addrs"]
-                    if capture_provider_addresses(address_list, peer_ID, peer_type):
-                        address_available = True
 
                     peer_table_dict = refresh_peer_row_from_template()
-                    peer_table_dict["peer_ID"] = peer_dict["ID"]
-                    peer_table_dict["local_update_DTS"] = get_DTS()
-                    peer_table_dict["peer_type"] = peer_type
+                    # peer_table_dict["peer_ID"] = peer_dict["ID"]
+                    # peer_table_dict["local_update_DTS"] = get_DTS()
+                    # peer_table_dict["peer_type"] = peer_type
+                    # peer_table_dict["disabled"] = 1
 
-                    if address_available:  # set initial value and move on
-                        peer_table_dict["processing_status"] = "WLR"
-                        # peer_table_dict["version"] = connect_address
-                    else:
-                        #  always wait for addresses
-                        if address_wait_is_enabled:
-                            peer_table_dict["processing_status"] = "WLW"
-                        else:
-                            peer_table_dict["processing_status"] = "WLR"
-                        # peer_table_dict["version"] = "0"
-                    conn, queries = set_up_sql_operations(
-                        capture_peer_config_dict
-                    )  # +1
-                    try:  # TODO: test here for existing peer first
-                        insert_peer_row(conn, queries, peer_table_dict)
-                        conn.commit()
-                        conn.close()
-                        # out_bound.put_nowait("wake up")
-                        if address_available:
-                            modified += 1
-
-                        original_peer_type = peer_table_dict["peer_type"]
-
-                    except IntegrityError:
-                        # conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-                        conn.rollback()
-                        peer_table_entry = select_peer_table_entry_by_key(
-                            conn, queries, peer_table_dict
-                        )
-                        conn.close()
-
-                        original_peer_type = peer_table_entry["peer_type"]
-                        peer_table_dict["peer_ID"] = peer_table_entry["peer_id"]
-
-                        if peer_table_entry["processing_status"] == "WLW":
-                            # if (
-                            #    peer_table_entry["version"] == "0"
-                            # ):  # exiting entry waiting on address
-                            if address_available:
-                                # address is available, wait no longer
-                                # peer_table_dict["processing_status"] = "WLR"
-                                # peer_table_dict["version"] = connect_address
-
-                                # WLW -> WLR
-                                conn, queries = set_up_sql_operations(
-                                    capture_peer_config_dict
-                                )  # +1
-                                update_peer_table_status_WLW_to_WLR(
-                                    conn, queries, peer_table_dict
+                    statement = select(Peer_Table).where(Peer_Table.peer_ID == peer_ID)
+                    with Session(engine) as session:
+                        results = session.exec(statement)
+                        try:
+                            current_peer = results.one()
+                            original_peer_type = current_peer.peer_type
+                            if current_peer.processing_status == "WLW":
+                                status_code, address_available, disabled = (
+                                    capture_provider_addresses(
+                                        call_stack, address_list, peer_ID, peer_type
+                                    )
                                 )
-                                conn.commit()
-                                conn.close()
+                                if not disabled and address_available:
+                                    current_peer.processing_status = "WLR"
+                                    current_peer.local_update_DTS = (get_DTS(),)
+                                    current_peer.disabled = 0
+                                    session.add(current_peer)
+                                    session.commit()
+                                    modified += 1
+                                    released += 1
 
-                                modified += 1
+                        except NoResultFound:
+                            original_peer_type = peer_type
+                            status_code, address_available, disabled = (
+                                capture_provider_addresses(
+                                    call_stack, address_list, peer_ID, peer_type
+                                )
+                            )
+                            if disabled or not address_available:
+                                peer_table_row = Peer_Table(
+                                    peer_ID=peer_ID,
+                                    local_update_DTS=get_DTS(),
+                                    origin_update_DTS=get_DTS(),
+                                    peer_type=peer_type,
+                                    original_peer_type=peer_type,
+                                    processing_status="WLW",
+                                    disabled=0,
+                                )
+                            else:
+                                peer_table_row = Peer_Table(
+                                    peer_ID=peer_ID,
+                                    local_update_DTS=get_DTS(),
+                                    origin_update_DTS=get_DTS(),
+                                    peer_type=peer_type,
+                                    original_peer_type=peer_type,
+                                    processing_status="WLR",
+                                    disabled=0,
+                                )
+                                released += 1
+                            try:
+                                session.add(peer_table_row)
+                                session.commit()
+                                added += 1
+
+                            except IntegrityError:
+                                # already released
+                                pass
 
                         if original_peer_type == "BP":
                             # promote
                             # BP -> PP
-                            conn, queries = set_up_sql_operations(
-                                capture_peer_config_dict
-                            )  # +1
+                            conn, queries = set_up_sql_operations(config_dict)  # +1
                             update_peer_table_peer_type_BP_to_PP(
                                 conn, queries, peer_table_dict
                             )
@@ -425,9 +494,7 @@ def decode_findprovs_structure(
                         elif original_peer_type == "SP":
                             # promote
                             # SP -> PP
-                            conn, queries = set_up_sql_operations(
-                                capture_peer_config_dict
-                            )  # +1
+                            conn, queries = set_up_sql_operations(config_dict)  # +1
                             update_peer_table_peer_type_SP_to_PP(
                                 conn, queries, peer_table_dict
                             )
@@ -437,81 +504,57 @@ def decode_findprovs_structure(
                             modified += 1
                             promoted += 1
 
-                        elif (
-                            original_peer_type == "LP"
-                        ):  # added by db-init no longer applies until moved out of logic constrained by self
-                            msg = "Local peer was identified as a provider"
-                            log_dict = refresh_log_dict()
-                            log_dict["DTS"] = get_DTS()
-                            log_dict["process"] = "peer_capture_decode_provider-2"
-                            log_dict["pid"] = pid
-                            log_dict["peer_type"] = "PP"
-                            log_dict["msg"] = msg
-                            conn, queries = set_up_sql_operations(
-                                capture_peer_config_dict
-                            )  # +1
-                            insert_log_row(conn, queries, log_dict)
-                            conn.commit()
-                            conn.close()
-
-                    if original_peer_type == "PP":
-                        msg = "put wake up from PP peer capture"
-                        log_dict = refresh_log_dict()
-                        log_dict["DTS"] = get_DTS()
-                        log_dict["process"] = "peer_capture_decode_provider-3"
-                        log_dict["pid"] = pid
-                        log_dict["peer_type"] = "PP"
-                        log_dict["msg"] = msg
-                        # insert_log_row(conn, queries, log_dict)
-                        # conn.commit()
+                    if original_peer_type == "PP":  # this should only occur on released
+                        # if not disabled:
+                        if logging_enabled:
+                            msg = "put wake up from PP peer capture"
+                            # add_log(
+                            # process=call_stack,
+                            # peer_type="status",
+                            # msg=msg,
+                            # )
 
                     elif original_peer_type == "BP":
-                        msg = "put promoted from bitswap wake up from PP peer capture"
-                        log_dict = refresh_log_dict()
-                        log_dict["DTS"] = get_DTS()
-                        log_dict["process"] = "peer_capture_decode_provider-4"
-                        log_dict["pid"] = pid
-                        log_dict["peer_type"] = "PP"
-                        log_dict["msg"] = msg
-                        conn, queries = set_up_sql_operations(
-                            capture_peer_config_dict
-                        )  # +1
-                        insert_log_row(conn, queries, log_dict)
-                        conn.commit()
-                        conn.close()
+                        if logging_enabled:
+                            msg = "put promoted from bitswap wake up from PP peer capture"  # released and promoted
+                            add_log(
+                                process=call_stack,
+                                peer_type="status",
+                                msg=msg,
+                            )
 
                     elif original_peer_type == "SP":
-                        msg = "put promoted from swarm wake up from PP peer capture"
-                        log_dict = refresh_log_dict()
-                        log_dict["DTS"] = get_DTS()
-                        log_dict["process"] = "peer_capture_decode_provider-5"
-                        log_dict["pid"] = pid
-                        log_dict["peer_type"] = "PP"
-                        log_dict["msg"] = msg
-                        conn, queries = set_up_sql_operations(
-                            capture_peer_config_dict
-                        )  # +1
-                        insert_log_row(conn, queries, log_dict)
-                        conn.commit()
-                        conn.close()
+                        if logging_enabled:
+                            msg = "put promoted from swarm wake up from PP peer capture"  # released and promoted
+                            add_log(
+                                process=call_stack,
+                                peer_type="status",
+                                msg=msg,
+                            )
+
+                else:
+                    if logging_enabled:
+                        msg = "Local peer was identified as a provider"
+                        add_log(
+                            process=call_stack,
+                            peer_type="status",
+                            msg=msg,
+                        )
+
+                    address_available = True
 
                 if address_available:
                     break  # break to next provider
 
-    log_string = f"{found} providers found, {added} added and {promoted} promoted."
+    log_string = f"{found} providers found, {added} added, released {released} and {promoted} promoted."
+    if logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=log_string,
+        )
 
-    log_dict = refresh_log_dict()
-    log_dict["DTS"] = get_DTS()
-    log_dict["process"] = "peer_capture_decode_provider-6"
-    log_dict["pid"] = pid
-    log_dict["peer_type"] = "PP"
-    log_dict["msg"] = log_string
-    conn, queries = set_up_sql_operations(capture_peer_config_dict)  # +1
-    insert_log_row(conn, queries, log_dict)
-    conn.commit()
-    conn.close()
-
-    return found, added, promoted, modified
+    return status_code, found, added, promoted, released, modified
 
 
 def decode_bitswap_stat_structure(
@@ -523,8 +566,9 @@ def decode_bitswap_stat_structure(
     # Uqueries,
     # Rconn,
     # Rqueries,
+    queues_enabled,
 ):
-    config_dict = get_capture_peer_config_dict()
+    config_dict = get_provider_capture_config_dict()
     found = 0
     added = 0
     promoted = 0
@@ -542,6 +586,7 @@ def decode_bitswap_stat_structure(
         peer_table_dict["processing_status"] = (
             "WLR"  # BP and SP will continue processing until they exceed the
         )
+        peer_table_dict["disabled"] = 0
         # zero want list threshold limit
         conn, queries = set_up_sql_operations(config_dict)  # +1
         try:
@@ -554,13 +599,13 @@ def decode_bitswap_stat_structure(
             conn.close()
             pass
         found += 1
-
-    out_bound.put_nowait("put wake up from BP peer capture")
+    # if queues_enabled:
+    #    out_bound.put_nowait("put wake up from BP peer capture")
 
     msg = "put wake up from BP peer capture"
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
-    log_dict["process"] = "peer_capture_decode_bitswap-1"
+    log_dict["process"] = "provider_capture_decode_bitswap-1"
     log_dict["pid"] = pid
     log_dict["peer_type"] = "BP"
     log_dict["msg"] = msg
@@ -571,7 +616,7 @@ def decode_bitswap_stat_structure(
     msg = log_string
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
-    log_dict["process"] = "peer_capture_decode_bitswap-2"
+    log_dict["process"] = "provider_capture_decode_bitswap-2"
     log_dict["pid"] = pid
     log_dict["peer_type"] = "BP"
     log_dict["msg"] = msg
@@ -589,8 +634,9 @@ def decode_swarm_structure(
     # Uqueries,
     # Rconn,
     # Rqueries,
+    queues_enabled,
 ):
-    config_dict = get_capture_peer_config_dict()
+    config_dict = get_provider_capture_config_dict()
     level_zero_dict = json.loads(r.text)
     level_one_list = level_zero_dict["Peers"]
     found = 0
@@ -605,6 +651,7 @@ def decode_swarm_structure(
         peer_table_dict["local_update_DTS"] = DTS
         peer_table_dict["peer_type"] = "SP"
         peer_table_dict["processing_status"] = "WLR"
+        peer_table_dict["disabled"] = 0
         try:
             conn, queries = set_up_sql_operations(config_dict)  # +1
             insert_peer_row(conn, queries, peer_table_dict)
@@ -615,13 +662,13 @@ def decode_swarm_structure(
         except IntegrityError:
             pass
         found += 1
-
-    out_bound.put_nowait("put wake up from SP peer capture")
+    # if queues_enabled:
+    #    out_bound.put_nowait("put wake up from SP peer capture")
 
     msg = "put wake up from SP peer capture"
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
-    log_dict["process"] = "peer_capture_decode_swarm-1"
+    log_dict["process"] = "provider_capture_decode_swarm-1"
     log_dict["pid"] = pid
     log_dict["peer_type"] = "SP"
     log_dict["msg"] = msg
@@ -632,7 +679,7 @@ def decode_swarm_structure(
     msg = log_string
     log_dict = refresh_log_dict()
     log_dict["DTS"] = get_DTS()
-    log_dict["process"] = "peer_capture_decode_swarm-2"
+    log_dict["process"] = "provider_capture_decode_swarm-2"
     log_dict["pid"] = pid
     log_dict["peer_type"] = "SP"
     log_dict["msg"] = msg
@@ -643,34 +690,77 @@ def decode_swarm_structure(
 
 
 def capture_provider_addresses(
-    address_list: list, peer_ID: str, peer_type: str
+    call_stack: str,
+    address_list: list,
+    peer_ID: str,
+    logging_enabled: bool,
 ) -> bool:
+    call_stack = call_stack + ":capture_provider_addresses"
     address_available = False
+    status_code = 800
     address_source = "PP"
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
-    capture_peer_addresses(
+    capture_addresses(  # provider is source
+        call_stack,
         address_list,
         peer_ID,
         address_source,
     )
+
     param = {"arg": peer_ID}
-    response, status_code, response_dict = execute_request(
+    response, status_code, response_dict = execute_request(  # gather peer addresses
         url_key="id",
         param=param,
+        call_stack=call_stack,
+        http_500_ignore=False,
+        connect_retries=1,
     )
+    # statement_2 = (
+    #        select(Peer_Table)
+    #        .where(Peer_Table.peer_ID == peer_ID)
+    #        )
     if status_code == 200:
         address_source = "FP"
         peer_dict = json.loads(response.text)
         address_list = peer_dict["Addresses"]
-        capture_peer_addresses(
+        capture_addresses(
+            call_stack,
             address_list,
             peer_ID,
             address_source,
         )
+        disabled = 0
+        # with Session(engine) as session:
+        #    results = session.exec(statement_2)#TODO: move to provider decode
+        #    try:
+        #        current_peer = results.one()
+        #        current_peer.disabled = 0
+        #        session.add(current_peer)
+        #        session.commit()
+        #    except NoResultFound:
+        #        pass
+    else:
+        disabled = 1
+        # with Session(engine) as session:
+        #    results = session.exec(statement_2)
+        #    try:
+        #        current_peer = results.one()
+        #        current_peer.disabled = 1
+        #        session.add(current_peer)
+        #        session.commit()
+        #        msg="ID failed and peer disabled."
+        #    except NoResultFound:
+        msg = "ID request failed. Peer most likely unreachable."
+        if logging_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg=msg,
+            )
 
     statement = select(Peer_Address).where(
         Peer_Address.peer_ID == peer_ID,
@@ -683,12 +773,15 @@ def capture_provider_addresses(
         else:
             address_available = True
 
-    return address_available
+    status_code = 200
+
+    return status_code, address_available, disabled
 
 
-def capture_peer_addresses(
-    address_list: list, peer_ID: str, address_source: str
+def capture_addresses(
+    call_stack: str, address_list: list, peer_ID: str, address_source: str
 ) -> bool:
+    call_stack = call_stack + ":capture_addresses"
     for address in address_list:
         address_string = address
         address_ignored = False
@@ -811,11 +904,6 @@ def capture_peer_addresses(
                                 multiaddress = address
                                 multiaddress_valid = True
 
-        # if address_source == "FF":
-        #    multiaddress = address
-        #    multiaddress_valid = True
-        #    available = True
-
         if not address_ignored and multiaddress_valid and address_global:
             available = True
 
@@ -878,4 +966,11 @@ def create_peer_address(
 
 
 if __name__ == "__main__":
-    capture_peer_main("PP")
+    freeze_support()
+    set_start_method("spawn")
+
+    os.environ["DIYIMS_ROAMING"] = "RoamingDev"
+    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["QUEUES_ENABLED"] = "0"
+
+    provider_capture_main("__main__", "PP")

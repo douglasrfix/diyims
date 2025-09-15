@@ -5,6 +5,6 @@ import os
 freeze_support()
 set_start_method("spawn")
 roaming = "Roaming"
-os.environ["ROAMING"] = roaming
+os.environ["DIYIMS_ROAMING"] = roaming
 
 scheduler_main(roaming)

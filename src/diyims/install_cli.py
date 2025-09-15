@@ -54,9 +54,9 @@ def install(
         no matter the source.
 
     """
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     try:
-        install_main(drive_letter, force_install)
+        install_main("cmd-install", drive_letter, force_install)
 
     except UnTestedPlatformError as error:
         print(
@@ -93,9 +93,9 @@ def create_schema(
     """Initializes the database to a known state. If a pre-existing
     installation exists it will simply return with an error message
     """
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     try:
-        create()
+        create("cmd-db")
     except CreateSchemaError as error:
         print(
             f"There was a schema creation problem. If {error.value} is about a table already existing then this is simply a symptom of an existing installation. No changes were made."
@@ -124,9 +124,9 @@ def init_database(
     message
 
     """
-    os.environ["ROAMING"] = str(roaming)
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
     try:
-        init()
+        init("cmd-db")
 
     except PreExistingInstallationError:
         print("Previous installation found. Current installation not changed.")

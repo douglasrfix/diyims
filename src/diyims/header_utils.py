@@ -17,12 +17,13 @@
 
 
 def ipfs_header_add(
+    call_stack,
     DTS,
     object_CID,
     object_type,
     peer_ID,
     config_dict,
-    logger,
+    # logger,
     mode,
     # conn,
     # queries,
@@ -35,10 +36,12 @@ def ipfs_header_add(
     from diyims.requests_utils import execute_request
     from diyims.path_utils import get_path_dict, get_unique_file
     from diyims.ipfs_utils import get_url_dict
+    from diyims.logger_utils import add_log
     import json
 
     path_dict = get_path_dict()
     url_dict = get_url_dict()
+    call_stack = call_stack + ":ipfs_header_add"
 
     if mode != "init":
         q_server_port = int(config_dict["q_server_port"])
@@ -77,15 +80,25 @@ def ipfs_header_add(
     add_file = {"file": f}
     response, status_code, response_dict = execute_request(
         url_key="add",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
         param=param,
         file=add_file,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
+    if status_code == 200:
+        header_CID = response_dict["Hash"]
+    else:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="IPFS Header Panic.",
+        )
+        return status_code, header_CID
 
-    header_CID = response_dict["Hash"]
     conn, queries = set_up_sql_operations(config_dict)
     insert_header_row(conn, queries, header_dict, header_CID)
     conn.commit()
@@ -94,7 +107,7 @@ def ipfs_header_add(
     if mode != "init":
         publish_queue.put_nowait("wake up")
 
-    return header_CID
+    return status_code, header_CID
 
 
 def ipfs_header_update(
@@ -103,7 +116,7 @@ def ipfs_header_update(
     object_type,
     peer_ID,
     config_dict,
-    logger,
+    # logger,
     mode,
     # conn,
     # queries,

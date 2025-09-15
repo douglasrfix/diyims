@@ -1,62 +1,84 @@
-def sign_file(sign_dict, logger, config_dict):
-    from diyims.requests_utils import execute_request
-    from diyims.ipfs_utils import get_url_dict
+import json
 
-    url_dict = get_url_dict()
+from diyims.logger_utils import add_log
+from diyims.requests_utils import execute_request
+from diyims.path_utils import get_path_dict
+from diyims.ipfs_utils import unpack_peer_row_from_cid
 
+
+def sign_file(call_stack, sign_dict, config_dict):
+    call_stack = call_stack + ":sign_file"
     sign_params = {}
 
     f = open(sign_dict["file_to_sign"], "rb")
     sign_files = {"file": f}
     response, status_code, response_dict = execute_request(
         url_key="sign",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
         file=sign_files,
         param=sign_params,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
+    if status_code == 200:
+        id = response_dict["Key"]["Id"]
+        signature = response_dict["Signature"]
+    else:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Sign File Panic.",
+        )
+        id = ""
+        signature = ""
 
-    id = response_dict["Key"]["Id"]
-    signature = response_dict["Signature"]
-
-    return id, signature
+    return status_code, id, signature
 
 
-def verify_file(verify_dict, logger, config_dict):
-    from diyims.requests_utils import execute_request
-    from diyims.ipfs_utils import get_url_dict
-
-    url_dict = get_url_dict()
-
+def verify_file(call_stack, verify_dict, config_dict):
+    call_stack = call_stack + ":verify_file"
     verify_params = {"key": verify_dict["id"], "signature": verify_dict["signature"]}
 
     f = open(verify_dict["signed_file"], "rb")
     verify_files = {"file": f}
     response, status_code, response_dict = execute_request(
         url_key="verify",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
         file=verify_files,
         param=verify_params,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
     f.close()
 
-    signature_valid = response_dict["SignatureValid"]
+    if status_code == 200:
+        signature_valid = response_dict["SignatureValid"]
+    else:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Verify File Panic.",
+        )
+        signature_valid = 0
 
-    return signature_valid
+    return status_code, signature_valid
 
 
-def verify_peer_row_from_cid(peer_row_CID, logger, config_dict):
-    from diyims.ipfs_utils import unpack_peer_row_from_cid
-    from diyims.path_utils import get_path_dict
-    import json
-
+def verify_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
     path_dict = get_path_dict()
+    call_stack = call_stack + "verify_peer_row_from_cid"
+    status_code, peer_row_dict = unpack_peer_row_from_cid(
+        call_stack, peer_row_CID, config_dict
+    )
 
-    peer_row_dict = unpack_peer_row_from_cid(peer_row_CID, config_dict)
+    if status_code != 200:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Verify Peer Row Panic.",
+        )
+        signature_verified = 0
+        peer_row_dict = {}
+        return status_code, signature_verified, peer_row_dict
 
     signing_dict = {}
     signing_dict["peer_ID"] = peer_row_dict["peer_ID"]
@@ -72,6 +94,13 @@ def verify_peer_row_from_cid(peer_row_CID, logger, config_dict):
     verify_dict["id"] = peer_row_dict["id"]
     verify_dict["signature"] = peer_row_dict["signature"]
 
-    signature_verified = verify_file(verify_dict, logger, config_dict)
-
-    return signature_verified, peer_row_dict
+    status_code, signature_verified = verify_file(call_stack, verify_dict, config_dict)
+    if status_code != 200:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Verify Peer Row Panic.",
+        )
+        signature_verified = 0
+        peer_row_dict = {}
+    return status_code, signature_verified, peer_row_dict

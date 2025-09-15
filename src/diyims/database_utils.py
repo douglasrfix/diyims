@@ -34,7 +34,7 @@ def set_up_sql_operations_list(config_dict):
     return conn, queries
 
 
-def reset_peer_table_status():
+def reset_peer_table_status(call_stack):
     # from diyims.config_utils import get_want_list_config_dict
     from diyims.path_utils import get_path_dict
     from diyims.py_version_dep import get_sql_str
@@ -45,6 +45,7 @@ def reset_peer_table_status():
     from diyims.general_utils import get_DTS
 
     # config_dict = get_want_list_config_dict()
+    call_stack = call_stack + ":reset_peer_table_status"
     path_dict = get_path_dict()
     sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
@@ -136,6 +137,7 @@ def insert_peer_row(conn, queries, peer_table_dict):
         processing_status=peer_table_dict["processing_status"],
         agent=peer_table_dict["agent"],
         version=peer_table_dict["version"],
+        disabled=peer_table_dict["disabled"],
     )
     return
 
@@ -405,7 +407,6 @@ def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
         python_version=peer_table_dict["python_version"],
         IPFS_agent=peer_table_dict["IPFS_agent"],
         agent=peer_table_dict["agent"],
-        version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
@@ -430,7 +431,6 @@ def update_peer_table_status_to_NPC_no_update(conn, queries, peer_table_dict):
     queries.update_peer_table_status_to_NPC_no_update(
         conn,
         local_update_DTS=peer_table_dict["local_update_DTS"],
-        version=peer_table_dict["version"],
         peer_ID=peer_table_dict["peer_ID"],
     )
     return
@@ -454,7 +454,7 @@ def refresh_peer_row_from_template():
     peer_row_dict["IPNS_name"] = "null"
     peer_row_dict["id"] = "null"
     peer_row_dict["signature"] = "null"
-    peer_row_dict["signature_valid"] = 0
+    peer_row_dict["signature_valid"] = 000
     peer_row_dict["peer_type"] = "null"
     peer_row_dict["origin_update_DTS"] = "null"
     peer_row_dict["local_update_DTS"] = "null"
@@ -644,6 +644,9 @@ def insert_header_row(conn, queries, header_dict, header_CID):
 
 
 def insert_log_row(conn, queries, log_dict):
+    from time import sleep
+
+    sleep(1)
     queries.insert_log_row(
         conn,
         DTS=log_dict["DTS"],
@@ -667,7 +670,7 @@ def refresh_log_dict():
 
 def refresh_clean_up_dict():
     clean_up_dict = {}
-    clean_up_dict["DTS"] = "null"
+    clean_up_dict["insert_DTS"] = "null"
     clean_up_dict["want_item_file"] = "null"
     clean_up_dict["beacon_CID"] = "null"
     return clean_up_dict
@@ -676,7 +679,7 @@ def refresh_clean_up_dict():
 def insert_clean_up_row(conn, queries, clean_up_dict):
     queries.insert_clean_up_row(
         conn,
-        DTS=clean_up_dict["DTS"],
+        insert_DTS=clean_up_dict["insert_DTS"],
         want_item_file=clean_up_dict["want_item_file"],
         beacon_CID=clean_up_dict["beacon_CID"],
     )
@@ -687,7 +690,7 @@ def insert_clean_up_row(conn, queries, clean_up_dict):
 def select_clean_up_rows_by_date(conn, queries, clean_up_dict):
     with queries.select_clean_up_rows_by_date_cursor(
         conn,
-        DTS=clean_up_dict["DTS"],
+        insert_DTS=clean_up_dict["insert_DTS"],
     ) as cursor:
         key_dict = {}
         i = 0
@@ -703,7 +706,7 @@ def select_clean_up_rows_by_date(conn, queries, clean_up_dict):
 def delete_clean_up_row_by_date(conn, queries, clean_up_dict):
     queries.delete_clean_up_row_by_date(
         conn,
-        DTS=clean_up_dict["DTS"],
+        insert_DTS=clean_up_dict["insert_DTS"],
     )
 
     return
@@ -712,7 +715,7 @@ def delete_clean_up_row_by_date(conn, queries, clean_up_dict):
 def delete_log_rows_by_date(conn, queries, clean_up_dict):
     queries.delete_log_rows_by_date(
         conn,
-        DTS=clean_up_dict["DTS"],
+        DTS=clean_up_dict["insert_DTS"],
     )
 
     return
@@ -721,8 +724,8 @@ def delete_log_rows_by_date(conn, queries, clean_up_dict):
 def delete_want_list_table_rows_by_date(conn, queries, clean_up_dict):
     queries.delete_want_list_table_rows_by_date(
         conn,
-        DTS1=clean_up_dict["DTS"],
-        DTS2=clean_up_dict["DTS"],
+        DTS1=clean_up_dict["insert_DTS"],
+        DTS2=clean_up_dict["insert_DTS"],
     )
 
     return

@@ -19,13 +19,13 @@ from diyims.config_utils import config_install
 # TODO: #12 test ipfs agent at install time
 
 
-def install_main(drive_letter, force_install):
+def install_main(call_stack, drive_letter, force_install):
     try:
         os_platform = test_os_platform()
 
     except UnSupportedPlatformError:
         raise
-
+    call_stack = call_stack + ":install_main"
     override_drive = "False"
     if drive_letter != "Default" and os_platform.startswith("win32"):
         if Path(drive_letter + "/").exists() is not True:

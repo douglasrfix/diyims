@@ -3,10 +3,42 @@ from logging.handlers import RotatingFileHandler
 from logging.handlers import QueueHandler
 from pathlib import Path
 from multiprocessing.managers import BaseManager
-# from time import sleep
+from sqlalchemy.exc import IntegrityError
+from time import sleep
 
 from diyims.path_utils import get_path_dict
 from diyims.config_utils import get_logger_config_dict, get_logger_server_config_dict
+
+
+def add_log(process: str, peer_type: str, msg: str):
+    import psutil
+    from diyims.general_utils import get_DTS
+    from diyims.sqlmodels import Log
+    from diyims.path_utils import get_path_dict
+    from sqlmodel import Session, create_engine
+
+    # from time import sleep
+    # TODO: figure out how to handle dup keys
+    p = psutil.Process()
+    pid = p.pid
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+    while True:
+        log_entry = Log(
+            DTS=get_DTS(), process=process, pid=pid, peer_type=peer_type, msg=msg
+        )
+        try:
+            with Session(engine) as session:
+                session.add(log_entry)
+                session.commit()
+            break
+        except IntegrityError:
+            sleep(1)
 
 
 def get_logger(file, peer_type):

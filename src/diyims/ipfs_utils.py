@@ -47,128 +47,18 @@ def get_url_dict():
     return url_dict
 
 
-def publish_main(mode):
-    """
-    Publish upon request
-
-    """
-    from multiprocessing.managers import BaseManager
-    from queue import Empty
-    from diyims.logger_utils import get_logger
-    from diyims.requests_utils import execute_request
-    from diyims.config_utils import get_publish_config_dict
-    from diyims.database_utils import set_up_sql_operations, select_shutdown_entry
-
-    url_dict = get_url_dict()
-
-    config_dict = get_publish_config_dict()
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
-
-    # last_insert_DTS = "null"
-
-    logger.info("Publish startup.")
-
-    if mode != "init":
-        q_server_port = int(config_dict["q_server_port"])
-        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-        queue_server.register("get_publish_queue")
-        queue_server.connect()
-        in_bound = queue_server.get_publish_queue()
-
-    response, status_code, response_dict = execute_request(
-        url_key="id",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
-    )
-
-    peer_ID = response_dict["ID"]
-
-    conn, queries = set_up_sql_operations(config_dict)
-    # Rconn, Rqueries = set_up_sql_operations(config_dict)
-    peer_table_row = queries.select_peer_table_local_peer_entry(conn)
-    ipns_path = "/ipns/" + peer_table_row["IPNS_name"]
-    conn.close()
-    while True:
-        conn, queries = set_up_sql_operations(config_dict)
-        shutdown_row_dict = select_shutdown_entry(
-            conn,
-            queries,
-        )
-        conn.close()
-        if shutdown_row_dict["enabled"]:
-            break
-        conn, queries = set_up_sql_operations(config_dict)
-        query_row = queries.select_last_header(
-            conn, peer_ID=peer_ID
-        )  # find the header CID of the last header
-        conn.close()
-        if query_row is not None:
-            param = {"arg": ipns_path}
-            response, status_code, response_dict = execute_request(
-                url_key="resolve",
-                logger=logger,
-                url_dict=url_dict,
-                config_dict=config_dict,
-                param=param,
-            )
-
-            if status_code == 200:
-                ipfs_header_CID = response_dict["Path"][6:]
-            else:
-                ipfs_header_CID = "null"
-
-            if ipfs_header_CID != query_row["header_CID"]:
-                header_CID = query_row["header_CID"]
-
-                ipfs_path = "/ipfs/" + header_CID
-
-                name_publish_arg = {
-                    "arg": ipfs_path,
-                    "resolve": "true",
-                    "key": "self",
-                    "ipns-base": "base36",
-                }
-
-                response, status_code, response_dict = execute_request(
-                    url_key="name_publish",
-                    logger=logger,
-                    url_dict=url_dict,
-                    config_dict=config_dict,
-                    param=name_publish_arg,
-                )
-
-                # logger.info(f"{status_code}.")
-
-        if mode != "init":
-            wait_for_next_request_seconds = int(config_dict["wait_time"])
-
-            try:
-                # logger.info("queue get.")
-                in_bound.get(timeout=wait_for_next_request_seconds)
-                # logger.info("get satisfied.")
-            except Empty:
-                # logger.info(f"queue empty at {wait_for_next_request_seconds}.")
-                # test = "False"
-                pass
-
-    logger.info("Publish shutdown.")
-    return
-
-
-def purge():
+def purge(call_stack):
     from diyims.config_utils import get_ipfs_config_dict
-    from diyims.logger_utils import get_logger
+
+    # from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
     from diyims.database_utils import set_up_sql_operations
     import requests
 
+    call_stack = call_stack + ":purge"
     ipfs_config_dict = get_ipfs_config_dict()
-    peer_type = "none"
-    logger = get_logger(ipfs_config_dict["log_file"], peer_type)
+    # peer_type = "none"
+    # logger = get_logger(ipfs_config_dict["log_file"], peer_type)
     url_dict = get_url_dict()
     conn, queries = set_up_sql_operations(ipfs_config_dict)
 
@@ -196,33 +86,36 @@ def purge():
 
             execute_request(
                 url_key="name_publish",
-                logger=logger,
+                # =logger,
                 url_dict=url_dict,
                 config_dict=ipfs_config_dict,
                 param=param,
+                call_stack=call_stack,
             )
-
+            # TODO: 700 later
         elif row["object_CID"] != "null":
             param = {"arg": row["object_CID"]}
 
             execute_request(
                 url_key="pin_remove",
-                logger=logger,
+                # logger=logger,
                 url_dict=url_dict,
                 config_dict=ipfs_config_dict,
                 param=param,
+                call_stack=call_stack,
             )
-
+            # TODO: 700 later
         param = {"arg": row["header_CID"]}
 
         execute_request(
             url_key="pin_remove",
-            logger=logger,
+            # logger=logger,
             url_dict=url_dict,
             config_dict=ipfs_config_dict,
             param=param,
+            call_stack=call_stack,
         )
-
+        # TODO: 700 later
     conn.close()
 
     with requests.post(url_dict["run_gc"], stream=False) as r:  # NOTE: fix
@@ -265,17 +158,19 @@ def test_ipfs_version():
     return json_dict["AgentVersion"]
 
 
-def force_purge():
+def force_purge(call_stack):
     import json
     import requests
     from diyims.config_utils import get_ipfs_config_dict
-    from diyims.logger_utils import get_logger
+
+    # from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
 
+    call_stack = call_stack + ":force_purge"
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
-    peer_type = "none"
-    logger = get_logger(ipfs_config_dict["log_file"], peer_type)
+    # peer_type = "none"
+    # logger = get_logger(ipfs_config_dict["log_file"], peer_type)
 
     with requests.post(url_dict["pin_list"], stream=False) as r:  # NOTE: fix
         r.raise_for_status()
@@ -286,12 +181,13 @@ def force_purge():
                 param = {"arg": key}
                 execute_request(
                     url_key="pin_remove",
-                    logger=logger,
+                    # logger=logger,
                     url_dict=url_dict,
                     config_dict=ipfs_config_dict,
                     param=param,
+                    call_stack=call_stack,
                 )
-
+                # TODO: 700 later
         except KeyError:
             pass
 
@@ -299,36 +195,38 @@ def force_purge():
         r.raise_for_status()
 
 
-def wait_on_ipfs(logger):
+def wait_on_ipfs(call_stack):  # TODO: redo this logic to use exec
     from time import sleep
     import requests
     from diyims.config_utils import get_ipfs_config_dict
 
+    call_stack = call_stack + "wait_on_ipfs"
     url_dict = get_url_dict()
     ipfs_config_dict = get_ipfs_config_dict()
     i = 0
     not_found = True
-    logger.debug("ipfs wait started.")
+    # logger.debug("ipfs wait started.")
     sleep(int(ipfs_config_dict["connect_retry_delay"]))
     while i < 30 and not_found:
         try:
             with requests.post(url=url_dict["id"]) as r:
                 r.raise_for_status()
                 not_found = False
-                logger.debug("ipfs wait completed.")
+                # logger.debug("ipfs wait completed.")
         except requests.exceptions.ConnectionError:
             i += 1
-            logger.exception(f"wait on ipfs iteration {i}.")
+            # logger.exception(f"wait on ipfs iteration {i}.")
             sleep(int(ipfs_config_dict["connect_retry_delay"]))
 
     return
 
 
-def refresh_network_name():
+def refresh_network_name(call_stack):
     import requests
     from requests.exceptions import HTTPError
     from diyims.config_utils import get_ipfs_config_dict
-    from diyims.logger_utils import get_logger
+
+    # from diyims.logger_utils import add_log
     from diyims.requests_utils import execute_request
     from diyims.database_utils import set_up_sql_operations
     from diyims.database_utils import (
@@ -337,10 +235,11 @@ def refresh_network_name():
     )
     from diyims.py_version_dep import get_car_path
 
+    call_stack = call_stack + ":refresh_network_name"
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
-    peer_type = "none"
-    logger = get_logger(ipfs_config_dict["log_file"], peer_type)
+    # = "none"
+    # logger = get_logger(ipfs_config_dict["log_file"], peer_type)
     conn, queries = set_up_sql_operations(ipfs_config_dict)
 
     url_dict = get_url_dict()
@@ -349,17 +248,20 @@ def refresh_network_name():
     network_name = network_table_dict["network_name"]
     param = {"arg": network_name}
 
-    logger.debug(f"refreshing {network_name}.")
+    # logger.debug(f"refreshing {network_name}.")
     try:
         response, status_code, response_dict = execute_request(
             url_key="pin_remove",
-            logger=logger,
+            # logger=logger,
             url_dict=url_dict,
             config_dict=ipfs_config_dict,
             param=param,
+            call_stack=call_stack,
         )
+        # TODO: 700 later
     except HTTPError:
-        logger.debug(response)
+        # logger.debug(response)
+        pass
 
     with requests.post(url_dict["run_gc"], stream=False) as r:  # NOTE: Fix
         r.raise_for_status()
@@ -375,13 +277,14 @@ def refresh_network_name():
 
     execute_request(
         url_key="dag_import",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=ipfs_config_dict,
         param=param,
         file=file,
-    )
-    logger.debug("refresh network name completed.")
+        call_stack=call_stack,
+    )  # TODO: 700 later
+    # logger.debug("refresh network name completed.")
     conn.close()
 
     """
@@ -400,33 +303,40 @@ def refresh_network_name():
     return
 
 
-def unpack_peer_row_from_cid(peer_row_CID, config_dict):
+def unpack_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
     from diyims.requests_utils import execute_request
+    from diyims.logger_utils import add_log
 
-    url_dict = get_url_dict()
+    call_stack = call_stack + "unpack_peer_row_from_cid"
     param = {
         "arg": peer_row_CID,
     }
-    url_key = "cat"
 
     response, status_code, response_dict = execute_request(
-        url_key,
-        url_dict=url_dict,
+        url_key="cat",
         config_dict=config_dict,
         param=param,
-        timeout=(3.05, 27),
+        timeout=(3.05, 122),  # control time out to avoid retries
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
-
-    return response_dict
+    if status_code != 200:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Unpack exhausted retries.",
+        )
+    return status_code, response_dict
 
 
 def export_peer_table(
+    call_stack,
     # conn,
     # queries,
     url_dict,
     path_dict,
     config_dict,
-    logger,
+    # logger,
 ):
     """
     docstring
@@ -435,7 +345,9 @@ def export_peer_table(
     from diyims.path_utils import get_unique_file
     from diyims.database_utils import set_up_sql_operations
     from diyims.requests_utils import execute_request
+    from diyims.logger_utils import add_log
 
+    call_stack = call_stack + ":export_peer_table"
     conn, queries = set_up_sql_operations(config_dict)
     peer_table_rows = queries.select_peer_table_signature_valid(conn)
     peer_table_dict = {}
@@ -460,18 +372,37 @@ def export_peer_table(
     add_file = {"file": f}
     response, status_code, response_dict = execute_request(
         url_key="add",
-        logger=logger,
+        # =logger,
         url_dict=url_dict,
         config_dict=config_dict,
         file=add_file,
         param=param,
+        call_stack=call_stack,
+        ignore_HTTP500=False,
     )
     f.close()
 
-    object_CID = response_dict["Hash"]
+    if status_code == 200:
+        object_CID = response_dict["Hash"]
+    else:
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg="Export Peer Panic.",
+        )
+        return status_code, object_CID
 
-    return object_CID
+    return status_code, object_CID
 
 
 if __name__ == "__main__":
-    refresh_network_name()
+    import os
+    from multiprocessing import set_start_method, freeze_support
+
+    freeze_support()
+    set_start_method("spawn")
+
+    os.environ["DIYIMS_ROAMING"] = "RoamingDev"
+    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["QUEUES_ENABLED"] = "0"
+    # ("__main__", "init")

@@ -21,19 +21,21 @@ from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.py_version_dep import get_car_path
 from diyims.requests_utils import execute_request
-from diyims.logger_utils import get_logger
+
+# from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
 from diyims.security_utils import sign_file, verify_file
 from sqlmodel import SQLModel, create_engine, Session, text
 
 
-def create():
+def create(call_stack):
     try:
         path_dict = get_path_dict()
 
     except ApplicationNotInstalledError:
         raise
 
+    call_stack = call_stack + ":create"
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
@@ -50,7 +52,8 @@ def create():
     return
 
 
-def init():
+def init(call_stack):
+    call_stack = call_stack + ":init"
     try:
         path_dict = get_path_dict()
 
@@ -60,11 +63,11 @@ def init():
     url_dict = get_url_dict()
 
     config_dict = get_db_init_config_dict()
-    logger = get_logger(
-        config_dict["log_file"],
-        "none",
-    )
-    wait_on_ipfs(logger)
+    # logger = get_logger(
+    #    config_dict["log_file"],
+    #    "none",
+    # )
+    wait_on_ipfs(call_stack)
 
     conn, queries = set_up_sql_operations(config_dict)
     Rconn, Rqueries = set_up_sql_operations(config_dict)
@@ -94,13 +97,15 @@ def init():
 
     response, status_code, response_dict = execute_request(
         url_key="id",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
 
     peer_ID = response_dict["ID"]
-
+    # TODO: 700 later
     signing_dict = {}
     signing_dict["peer_ID"] = peer_ID
 
@@ -114,14 +119,14 @@ def init():
     sign_dict = {}
     sign_dict["file_to_sign"] = proto_file_path
 
-    id, signature = sign_file(sign_dict, logger, config_dict)
+    status_code, id, signature = sign_file(call_stack, sign_dict, config_dict)
 
     verify_dict = {}
     verify_dict["signed_file"] = proto_file_path
     verify_dict["id"] = id
     verify_dict["signature"] = signature
 
-    signature_valid = verify_file(verify_dict, logger, config_dict)
+    status_code, signature_valid = verify_file(call_stack, verify_dict, config_dict)
 
     """
     Create the initial peer table entry for this peer.
@@ -146,15 +151,16 @@ def init():
     response, status_code, response_dict = (
         execute_request(  # to have something to publish to capture IPNS_name
             url_key="add",
-            logger=logger,
+            # logger=logger,
             url_dict=url_dict,
             config_dict=config_dict,
             file=add_files,
             param=add_params,
+            call_stack=call_stack,
         )
     )
     f.close()
-
+    # TODO: 700 later
     object_CID = response_dict["Hash"]
 
     ipfs_path = "/ipfs/" + object_CID
@@ -170,12 +176,14 @@ def init():
 
     response, status_code, response_dict = execute_request(  # publish to get ipns name
         url_key="name_publish",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=config_dict,
         param=name_publish_arg,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
-
+    # TODO: 700 later
     IPNS_name = response_dict["Name"]
 
     peer_row_dict["peer_ID"] = peer_ID
@@ -191,6 +199,7 @@ def init():
     peer_row_dict["IPFS_agent"] = IPFS_agent
     peer_row_dict["agent"] = agent
     peer_row_dict["processing_status"] = "NPC"  # Normal peer processing complete
+    peer_row_dict["disabled"] = "0"
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
     with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
@@ -201,15 +210,16 @@ def init():
     response, status_code, response_dict = (
         execute_request(  # this is the true peer table row but not yet published
             url_key="add",
-            logger=logger,
+            # logger=logger,
             url_dict=url_dict,
             config_dict=config_dict,
             file=add_files,
             param=add_params,
+            call_stack=call_stack,
         )
     )
     f.close()
-
+    # TODO: 700 later
     insert_peer_row(conn, queries, peer_row_dict)
     conn.commit()
 
@@ -221,12 +231,13 @@ def init():
     processing_status = DTS
 
     header_CID = ipfs_header_add(
+        call_stack,
         DTS,
         peer_row_CID,
         object_type,
         peer_ID,
         config_dict,
-        logger,
+        # logger,
         mode,
         # conn,
         # queries,
@@ -239,7 +250,7 @@ def init():
     DTS = get_DTS()
 
     network_table_dict = refresh_network_table_from_template()
-    network_table_dict["network_name"] = import_car()  # 3
+    network_table_dict["network_name"] = import_car(call_stack)  # 3
 
     network_name = network_table_dict["network_name"]  # abused table dict entry
     insert_network_row(conn, queries, network_table_dict)
@@ -250,13 +261,14 @@ def init():
 
     mode = "init"
     processing_status = DTS
-    header_CID = ipfs_header_add(  # header for network name
+    header_CID = ipfs_header_add(
+        call_stack,  # header for network name
         DTS,
         object_CID,
         object_type,
         peer_ID,
         config_dict,
-        logger,
+        # logger,
         mode,
         # conn,
         # queries,
@@ -274,13 +286,14 @@ def init():
     return
 
 
-def import_car():
+def import_car(call_stack: str):
+    call_stack = call_stack + ":import_car"
     url_dict = get_url_dict()
     db_init_config_dict = get_db_init_config_dict()
-    logger = get_logger(
-        db_init_config_dict["log_file"],
-        "none",
-    )
+    # logger = get_logger(
+    #    db_init_config_dict["log_file"],
+    #    "none",
+    # )
 
     car_path = get_car_path()
     dag_import_files = {"file": car_path}
@@ -293,13 +306,15 @@ def import_car():
 
     response, status_code, response_dict = execute_request(
         url_key="dag_import",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=db_init_config_dict,
         file=dag_import_files,
         param=dag_import_params,
+        call_stack=call_stack,
+        http_500_ignore=False,
     )
-
+    # TODO: 700 later
     imported_CID = response_dict["Root"]["Cid"]["/"]
 
     # import does not pin unless in offline mode so it must be done manually ###### name?
@@ -307,13 +322,14 @@ def import_car():
 
     response, status_code, response_dict = execute_request(
         url_key="pin_add",
-        logger=logger,
+        # logger=logger,
         url_dict=url_dict,
         config_dict=db_init_config_dict,
         file=dag_import_files,
         param=pin_add_params,
+        call_stack=call_stack,
     )
-
+    # TODO: 700 later
     return imported_CID
 
 

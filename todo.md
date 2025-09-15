@@ -193,4 +193,4 @@
 
 ## [x]: #60 multi address is created with two peerIDs
 
-## BUG: #63 requests return code not handled correctly
+## [x]: #63 requests return code not handled correctly

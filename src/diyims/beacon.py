@@ -5,11 +5,10 @@ Beacon creates a unique CID that is used to generate a item in a nodes wantlist.
 # "Beacon creates a temporary wantlist item to allow a remote peer the ability
 # to discover and access the local peer's communication and verification information.
 # """
+# from rich import print
 from time import sleep
 from datetime import datetime, timedelta
 from multiprocessing import Process, set_start_method, freeze_support
-
-# from diyims.class_imports import SetSelfReturn
 from diyims.requests_utils import execute_request
 from diyims.config_utils import get_beacon_config_dict
 from diyims.logger_utils import add_log
@@ -23,8 +22,8 @@ from diyims.satisfy import satisfy_main
 import json
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import create_engine, Session, select, col
-from diyims.sqlmodels import Clean_Up, Header_Table
-from diyims.path_utils import get_path_dict, get_unique_file
+from diyims.sqlmodels import Header_Table, Beacon
+from diyims.path_utils import get_path_dict
 from diyims.general_utils import get_DTS
 
 
@@ -102,7 +101,7 @@ def beacon_main(call_stack: str) -> None:
             if shutdown_query(call_stack):
                 break  # exit for loop
 
-            status_code, beacon_CID, want_item_file = create_beacon_CID(
+            status_code, beacon_CID = create_beacon_CID(
                 call_stack,
                 SetControlsReturn.logging_enabled,
                 SetControlsReturn.debug_enabled,
@@ -170,7 +169,10 @@ def create_beacon_CID(
     peer_row_CID: str,
     path_dict: dict,
     engine: str,
-) -> tuple[str, str, str]:
+) -> tuple[
+    str,
+    str,
+]:
     """
     create_beacon_CID _summary_
 
@@ -199,16 +201,12 @@ def create_beacon_CID(
     want_item_dict = {}
     want_item_dict["peer_row_CID"] = peer_row_CID
     want_item_dict["DTS"] = get_DTS()
+    want_item_file = str(path_dict["want_item_file"])
 
-    want_item_path = path_dict["want_item_path"]
-    proto_item_file = path_dict["want_item_file"]
-    want_item_file_path = get_unique_file(want_item_path, proto_item_file)
-    want_item_file = str(want_item_file_path)
-
-    with open(want_item_file_path, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
-    f = open(want_item_file_path, "rb")
+    f = open(want_item_file, "rb")
     file = {"file": f}
     param = {"only-hash": "true", "pin": "false", "cid-version": 1}
     response, status_code, response_dict = execute_request(
@@ -219,35 +217,37 @@ def create_beacon_CID(
         http_500_ignore=False,
     )
     f.close()
+    ## unlink not required since the file will be reused in satisfy
 
     if status_code == 200:
         beacon_CID = response_dict["Hash"]
 
-        statement = select(Clean_Up).where(Clean_Up.status == "new")
+        statement = select(Beacon).where(Beacon.status == "new")
         with Session(engine) as session:
             results = session.exec(statement)
             try:
-                clean_up = results.one()
+                beacon = results.one()
                 one_available = True
-                clean_up.status = "old"
+                beacon.status = "old"
             except NoResultFound:
                 one_available = False
 
+        want_item_dict_str = json.dumps(want_item_dict, indent=4)
         insert_DTS = get_DTS()
         insert_datetime = datetime.fromisoformat(insert_DTS)
         satisfy_target_DTS = insert_datetime + satisfy_timedelta
-        clean_up_entry = Clean_Up(
+        beacon_entry = Beacon(
             insert_DTS=insert_DTS,
             satisfy_target_DTS=satisfy_target_DTS,
             status="new",
-            want_item_file=want_item_file,
+            want_item_dict_str=want_item_dict_str,
             beacon_CID=beacon_CID,
         )
 
         with Session(engine) as session:
             if one_available:
-                session.add(clean_up)
-            session.add(clean_up_entry)
+                session.add(beacon_entry)
+            session.add(beacon_entry)
             session.commit()
         if logging_enabled:
             add_log(
@@ -264,7 +264,7 @@ def create_beacon_CID(
                 peer_type="error",
                 msg=f"Beacon not created ipfs add failed with {status_code} for peer table row CID {peer_row_CID}",
             )
-    return status_code, beacon_CID, want_item_file
+    return status_code, beacon_CID
 
 
 def flash_beacon(
@@ -342,8 +342,8 @@ if __name__ == "__main__":
     freeze_support()
     set_start_method("spawn")
 
-    os.environ["DIYIMS_ROAMING"] = "RoamingDev"
-    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["DIYIMS_ROAMING"] = "Roaming"
+    os.environ["COMPONENT_TEST"] = "0"
     os.environ["QUEUES_ENABLED"] = "0"
 
     status_code = beacon_main(

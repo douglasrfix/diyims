@@ -1,11 +1,14 @@
 from multiprocessing.managers import BaseManager
-from diyims.config_utils import get_beacon_config_dict
+from diyims.config_utils import get_beacon_config_dict, get_clean_up_config_dict
 from diyims.logger_utils import add_log
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 from queue import Empty
+import json
+
+# from rich import print
 from sqlmodel import create_engine, Session, select
-from diyims.sqlmodels import Clean_Up
+from diyims.sqlmodels import Beacon
 from diyims.requests_utils import execute_request
 from diyims.path_utils import get_path_dict
 from diyims.general_utils import get_DTS, set_controls
@@ -105,22 +108,28 @@ def satisfy_beacon(
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
 
-    statement = select(Clean_Up).where(Clean_Up.status == "new")
+    statement = select(Beacon).where(Beacon.status == "new")
     with Session(engine) as session:
         results = session.exec(statement)
-        clean_up = results.one()
+        beacon = results.one()
 
-        clean_up.status = "old"
-        clean_up_target = clean_up.satisfy_target_DTS
-        want_item_file = clean_up.want_item_file
+        beacon.status = "old"
+        clean_up_target = beacon.satisfy_target_DTS
+        want_item_dict = json.loads(beacon.want_item_dict_str)
 
     with Session(engine) as session:
-        session.add(clean_up)
+        session.add(beacon)
         session.commit()
+
+    want_item_file = str(path_dict["want_item_file"])
+
+    with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+        json.dump(want_item_dict, write_file, indent=4)
+
+    clean_up(call_stack)
 
     target = datetime.fromisoformat(clean_up_target)
     now_DTS = datetime.fromisoformat(get_DTS())
-
     wait_seconds = (target - now_DTS).total_seconds()
 
     if logging_enabled:
@@ -150,6 +159,7 @@ def satisfy_beacon(
         http_500_ignore=False,
     )
     f.close()
+    # unlink file is not required because the file is reused by the json dumps
 
     if status_code != 200:
         if debug_enabled:
@@ -166,3 +176,42 @@ def satisfy_beacon(
             msg=f"Satisfy {want_item_file}",
         )
     return status_code
+
+
+def clean_up(
+    call_stack: str,
+):
+    call_stack = call_stack + ":clean_up"
+    config_dict = get_clean_up_config_dict()
+
+    hours_to_delay = config_dict["hours_to_delay"]
+    insert_DTS = get_DTS()
+    end_time = datetime.fromisoformat(insert_DTS) - timedelta(hours=int(hours_to_delay))
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement = select(Beacon).where(Beacon.insert_DTS <= end_time.isoformat())
+
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+
+        for beacon in results:
+            beacon_CID = beacon.beacon_CID
+            param = {
+                "arg": beacon_CID,
+            }
+
+            response, status_code, response_dict = execute_request(
+                url_key="pin_remove",
+                param=param,
+                call_stack=call_stack,
+            )
+            # TODO: 700
+            session.delete(beacon)
+            session.commit()
+
+    return

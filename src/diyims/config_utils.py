@@ -69,6 +69,7 @@ def get_beacon_config_dict():
         beacon_config_dict["queues_enabled"] = parser["Beacon"]["queues_enabled"]
         beacon_config_dict["logging_enabled"] = parser["Beacon"]["logging_enabled"]
         beacon_config_dict["debug_enabled"] = parser["Beacon"]["debug_enabled"]
+        beacon_config_dict["component_test"] = parser["Beacon"]["component_test"]
 
     except KeyError:
         parser["Beacon"] = {}
@@ -84,7 +85,8 @@ def get_beacon_config_dict():
         parser["Beacon"]["connect_retry_delay"] = "10"
         parser["Beacon"]["queues_enabled"] = "1"
         parser["Beacon"]["logging_enabled"] = "0"
-        parser["Beacon"]["debug_enabled"] = "1"
+        parser["Beacon"]["debug_enabled"] = "0"
+        parser["Beacon"]["component_test"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -109,6 +111,7 @@ def get_beacon_config_dict():
         beacon_config_dict["queues_enabled"] = parser["Beacon"]["queues_enabled"]
         beacon_config_dict["logging_enabled"] = parser["Beacon"]["logging_enabled"]
         beacon_config_dict["debug_enabled"] = parser["Beacon"]["debug_enabled"]
+        beacon_config_dict["component_test"] = parser["Beacon"]["component_test"]
 
     return beacon_config_dict
 
@@ -241,7 +244,7 @@ def get_clean_up_config_dict():
 
     except KeyError:
         parser["Clean_Up"] = {}
-        parser["Clean_Up"]["hours_to_delay"] = "12"
+        parser["Clean_Up"]["hours_to_delay"] = "1"
         parser["Clean_Up"]["sql_timeout"] = "60"
         parser["Clean_Up"]["log_file"] = "clean_up.log"
         parser["Clean_Up"]["connect_retries"] = "30"
@@ -493,7 +496,7 @@ def get_provider_capture_config_dict():
         parser["Provider_Capture"]["connect_retry_delay"] = "10"
         parser["Provider_Capture"]["queues_enabled"] = "1"
         parser["Provider_Capture"]["logging_enabled"] = "0"
-        parser["Provider_Capture"]["debug_enabled"] = "1"
+        parser["Provider_Capture"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -713,7 +716,7 @@ def get_want_list_config_dict():
         parser["Want_List"]["connect_retry_delay"] = "10"
         parser["Want_List"]["queues_enabled"] = "1"
         parser["Want_List"]["logging_enabled"] = "0"
-        parser["Want_List"]["debug_enabled"] = "1"
+        parser["Want_List"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -906,7 +909,7 @@ def get_publish_config_dict():
         parser["Publish"]["connect_retry_delay"] = "10"
         parser["Publish"]["queues_enabled"] = "1"
         parser["Publish"]["logging_enabled"] = "0"
-        parser["Publish"]["debug_enabled"] = "1"
+        parser["Publish"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -969,7 +972,7 @@ def get_metrics_config_dict():
         parser["Metrics"]["connect_retry_delay"] = "10"
         parser["Metrics"]["queues_enabled"] = "1"
         parser["Metrics"]["logging_enabled"] = "0"
-        parser["Metrics"]["debug_enabled"] = "1"
+        parser["Metrics"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -1045,7 +1048,7 @@ def get_peer_table_maint_config_dict():
         parser["Peer_Table_Maintenance"]["connect_retry_delay"] = "10"
         parser["Peer_Table_Maintenance"]["queues_enabled"] = "1"
         parser["Peer_Table_Maintenance"]["logging_enabled"] = "0"
-        parser["Peer_Table_Maintenance"]["debug_enabled"] = "1"
+        parser["Peer_Table_Maintenance"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -1148,7 +1151,7 @@ def get_peer_monitor_config_dict():
         parser["Peer_Monitor"]["connect_retry_delay"] = "10"
         parser["Peer_Monitor"]["queues_enabled"] = "1"
         parser["Peer_Monitor"]["logging_enabled"] = "0"
-        parser["Peer_Monitor"]["debug_enabled"] = "1"
+        parser["Peer_Monitor"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)

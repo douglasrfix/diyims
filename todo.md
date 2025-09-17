@@ -196,3 +196,5 @@
 ## [x]: #63 requests return code not handled correctly
 
 ## [x]: #65 implement cleanup in beacon
+
+## TODO: #67 Test ipfs version 37

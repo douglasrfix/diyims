@@ -19,7 +19,7 @@ from diyims.config_utils import (
 )
 from diyims.logger_utils import add_log
 from diyims.database_utils import (
-    delete_want_list_table_rows_by_date,
+    # delete_want_list_table_rows_by_date,
     set_up_sql_operations,
     refresh_clean_up_dict,
     set_up_sql_operations_list,
@@ -30,7 +30,7 @@ from diyims.requests_utils import execute_request
 
 
 def get_agent() -> str:
-    agent = "0.0.0a145"  # NOTE: How to extract at run time
+    agent = "0.0.0a146"  # NOTE: How to extract at run time
 
     return agent
 
@@ -395,9 +395,9 @@ def clean_up(call_stack, roaming):  # TODO: roaming should be set by caller
         delete_log_rows_by_date(conn, queries, clean_up_dict)
         conn.commit()
 
-        conn, queries = set_up_sql_operations_list(config_dict)
-        delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
-        conn.commit()
+        # conn, queries = set_up_sql_operations_list(config_dict)
+        # delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
+        # conn.commit()
         conn.close()
 
     network_name = get_network_name()

@@ -138,6 +138,7 @@ def test_ipfs_version():
             "kubo/0.34.1/",
             "kubo/0.35.0/",
             "kubo/0.36.0/",
+            "kubo/0.37.0/",
         ]
         match_count = 0
         for x in supported_agents:

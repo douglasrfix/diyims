@@ -22,6 +22,14 @@ class Clean_Up(SQLModel, table=True):
     beacon_CID: str | None = None
 
 
+class Beacon(SQLModel, table=True):
+    insert_DTS: str = Field(primary_key=True)
+    satisfy_target_DTS: str | None = None
+    status: str | None = None
+    want_item_dict_str: str | None = None
+    beacon_CID: str | None = None
+
+
 class Header_Chain_Status(SQLModel, table=True):
     insert_DTS: str = Field(primary_key=True)
     peer_ID: str = Field(primary_key=True)

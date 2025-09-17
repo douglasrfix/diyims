@@ -197,4 +197,4 @@
 
 ## [x]: #65 implement cleanup in beacon
 
-## TODO: #67 Test ipfs version 37
+## [x]: #67 Test ipfs version 37

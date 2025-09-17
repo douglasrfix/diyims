@@ -194,3 +194,5 @@
 ## [x]: #60 multi address is created with two peerIDs
 
 ## [x]: #63 requests return code not handled correctly
+
+## [x]: #65 implement cleanup in beacon

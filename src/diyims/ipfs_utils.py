@@ -135,10 +135,8 @@ def test_ipfs_version():
         json_dict = json.loads(r.text)
 
         supported_agents = [
-            "kubo/0.34.1/",
-            "kubo/0.35.0/",
-            "kubo/0.36.0/",
             "kubo/0.37.0/",
+            "kubo/0.39.0/",
         ]
         match_count = 0
         for x in supported_agents:
@@ -304,18 +302,20 @@ def refresh_network_name(call_stack):
     return
 
 
-def unpack_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
+def unpack_object_from_cid(
+    call_stack,
+    object_CID,
+):
     from diyims.requests_utils import execute_request
     from diyims.logger_utils import add_log
 
-    call_stack = call_stack + "unpack_peer_row_from_cid"
+    call_stack = call_stack + "unpack_object_from_cid"
     param = {
-        "arg": peer_row_CID,
+        "arg": object_CID,
     }
 
     response, status_code, response_dict = execute_request(
         url_key="cat",
-        config_dict=config_dict,
         param=param,
         timeout=(3.05, 122),  # control time out to avoid retries
         call_stack=call_stack,
@@ -365,7 +365,12 @@ def export_peer_table(
     proto_file = path_dict["peer_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
-    param = {"cid-version": 1, "only-hash": "false", "pin": "true"}
+    param = {
+        "cid-version": 1,
+        "only-hash": "false",
+        "pin": "true",
+        "pin-name": "export_peer_table",
+    }
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_table_dict, write_file, indent=4)
 

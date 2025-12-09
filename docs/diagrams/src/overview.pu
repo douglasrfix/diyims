@@ -1,0 +1,19 @@
+@startmindmap DIYIMS overview
+
+* Purpose - Provide a platform for media delivery
+    * Start with a simple messaging system
+* General Requirements
+    * Standalone - Usable as a repository for private information
+    * Distributed - Selectively shares public information with others
+    * Secure
+        * Provides reasonable levels of authentication of other parties
+        * Provides reasonable levels of data corruption and recovery
+    * Minimize custom programming
+    * Provide the best user interaction performance as possible with minimum hardware
+    * Provide a simple and consistent GUI that is useable on multiple platforms
+    * Make the application as generic as possible to support as many media type as possible
+    * Minimize system administration tasks since this will be a self supported application
+    * End user experience should be insensitive to distributed node performance
+    * Minimize mouse to keyboard transitions
+
+@endmindmap

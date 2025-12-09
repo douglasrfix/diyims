@@ -440,7 +440,7 @@ def decode_findprovs_structure(
                             status_code = 200
                             existing_peer = True
                         except NoResultFound:
-                            status_code = 200
+                            status_code = 402
                             existing_peer = False
 
                     # status_code, current_peer = peer_add_update(call_stack, execution_mode, peer_maint_dict)
@@ -475,7 +475,7 @@ def decode_findprovs_structure(
                     if existing_peer:
                         if (
                             current_peer.processing_status == "WLW"
-                            or current_peer.processing_status == "WLWP"
+                            or current_peer.processing_status == "WLWF"
                             or current_peer.processing_status == "WLWX"
                         ):  # TODO: This can be WLWP or WLWX oor WLW?
                             status_code, address_available = capture_provider_addresses(
@@ -487,15 +487,17 @@ def decode_findprovs_structure(
                                 engine,
                             )
                             status_code = 200  # ignore any address capture failure
-                            # if address_available: # update peer_dict of update
-                            #    current_peer.processing_status = "WLR" # from waiting to ready transition
-                            #    current_peer.local_update_DTS = get_DTS()
-                            #    current_peer.disabled = 0
-                            #    add_required = True
-                            #    modified += 1
-                            #    released += 1
-                            # else:
-                            #    pass  # ignore and move on
+                            if address_available:  # update peer_dict of update
+                                current_peer.processing_status = (
+                                    "WLR"  # from waiting to ready transition
+                                )
+                                current_peer.local_update_DTS = get_DTS()
+                                current_peer.disabled = 0
+                                add_required = True
+                                modified += 1
+                                released += 1
+                            else:
+                                pass  # ignore and move on #TODO: reset WLWX to WLW ???????
                         else:
                             pass  # in wlr or something else status and won't look for addresses
                     else:  # new provider found
@@ -515,7 +517,7 @@ def decode_findprovs_structure(
                                 peer_type="status",
                                 msg=msg,
                             )
-                        if address_available:
+                        if address_available:  # TODO: factor peer table create and update out address available should be conditioned on wantlist list attempt
                             current_peer = Peer_Table(
                                 peer_ID=peer_ID,
                                 local_update_DTS=get_DTS(),

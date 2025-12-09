@@ -3,10 +3,13 @@ import json
 from diyims.logger_utils import add_log
 from diyims.requests_utils import execute_request
 from diyims.path_utils import get_path_dict
-from diyims.ipfs_utils import unpack_peer_row_from_cid
+from diyims.ipfs_utils import unpack_object_from_cid
 
 
-def sign_file(call_stack, sign_dict, config_dict):
+def sign_file(
+    call_stack,
+    sign_dict,
+):
     call_stack = call_stack + ":sign_file"
     sign_params = {}
 
@@ -35,7 +38,10 @@ def sign_file(call_stack, sign_dict, config_dict):
     return status_code, id, signature
 
 
-def verify_file(call_stack, verify_dict, config_dict):
+def verify_file(
+    call_stack,
+    verify_dict,
+):
     call_stack = call_stack + ":verify_file"
     verify_params = {"key": verify_dict["id"], "signature": verify_dict["signature"]}
 
@@ -63,11 +69,15 @@ def verify_file(call_stack, verify_dict, config_dict):
     return status_code, signature_valid
 
 
-def verify_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
+def verify_peer_row_from_cid(
+    call_stack,
+    peer_row_CID,
+):
     path_dict = get_path_dict()
     call_stack = call_stack + "verify_peer_row_from_cid"
-    status_code, peer_row_dict = unpack_peer_row_from_cid(
-        call_stack, peer_row_CID, config_dict
+    status_code, peer_row_dict = unpack_object_from_cid(
+        call_stack,
+        peer_row_CID,
     )
 
     if status_code != 200:
@@ -94,7 +104,10 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, config_dict):
     verify_dict["id"] = peer_row_dict["id"]
     verify_dict["signature"] = peer_row_dict["signature"]
 
-    status_code, signature_verified = verify_file(call_stack, verify_dict, config_dict)
+    status_code, signature_verified = verify_file(
+        call_stack,
+        verify_dict,
+    )
     if status_code != 200:
         add_log(
             process=call_stack,

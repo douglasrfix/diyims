@@ -41,7 +41,7 @@ def satisfy_main(call_stack: str) -> None:
     else:
         in_bound_wait = None
 
-    if SetControlsReturn.logging_enabled:
+    if SetControlsReturn.debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -58,14 +58,14 @@ def satisfy_main(call_stack: str) -> None:
     )
 
     if status_code != 200:
-        if SetControlsReturn.logging_enabled:
+        if SetControlsReturn.debug_enabled:
             add_log(
                 process=call_stack,
                 peer_type="status",
                 msg=f"Satisfy Panic satisfy beacon failed with {status_code}.",
             )
 
-    if SetControlsReturn.logging_enabled:
+    if SetControlsReturn.debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -132,7 +132,7 @@ def satisfy_beacon(
     now_DTS = datetime.fromisoformat(get_DTS())
     wait_seconds = (target - now_DTS).total_seconds()
 
-    if logging_enabled:
+    if debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -150,7 +150,12 @@ def satisfy_beacon(
     f = open(want_item_file, "rb")
     file = {"file": f}
 
-    param = {"only-hash": "false", "pin": "true", "cid-version": 1}
+    param = {
+        "only-hash": "false",
+        "pin": "true",
+        "cid-version": 1,
+        "pin-name": "satisfy_beacon",
+    }
     response, status_code, response_dict = execute_request(
         url_key="add",
         param=param,
@@ -169,7 +174,7 @@ def satisfy_beacon(
                 msg=f"Satisfy ipfs add failed with {status_code}.",
             )
 
-    if logging_enabled:
+    if debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -182,7 +187,7 @@ def clean_up(
     call_stack: str,
 ):
     call_stack = call_stack + ":clean_up"
-    config_dict = get_clean_up_config_dict()
+    config_dict = get_clean_up_config_dict()  # TODO: share???
 
     hours_to_delay = config_dict["hours_to_delay"]
     insert_DTS = get_DTS()

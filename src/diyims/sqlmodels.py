@@ -88,6 +88,7 @@ class Peer_Table(SQLModel, table=True):
     peer_type: str
     origin_update_DTS: str | None = None
     local_update_DTS: str
+
     execution_platform: str | None = None
     python_version: str | None = None
     IPFS_agent: str | None = None
@@ -95,6 +96,25 @@ class Peer_Table(SQLModel, table=True):
     agent: str | None = None
     version: str | None = "0"
     disabled: int | None = 1
+
+
+class Peer_Control(SQLModel, table=True):
+    peer_ID: str = Field(primary_key=True)
+    insert_DTS: str | None = None
+    processing_status: str
+    disabled: int | None = 1
+    WLW_retry_enabled: bool | None = False
+    WLW_retry_count: int | None = 1
+
+
+class Peer_Telemetry(SQLModel, table=True):
+    peer_ID: str = Field(primary_key=True)
+    insert_DTS: str | None = None
+    update_DTS: str | None = None
+    execution_platform: str | None = None
+    python_version: str | None = None
+    IPFS_agent: str | None = None
+    DIYIMS_agent: str | None = None
 
 
 class Shutdown(SQLModel, table=True):

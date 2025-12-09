@@ -4,9 +4,23 @@ import os
 from queue import Empty
 from multiprocessing.managers import BaseManager
 from multiprocessing import set_start_method, freeze_support
+
+# from sqlite3 import IntegrityError
 from diyims.config_utils import get_peer_monitor_config_dict
+
+# from diyims.database_utils import (
+# insert_peer_row,
+# set_up_sql_operations,
+# insert_header_row,
+# refresh_peer_row_from_template,
+# update_peer_table_status_to_PMP,
+# update_peer_table_status_to_PMP_type_PR,
+# add_header_chain_status_entry,
+# )
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import add_log
+
+# from diyims.ipfs_utils import unpack_peer_row_from_cid
 from diyims.general_utils import get_DTS, shutdown_query, set_controls
 from diyims.path_utils import get_path_dict
 from sqlmodel import create_engine, Session, select
@@ -74,8 +88,8 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     while True:
         peer_list = []
         with Session(engine) as session:
-            results = session.exec(statement_1)
-            peer_rows = results.all()
+            results = session.exec(statement_1).all()
+            peer_rows = results
             for peer in peer_rows:
                 peer_list.append(peer)
 
@@ -84,7 +98,9 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                 break
 
             if (  # select peer to process. ignore the local peer and select only peers that have been processed
-                peer.peer_type != "LP" and peer.processing_status == "NPC"
+                peer.peer_type != "LP"
+                and peer.processing_status
+                == "NPC"  # or WLW or WLR#TODO: accept expanded list of conditions
             ):  # this single threads updates from a  remote peer
                 ipns_path = "/ipns/" + peer.IPNS_name
 
@@ -94,7 +110,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     url_key="resolve",
                     param=param,
                     call_stack=call_stack,
-                    connect_retries=0,
+                    connect_retries=0,  # disable peer on first resolve failure #TODO: when to retry?????
                     http_500_ignore=False,
                 )
                 if SetControlsReturn.metrics_enabled:
@@ -115,9 +131,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     with Session(engine) as session:
                         results = session.exec(statement_2)
                         current_peer = results.one()
-                        current_peer.disabled = (
-                            1  # disable peer on first resolve failure
-                        )
+                        current_peer.disabled = 1
                         session.add(current_peer)
                         session.commit()
                     if SetControlsReturn.logging_enabled:
@@ -130,24 +144,32 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                 if status_code == 200:
                     peer_ID = peer.peer_ID
 
+                    # conn, queries = set_up_sql_operations(config_dict)
                     ipfs_sourced_header_CID = response_dict["Path"][
                         6:
-                    ]  # header cid in a published object which is always a header
-                    statement = (  # look for an existing header
+                    ]  # header cid in publish
+                    # last published cid that was processed
+                    # db_header_row = queries.select_last_header(conn, peer_ID=peer_ID)
+                    # conn.close()
+                    statement = (
                         select(Header_Table)
                         .where(Header_Table.peer_ID == peer_ID)
                         .where(Header_Table.header_CID == ipfs_sourced_header_CID)
+                        # .order_by(col(Header_Table.insert_DTS).desc())
                     )
+                    # header_dict = {}
                     with Session(engine) as session:
                         results = session.exec(statement)
 
                         try:
-                            results.one()  # dont need the data if a header exists
+                            results.one()
                             header_not_found = False
                         except NoResultFound:
                             header_not_found = True
 
-                    if header_not_found:  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
+                    if (
+                        header_not_found  # TODO: change logic to support NoResults logic
+                    ):  # we have not seen this peer before this costs one db read in exchange for one extra cat with an insert exception
                         start_DTS = get_DTS()
                         status_code = header_chain_maint(
                             call_stack,
@@ -178,6 +200,46 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                         # out_bound.put_nowait("wake up")
                     else:
                         pass
+                    """
+                        most_recent_db_header = header_row.header_CID
+                        # if we have a null cid at head of chain we should only process current entries
+                        # if we have a gap whe should process the current entry and follow the chain to see if we can fill the gap
+                        # if we find the null entry we should delete any gap entry ??
+                        if (
+                            most_recent_db_header == ipfs_sourced_header_CID
+                        ):  # nothing new #TODO: we should check for an existing gap and retry if there is one, could be expensive
+                            pass
+                            # print(f"no new entries for {peer_ID}")
+                        else:
+                            start_DTS = get_DTS()
+                            status_code = header_chain_maint(
+                                call_stack,
+                                ipfs_sourced_header_CID,
+                                config_dict,
+                                out_bound,
+                                peer_ID,
+                                SetControlsReturn.logging_enabled,
+                                SetControlsReturn.queues_enabled,
+                                SetControlsReturn.debug_enabled,
+                            )  # add one or more headers
+                            if SetControlsReturn.metrics_enabled:
+                                stop_DTS = get_DTS()
+                                start = datetime.fromisoformat(start_DTS)
+                                stop = datetime.fromisoformat(stop_DTS)
+                                duration = stop - start
+                                add_log(
+                                    process=call_stack,
+                                    peer_type="status",
+                                    msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
+                                )
+
+                            if status_code != 200:
+                                add_log(
+                                    process=call_stack,
+                                    peer_type="Error",
+                                    msg=f"Remote Monitor Panic with {status_code}.",
+                                )
+                    """
                     # out_bound.put_nowait("wake up")
         try:  # peer list completed
             if SetControlsReturn.queues_enabled:

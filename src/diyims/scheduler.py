@@ -9,7 +9,7 @@ from diyims.logger_utils import add_log
 from diyims.config_utils import get_scheduler_config_dict
 from diyims.queue_server import queue_main
 from diyims.database_utils import reset_peer_table_status
-from diyims.peer_utils import select_local_peer_and_update_metrics
+from diyims.telemetry import select_local_peer_and_update_metrics
 from diyims.monitor_peer_publishing import monitor_peer_publishing_main
 from diyims.peer_maintenance import peer_maintenance_main
 from diyims.general_utils import clean_up, reset_shutdown, set_controls
@@ -262,5 +262,5 @@ if __name__ == "__main__":
     # monkeypatch.setenv("DIYIMS_ROAMING", "RoamingDev")
     scheduler_main(
         "cmd",
-        "RoamingDev",
+        "Roaming",
     )

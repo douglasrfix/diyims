@@ -30,7 +30,7 @@ from diyims.requests_utils import execute_request
 
 
 def get_agent() -> str:
-    agent = "0.0.0a146"  # NOTE: How to extract at run time
+    agent = "0.0.0a147"  # NOTE: How to extract at run time
 
     return agent
 
@@ -131,7 +131,7 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
     set_controls_return.single_thread = single_thread
     set_controls_return.metrics_enabled = metrics_enabled
 
-    if logging_enabled:
+    if component_test:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -268,7 +268,8 @@ def shutdown_cmd(call_stack):
     queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
     queue_server.register("get_satisfy_queue")
     queue_server.register("get_provider_queue")
-    queue_server.register("get_want_list_queue")
+    queue_server.register("get_wantlist_submit_queue")
+    queue_server.register("get_wantlist_process_queue")
     queue_server.register("get_remote_monitor_queue")
     queue_server.register("get_publish_queue")
     queue_server.register("get_peer_maint_queue")
@@ -279,7 +280,8 @@ def shutdown_cmd(call_stack):
         return
     satisfy_queue = queue_server.get_satisfy_queue()
     provider_queue = queue_server.get_provider_queue()
-    want_list_queue = queue_server.get_want_list_queue()
+    wantlist_process_queue = queue_server.get_wantlist_process_queue()
+    wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
     remote_monitor_queue = queue_server.get_remote_monitor_queue()
     publish_queue = queue_server.get_publish_queue()
     peer_maint_queue = queue_server.get_peer_maint_queue()
@@ -288,7 +290,8 @@ def shutdown_cmd(call_stack):
     if bool(queue_dict["provider_enable"]):
         provider_queue.put_nowait("1")
     if bool(queue_dict["wantlist_enable"]):
-        want_list_queue.put_nowait("2")
+        wantlist_process_queue.put_nowait("2")
+        wantlist_submit_queue.put_nowait("2")
     if bool(queue_dict["remote_monitor_enable"]):
         remote_monitor_queue.put_nowait("3")
     if bool(queue_dict["publish_enable"]):

@@ -69,25 +69,26 @@ def beacon_main(call_stack: str) -> None:
     peer_row_CID = header_row.object_CID
 
     wait_before_startup = int(config_dict["wait_before_startup"])
-    if SetControlsReturn.logging_enabled:
+    if SetControlsReturn.debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
             msg=f"Waiting for {wait_before_startup} seconds before startup.",
         )
     sleep(wait_before_startup)
-    add_log(
-        process=call_stack,
-        peer_type="status",
-        msg="Beacon main startup.",
-    )
+    if SetControlsReturn.logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Beacon main startup.",
+        )
 
     interval = 0
     target_DT = get_shutdown_target(config_dict)
     current_DT = datetime.now()
 
     max_intervals = int(config_dict["max_intervals"])
-    if SetControlsReturn.logging_enabled:
+    if SetControlsReturn.debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -152,12 +153,12 @@ def beacon_main(call_stack: str) -> None:
             current_DT = datetime.now()
         else:
             break
-
-    add_log(
-        process=call_stack,
-        peer_type="status",
-        msg=f"Beacon shutdown with {status_code}.",
-    )
+    if SetControlsReturn.logging_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Beacon shutdown with {status_code}.",
+        )
     return
 
 
@@ -249,7 +250,7 @@ def create_beacon_CID(
                 session.add(beacon_entry)
             session.add(beacon_entry)
             session.commit()
-        if logging_enabled:
+        if debug_enabled:
             add_log(
                 process=call_stack,
                 peer_type="status",
@@ -294,7 +295,7 @@ def flash_beacon(
 
     call_stack = call_stack + ":flash_beacon"
     status_code = 200
-    if logging_enabled:
+    if debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
@@ -325,7 +326,7 @@ def flash_beacon(
                     msg=f"Beacon flash panic, ipfs get failed with {status_code} for {beacon_CID}.",
                 )
 
-    if logging_enabled:
+    if debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",

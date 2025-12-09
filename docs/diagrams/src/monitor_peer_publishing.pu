@@ -1,0 +1,24 @@
+@startuml monitor_peer_publishing
+start
+
+while (no shutdown request ?) is (true)
+    :get valid peer list;
+    note left: Peer type NE "LP" and\n processing status EQ "WLW" or "WLR" or "NPC"
+    repeat
+        :get next list entry;
+        if (list entry found ?) then (true)
+            :exec ipfs resolve;
+            :header chain maintenance;
+
+        else (false)
+            break
+        endif
+
+
+
+    repeat while (no shutdown request ?) is (true)
+    :wait for message with timer;
+endwhile
+
+stop
+@enduml

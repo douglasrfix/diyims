@@ -11,6 +11,7 @@ import os
 import typer
 from typing import Optional
 from typing_extensions import Annotated
+from time import sleep
 
 from diyims import install_cli
 from diyims import beacon_cli
@@ -166,4 +167,4 @@ def run_test(
 ):
     os.environ["DIYIMS_ROAMING"] = str(roaming)
 
-    # test()
+    sleep(300)

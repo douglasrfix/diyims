@@ -7,6 +7,12 @@ from multiprocessing import set_start_method, freeze_support
 from multiprocessing.managers import BaseManager
 from queue import Empty
 from diyims.requests_utils import execute_request
+
+# from diyims.database_utils import (
+#    refresh_peer_row_from_template,
+# set_up_sql_operations,
+#    update_peer_table_status_WLP,
+# )
 from diyims.general_utils import (
     get_DTS,
     get_shutdown_target,
@@ -229,6 +235,8 @@ def capture_wantlist_peers(
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
     peers_processed = 0
 
+    # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+
     statement = (
         select(Peer_Table).where(
             or_(
@@ -247,6 +255,14 @@ def capture_wantlist_peers(
     for row in peer_table_rows:
         peer_list.append(row)
 
+    # rows_of_peers = queries.select_peers_by_peer_type_status(
+    #    conn, peer_type=peer_type
+    # )
+    # list_of_peers = []
+    # if rows_of_peers is not None:
+    #    for peer_row in rows_of_peers:
+    #        list_of_peers.append(peer_row)
+    # conn.close()
     status_code = 200
     for peer_row in peer_list:
         if shutdown_query(call_stack):
@@ -283,6 +299,12 @@ def capture_wantlist_peers(
             results = session.exec(statement)
             peer_table_row = results.one()
 
+        # peer_table_dict = refresh_peer_row_from_template()
+        # peer_table_dict["peer_ID"] = peer_row["peer_ID"]
+        # peer_table_dict["peer_type"] = peer_row["peer_type"]
+        # peer_table_dict["processing_status"] = (
+        #    "WLP"  # suppress resubmission by WLR -> WLP
+        # )
         provider_peer_ID = peer_table_row.peer_ID
         peer_table_row.local_update_DTS = get_DTS()
         if peer_table_row.processing_status == "WLR":
@@ -296,6 +318,12 @@ def capture_wantlist_peers(
             session.add(peer_table_row)
             session.commit()
             session.refresh(peer_table_row)
+        # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+
+        # update_peer_table_status_WLP(conn, queries, peer_table_dict)
+        # conn.commit()
+        # conn.close()
+
         # peer_table_row_dict = jsonable_encoder(peer_table_row)
         peer_table_row_dict = dict(peer_table_row)
 
@@ -327,7 +355,7 @@ def capture_wantlist_peers(
                         peer_type="status",
                         msg=f"Want List capture process failed for {peer_ID}.",
                     )
-                if status_code == 410:  # ?????????????????????????????????????
+                if status_code == 410:
                     statement = select(Peer_Address).where(
                         Peer_Address.peer_ID == provider_peer_ID,
                         Peer_Address.in_use == 1,

@@ -22,7 +22,8 @@ def queue_main(call_stack):
     # )
     q_server_port = int(queue_config_dict["q_server_port"])
     manager = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    want_list_queue = Queue()
+    wantlist_submit_queue = Queue()
+    wantlist_process_queue = Queue()
     bitswap_queue = Queue()
     swarm_queue = Queue()
     provider_queue = Queue()
@@ -38,7 +39,12 @@ def queue_main(call_stack):
     manager.register("get_satisfy_queue", callable=lambda: satisfy_queue)
     manager.register("get_publish_queue", callable=lambda: publish_queue)
     manager.register("get_peer_maint_queue", callable=lambda: peer_maint_queue)
-    manager.register("get_want_list_queue", callable=lambda: want_list_queue)
+    manager.register(
+        "get_wantlist_submit_queue", callable=lambda: wantlist_submit_queue
+    )
+    manager.register(
+        "get_wantlist_process_queue", callable=lambda: wantlist_process_queue
+    )
     manager.register("get_bitswap_queue", callable=lambda: bitswap_queue)
     manager.register("get_swarm_queue", callable=lambda: swarm_queue)
     manager.register(

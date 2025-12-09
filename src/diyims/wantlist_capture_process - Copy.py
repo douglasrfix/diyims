@@ -17,9 +17,13 @@ from diyims.database_utils import (
     refresh_peer_row_from_template,
     refresh_want_list_table_dict,
     set_up_sql_operations,
+    # update_peer_table_status_WLR,
+    # update_peer_table_status_WLX,
+    # update_peer_table_status_WLZ,
+    # update_peer_table_status_to_NPP,
     select_peer_table_entry_by_key,
 )
-from diyims.general_utils import get_DTS, shutdown_query, set_self
+from diyims.general_utils import get_DTS, shutdown_query
 from diyims.ipfs_utils import unpack_object_from_cid
 from diyims.logger_utils import add_log
 from diyims.config_utils import get_want_list_config_dict
@@ -61,18 +65,19 @@ def submitted_wantlist_process_for_peer(
     peer_type = provider_peer_table_row["peer_type"]
     provider_peer_ID = provider_peer_table_row["peer_ID"]
 
+    # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
     log_string = (
         f"Want list capture for {provider_peer_ID} and type {peer_type} started."
     )
-
-    SetSelfReturn = set_self()
-    self = SetSelfReturn.self
     if SetControlsReturn.debug_enabled:
         add_log(
             process=call_stack,
             peer_type="status",
             msg=log_string,
         )
+
+    # peer_table_dict["processing_status"] = "WLX" # WLR to WLX
+    # peer_table_dict["local_update_DTS"] = get_DTS()
 
     statement = (
         select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
@@ -94,6 +99,12 @@ def submitted_wantlist_process_for_peer(
         session.add(peer_table_row)
         session.commit()
         session.refresh(peer_table_row)
+
+    # indicate processing is active for this peer WLP -> WLX
+    # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+    # update_peer_table_status_WLX(conn, queries, peer_table_dict)
+    # conn.commit()
+    # conn.close()
 
     q_server_port = int(want_list_config_dict["q_server_port"])
 
@@ -146,6 +157,11 @@ def submitted_wantlist_process_for_peer(
     ):
         if shutdown_query(call_stack):
             break
+        # conn, queries = set_up_sql_operations(want_list_config_dict)
+
+        # peer_row_dict = refresh_peer_row_from_template()  # start from scratch
+        # peer_row_dict["peer_ID"] = provider_peer_ID
+        # peer_row_dict["peer_type"] = peer_type
         statement = (
             select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
             # .where(Peer_Table.processing_status == "WLP")
@@ -155,6 +171,8 @@ def submitted_wantlist_process_for_peer(
             peer_table_row = results.one()
 
         peer_table_row_dict = jsonable_encoder(peer_table_row)
+        # peer_row_entry = select_peer_table_entry_by_key(conn, queries, peer_row_dict)
+        # conn.close()
         if (
             peer_table_row_dict["processing_status"] == "WLRX"
             or peer_table_row_dict["processing_status"] == "WLWX"
@@ -177,7 +195,7 @@ def submitted_wantlist_process_for_peer(
                         peer_type="status",
                         msg=f"Capture want list by ID failed with {status_code}.",
                     )
-                if status_code == 401 or status_code != 401:
+                if status_code == 401 and status_code != 401:
                     if peer_table_row.processing_status == "WLWX":
                         peer_table_row.processing_status = "WLW"
                     elif peer_table_row.processing_status == "WLWFX":
@@ -204,12 +222,21 @@ def submitted_wantlist_process_for_peer(
             if (
                 zero_sample_count == max_zero_sample_count and peer_type != "PP"
             ):  # sampling permanently completed due to no want list available for peer
+                # Uconn, Uqueries = set_up_sql_operations(want_list_config_dict)
+                # peer_table_dict["processing_status"] = "WLZ"
+
                 statement = select(Peer_Table).where(
                     Peer_Table.peer_ID == provider_peer_ID
                 )
                 with Session(engine) as session:
                     results = session.exec(statement)
                     peer_table_row = results.one()
+
+                # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+                # peer_table_dict["local_update_DTS"] = get_DTS()
+                # update_peer_table_status_WLZ(conn, queries, peer_table_dict)
+                # conn.commit()
+                # conn.close()
 
                 peer_table_row.processing_status = "WLZ"
                 peer_table_row.local_update_DTS = get_DTS()
@@ -244,7 +271,6 @@ def submitted_wantlist_process_for_peer(
                     SetControlsReturn.queues_enabled,
                     SetControlsReturn.logging_enabled,
                     SetControlsReturn.debug_enabled,
-                    self,
                 )
                 if status_code != 200:
                     if SetControlsReturn.debug_enabled:
@@ -289,15 +315,22 @@ def submitted_wantlist_process_for_peer(
     ):  # sampling interval completed
         # set from WLX to WLR so sampling will be continued for PP
 
+        # peer_table_dict["processing_status"] = "WLR"
         statement = select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
         with Session(engine) as session:
             results = session.exec(statement)
             peer_table_row = results.one()
 
+        # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+        # peer_table_dict["local_update_DTS"] = get_DTS()
+        # update_peer_table_status_WLR(conn, queries, peer_table_dict)
+        # conn.commit()
+        # conn.close()
+
         if peer_table_row.processing_status == "WLRX":
             peer_table_row.processing_status = "WLR"
-        elif peer_table_row.processing_status == "WLWX":
-            peer_table_row.processing_status = "WLW"
+        elif peer_table_row.processing_status == "WLWFX":
+            peer_table_row.processing_status = "WLWF"
         peer_table_row.local_update_DTS = get_DTS()
         with Session(engine) as session:
             session.add(peer_table_row)
@@ -482,7 +515,6 @@ def filter_wantlist(
     queues_enabled,
     logging_enabled,
     debug_enabled,
-    self,
 ) -> bool:
     """
     doc string
@@ -644,6 +676,10 @@ def filter_wantlist(
                                 results = session.exec(statement)
                                 peer_table_row = results.one()
 
+                            # conn, queries = set_up_sql_operations(config_dict)  # + 1
+                            # peer_table_row.version = (
+                            #    provider_peer_row_CID  # TODO: #58 add data dedicated data element
+                            # )
                             status_code, peer_verified, peer_row_verify_dict = (
                                 verify_peer_row_from_cid(
                                     call_stack,
@@ -678,6 +714,7 @@ def filter_wantlist(
                                 session.commit()
                                 session.refresh(peer_table_row)
 
+                            peer_verified = True
                             peer_table_row_dict = jsonable_encoder(peer_table_row)
 
                             proto_path = path_dict["header_path"]
@@ -737,7 +774,7 @@ def filter_wantlist(
                                 DTS,
                                 object_CID,
                                 object_type,
-                                self,
+                                provider_peer_ID,  # =self
                                 config_dict,
                                 mode,
                                 processing_status,

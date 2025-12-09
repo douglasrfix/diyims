@@ -201,7 +201,12 @@ def init(call_stack):
     peer_row_dict["processing_status"] = "NPC"  # Normal peer processing complete
     peer_row_dict["disabled"] = "0"
 
-    add_params = {"cid-version": 1, "only-hash": "false", "pin": "true"}
+    add_params = {
+        "cid-version": 1,
+        "only-hash": "false",
+        "pin": "true",
+        "pin-name": "init",
+    }
     with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
 
@@ -317,8 +322,20 @@ def import_car(call_stack: str):
     # TODO: 700 later
     imported_CID = response_dict["Root"]["Cid"]["/"]
 
+    pin_remove_params = {"arg": imported_CID}
+
+    response, status_code, response_dict = execute_request(
+        url_key="pin_remove",
+        # logger=logger,
+        url_dict=url_dict,
+        config_dict=db_init_config_dict,
+        file=dag_import_files,
+        param=pin_remove_params,
+        call_stack=call_stack,
+    )
+
     # import does not pin unless in offline mode so it must be done manually ###### name?
-    pin_add_params = {"arg": imported_CID}
+    pin_add_params = {"arg": imported_CID, "pin-name": "init"}
 
     response, status_code, response_dict = execute_request(
         url_key="pin_add",

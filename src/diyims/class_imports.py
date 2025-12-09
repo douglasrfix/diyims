@@ -27,7 +27,7 @@ class WantlistCaptureProcessMainArgs:
 
     call_stack: str
     want_list_config_dict: dict = None
-    peer_table_dict: dict = None
+    provider_peer_table_row: dict = None
     peer_type: str = None
     set_controls_return: SetControlsReturn = None
 

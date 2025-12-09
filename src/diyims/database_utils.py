@@ -40,8 +40,8 @@ def reset_peer_table_status(call_stack):
     from diyims.py_version_dep import get_sql_str
     import aiosql
     import sqlite3
-    from sqlmodel import create_engine, Session, select
-    from diyims.sqlmodels import Peer_Address
+    from sqlmodel import create_engine, Session, select, or_
+    from diyims.sqlmodels import Peer_Address, Shutdown, Peer_Table
     from diyims.general_utils import get_DTS
 
     # config_dict = get_want_list_config_dict()
@@ -59,9 +59,9 @@ def reset_peer_table_status(call_stack):
     )
     conn.commit()
 
-    update_shutdown_enabled_0(conn, queries)
-    conn.commit()
-    conn.close
+    # update_shutdown_enabled_0(conn, queries)
+    # conn.commit()
+    # conn.close
 
     db_url = f"sqlite:///{connect_path}"
 
@@ -76,6 +76,33 @@ def reset_peer_table_status(call_stack):
             address.connect_DTS = None
             address.peering_add_DTS = None
             session.add(address)
+        session.commit()
+
+    statement = select(Shutdown)
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for row in results:
+            row.enabled = 0
+
+            session.add(row)
+        session.commit()
+
+    statement = select(Peer_Table).where(
+        or_(
+            Peer_Table.processing_status == "WLRX",
+            Peer_Table.processing_status == "WLWX",
+        )
+    )
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for peer in results:
+            if peer.processing_status == "WLRX":
+                peer.processing_status = "WLR"
+
+            if peer.processing_status == "WLWX":
+                peer.processing_status = "WLW"
+
+            session.add(peer)
         session.commit()
 
     return
@@ -732,4 +759,4 @@ def delete_want_list_table_rows_by_date(conn, queries, clean_up_dict):
 
 
 if __name__ == "__main__":
-    reset_peer_table_status()
+    reset_peer_table_status("__main__")

@@ -187,7 +187,7 @@ where peer_ID = :peer_ID and (
 
 -- name: reset_peer_table_status#
 update peer_table set processing_status = "WLR"
-where processing_status  = "WLX" or processing_status = "WLP"
+where processing_status  = "WLRX" or processing_status = "WLP"
 
 -- name: select_peers_by_peer_type_status
 -- returns all rows

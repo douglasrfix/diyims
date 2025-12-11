@@ -45,12 +45,12 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
             msg=f"Waiting for {wait_before_startup} seconds before startup.",
         )
     sleep(wait_before_startup)
-    if SetControlsReturn.logging_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Remote Peer Monitor startup.",
-        )
+    # if SetControlsReturn.logging_enabled:
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Remote Peer Monitor startup.",
+    )
 
     status_code = 200
 
@@ -97,7 +97,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     connect_retries=0,
                     http_500_ignore=False,
                 )
-                if SetControlsReturn.metrics_enabled:
+                if SetControlsReturn.logging_enabled:
                     stop_DTS = get_DTS()
                     start = datetime.fromisoformat(start_DTS)
                     stop = datetime.fromisoformat(stop_DTS)
@@ -159,7 +159,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                             SetControlsReturn.queues_enabled,
                             SetControlsReturn.debug_enabled,
                         )  # add one or more headers
-                        if SetControlsReturn.metrics_enabled:
+                        if SetControlsReturn.logging_enabled:
                             stop_DTS = get_DTS()
                             start = datetime.fromisoformat(start_DTS)
                             stop = datetime.fromisoformat(stop_DTS)
@@ -170,11 +170,12 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                                 msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
                             )
                         if status_code != 200:
-                            add_log(
-                                process=call_stack,
-                                peer_type="Error",
-                                msg=f"Remote Monitor Panic {status_code}.",
-                            )
+                            if SetControlsReturn.logging_enabled:
+                                add_log(
+                                    process=call_stack,
+                                    peer_type="Error",
+                                    msg=f"Remote Monitor Panic {status_code}.",
+                                )
                         # out_bound.put_nowait("wake up")
                     else:
                         pass

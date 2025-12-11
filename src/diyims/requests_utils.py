@@ -73,7 +73,7 @@ def execute_request(url_key: str, **kwargs):
     except KeyError:
         url_dict = get_url_dict()
 
-    queues_enabled = bool(value_dict["queues_enabled"])
+    queues_enabled = bool(int(value_dict["queues_enabled"]))
     try:
         queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
     except KeyError:
@@ -82,8 +82,8 @@ def execute_request(url_key: str, **kwargs):
         component_test = bool(int(os.environ["COMPONENT_TEST"]))
     except KeyError:
         component_test = False
-    logging_enabled = bool(value_dict["logging_enabled"])
-    debug_enabled = bool(value_dict["debug_enabled"])
+    logging_enabled = bool(int(value_dict["logging_enabled"]))
+    debug_enabled = bool(int(value_dict["debug_enabled"]))
     dummy = component_test
     dummy = queues_enabled
     dummy = debug_enabled

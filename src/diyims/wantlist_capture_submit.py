@@ -111,7 +111,7 @@ def wantlist_capture_submit_main(
             pool,
             SetControlsReturn,
         )
-        if SetControlsReturn.metrics_enabled:
+        if SetControlsReturn.debug_enabled:
             stop_DTS = get_DTS()
             start = datetime.fromisoformat(start_DTS)
             stop = datetime.fromisoformat(stop_DTS)
@@ -309,7 +309,7 @@ def capture_wantlist_peers(
 
         if SetControlsReturn.single_thread:  # partial implementation
             status_code = wantlist_capture_process_main(Args)
-            if SetControlsReturn.metrics_enabled:
+            if SetControlsReturn.logging_enabled:
                 stop_DTS = get_DTS()
                 start = datetime.fromisoformat(start_DTS)
                 stop = datetime.fromisoformat(stop_DTS)

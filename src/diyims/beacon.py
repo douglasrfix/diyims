@@ -76,12 +76,12 @@ def beacon_main(call_stack: str) -> None:
             msg=f"Waiting for {wait_before_startup} seconds before startup.",
         )
     sleep(wait_before_startup)
-    if SetControlsReturn.logging_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Beacon main startup.",
-        )
+
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Beacon main startup.",
+    )
 
     interval = 0
     target_DT = get_shutdown_target(config_dict)
@@ -153,12 +153,12 @@ def beacon_main(call_stack: str) -> None:
             current_DT = datetime.now()
         else:
             break
-    if SetControlsReturn.logging_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg=f"Beacon shutdown with {status_code}.",
-        )
+
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg=f"Beacon shutdown with {status_code}.",
+    )
     return
 
 

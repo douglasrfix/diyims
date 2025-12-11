@@ -87,7 +87,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                 http_500_ignore=False,
             )
 
-            if SetControlsReturn.metrics_enabled:
+            if SetControlsReturn.logging_enabled:
                 stop_DTS = get_DTS()
                 start = datetime.fromisoformat(start_DTS)
                 stop = datetime.fromisoformat(stop_DTS)
@@ -124,7 +124,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                         call_stack=call_stack,
                         http_500_ignore=False,
                     )
-                    if SetControlsReturn.metrics_enabled:
+                    if SetControlsReturn.logging_enabled:
                         stop_DTS = get_DTS()
                         start = datetime.fromisoformat(start_DTS)
                         stop = datetime.fromisoformat(stop_DTS)

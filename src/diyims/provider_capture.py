@@ -67,12 +67,11 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
         )
     sleep(wait_before_startup)
 
-    if SetControlsReturn.logging_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Provider Capture main startup.",
-        )
+    add_log(
+        process=call_stack,
+        peer_type="status",
+        msg="Provider Capture main startup.",
+    )
 
     target_DT = get_shutdown_target(config_dict)
     max_intervals = int(config_dict["max_intervals"])
@@ -136,7 +135,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
                 SetSelfReturn.self,
             )
         )
-        if SetControlsReturn.metrics_enabled:
+        if SetControlsReturn.logging_enabled:
             stop_DTS = get_DTS()
             start = datetime.fromisoformat(start_DTS)
             stop = datetime.fromisoformat(stop_DTS)
@@ -174,7 +173,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
                         msg=f"Sent wakeup with {released} released.",
                     )
 
-        if SetControlsReturn.metrics_enabled:
+        if SetControlsReturn.logging_enabled:
             msg = f"Interval {capture_interval} complete with find provider duration {duration} and {released} released."
             add_log(
                 process=call_stack,

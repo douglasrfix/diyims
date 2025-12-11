@@ -170,7 +170,7 @@ def submitted_wantlist_process_for_peer(
             if shutdown_query(call_stack):
                 break
 
-            if status_code != 200:
+            if status_code != 200 and status_code != 401:
                 if SetControlsReturn.debug_enabled:
                     add_log(
                         process=call_stack,
@@ -202,8 +202,8 @@ def submitted_wantlist_process_for_peer(
                 zero_sample_count -= 1
 
             if (
-                zero_sample_count == max_zero_sample_count and peer_type != "PP"
-            ):  # sampling permanently completed due to no want list available for peer
+                zero_sample_count == max_zero_sample_count and status_code == 401
+            ):  # sampling reset due to no want list available for peer
                 statement = select(Peer_Table).where(
                     Peer_Table.peer_ID == provider_peer_ID
                 )
@@ -211,13 +211,29 @@ def submitted_wantlist_process_for_peer(
                     results = session.exec(statement)
                     peer_table_row = results.one()
 
-                peer_table_row.processing_status = "WLZ"
+                if peer_table_row.processing_status == "WLWX":
+                    peer_table_row.processing_status = "WLW"
+                elif peer_table_row.processing_status == "WLWFX":
+                    peer_table_row.processing_status = "WLWF"
+                elif peer_table_row.processing_status == "WLRX":
+                    peer_table_row.processing_status = "WLR"
+
+                # peer_table_row.processing_status = "WLZ"
                 peer_table_row.local_update_DTS = get_DTS()
                 with Session(engine) as session:
                     session.add(peer_table_row)
                     session.commit()
+                    session.refresh(peer_table_row)
 
+                log_string = f"{zero_sample_count} caused loop exit"
+                if SetControlsReturn.logging_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type="status",
+                        msg=log_string,
+                    )
                 NCW_count += 1
+                return status_code
 
             samples += 1
 
@@ -302,6 +318,7 @@ def submitted_wantlist_process_for_peer(
         with Session(engine) as session:
             session.add(peer_table_row)
             session.commit()
+            session.refresh(peer_table_row)
 
     log_string = f"In {samples} samples, {total_found} found, {total_added} added, {total_updated} updated and NCW {NCW_count} count for {provider_peer_ID}"
     if SetControlsReturn.debug_enabled:
@@ -709,11 +726,12 @@ def filter_wantlist(
                             if status_code == 200:  # this is a local ipfs problem
                                 object_CID = response_dict["Hash"]  # new peer_row_cid
                             else:
-                                add_log(
-                                    process=call_stack,
-                                    peer_type="Error",
-                                    msg=f"Object_CID add failed with {status_code}.",  # TODO: better error handling
-                                )
+                                if debug_enabled:
+                                    add_log(
+                                        process=call_stack,
+                                        peer_type="Error",
+                                        msg=f"Object_CID add failed with {status_code}.",  # TODO: better error handling
+                                    )
                                 return status_code, peer_verified
 
                             # object_CID = peer_row_CID

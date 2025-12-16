@@ -434,11 +434,13 @@ def decode_want_list_structure(
 
     level_one_list = response_dict["Keys"]
     # if str(level_one_list) != "None":
+
+    # TODO: convert to SQLalchemy
     for level_two_dict in level_one_list:
         want_item = level_two_dict["/"]
         provider_peer_ID = peer_row_dict["peer_ID"]
 
-        want_list_table_dict = refresh_want_list_table_dict()  # TODO: rename template
+        want_list_table_dict = refresh_want_list_table_dict()
         want_list_table_dict["peer_ID"] = provider_peer_ID
         want_list_table_dict["object_CID"] = want_item
         want_list_table_dict["insert_DTS"] = get_DTS()

@@ -65,11 +65,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     else:
         out_bound = None
 
-    statement_1 = (
-        select(Peer_Table)
-        .where(Peer_Table.signature_valid == 1)
-        .where(Peer_Table.disabled == 0)
-    )
+    statement_1 = select(Peer_Table).where(Peer_Table.signature_valid == 1)
 
     while True:
         peer_list = []

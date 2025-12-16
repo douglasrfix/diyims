@@ -485,6 +485,7 @@ def decode_findprovs_structure(
                                 debug_enabled,
                                 engine,
                             )
+
                             status_code = 200  # ignore any address capture failure
                             # if address_available: # update peer_dict of update
                             #    current_peer.processing_status = "WLR" # from waiting to ready transition

@@ -1,4 +1,14 @@
 # from rich import print
+from diyims.requests_utils import execute_request
+from diyims.logger_utils import add_log
+from diyims.general_utils import get_DTS
+from datetime import datetime
+
+# from sqlite3 import IntegrityError
+from diyims.path_utils import get_path_dict
+from sqlmodel import create_engine, Session, select, col
+from diyims.sqlmodels import Header_Table, Header_Chain_Status, Peer_Table
+from sqlalchemy.exc import NoResultFound, IntegrityError
 
 
 def header_chain_maint(
@@ -11,14 +21,14 @@ def header_chain_maint(
     queues_enabled,
     debug_enabled,
 ):
-    from diyims.requests_utils import execute_request
-    from diyims.logger_utils import add_log
-    from diyims.general_utils import get_DTS
-    from datetime import datetime
-    from sqlite3 import IntegrityError
-    from diyims.path_utils import get_path_dict
-    from sqlmodel import create_engine, Session, select
-    from diyims.sqlmodels import Header_Table, Header_Chain_Status
+    # from diyims.requests_utils import execute_request
+    # from diyims.logger_utils import add_log
+    # from diyims.general_utils import get_DTS
+    # from datetime import datetime
+    # from sqlite3 import IntegrityError
+    # from diyims.path_utils import get_path_dict
+    # from sqlmodel import create_engine, Session, select
+    # from diyims.sqlmodels import Header_Table, Header_Chain_Status
 
     """
     docstring
@@ -84,6 +94,15 @@ def header_chain_maint(
             )
             break  # the dictionary doesn't contain the object type so isn't a valid header object
 
+        if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
+            peer_manager(
+                call_stack,
+                logging_enabled,
+                engine,
+                config_dict,
+                response_dict,
+            )
+
         new_header = Header_Table(  # capture the published header
             version=header_dict["version"],
             object_CID=header_dict["object_CID"],
@@ -136,6 +155,93 @@ def header_chain_maint(
     return status_code
 
 
+def peer_manager(call_stack, logging_enabled, engine, config_dict, response_dict):
+    # from diyims.logger_utils import add_log
+    from diyims.ipfs_utils import unpack_object_from_cid
+    # from diyims.general_utils import get_DTS
+
+    # from diyims.sqlmodels import Peer_Table
+    # from sqlmodel import Session, select
+    # from sqlalchemy.exc import NoResultFound
+
+    object_type = response_dict["object_type"]
+    object_CID = response_dict["object_CID"]
+
+    if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
+        status_code, remote_peer_row_dict = unpack_object_from_cid(
+            call_stack,
+            object_CID,
+        )
+        # TODO: disable peer if != 200
+
+        statement = (  # check for the previous header in the db
+            select(Peer_Table).where(
+                Peer_Table.peer_ID == remote_peer_row_dict["peer_ID"]
+            )
+        )
+
+        with Session(engine) as session:
+            try:
+                results = session.exec(statement)
+                peer_row = results.one()
+
+                if object_type == "local_peer_entry":
+                    # this will trigger peer maint by npp without change anything but the version, etc.
+
+                    peer_row.processing_status = "NCP"
+                    # with Session(engine) as session:
+                    session.add(peer_row)
+                    session.commit()
+
+                    msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
+                    if logging_enabled:
+                        add_log(
+                            process=call_stack,
+                            peer_type="status",
+                            msg=msg,
+                        )
+                else:
+                    peer_row.processing_status = "NCP"
+                    peer_row.peer_type = "PR"
+
+                    # with Session(engine) as session:
+                    session.add(peer_row)
+                    session.commit()
+
+                    msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
+                    if logging_enabled:
+                        add_log(
+                            process=call_stack,
+                            peer_type="status",
+                            msg=msg,
+                        )
+
+                # out_bound.put_nowait("wake up")
+
+            except NoResultFound:
+                # proto_remote_peer_row_dict = refresh_peer_row_from_template()
+                peer_row = Peer_Table(
+                    peer_ID=remote_peer_row_dict["peer_ID"],
+                    local_update_DTS=get_DTS(),
+                    peer_type=remote_peer_row_dict["peer_type"],
+                    original_peer_type=remote_peer_row_dict["peer_type"],
+                    processing_status="NPC",  # new provider with valid address
+                )
+
+                # with Session(engine) as session:
+                session.add(peer_row)
+                session.commit()
+
+                msg = f"Peer {remote_peer_row_dict['peer_ID']} added."
+                if logging_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type="status",
+                        msg=msg,
+                    )
+                    # out_bound.put_nowait("wake up")
+
+
 def ipfs_header_add(
     call_stack,
     DTS,
@@ -149,13 +255,15 @@ def ipfs_header_add(
 ):
     # from diyims.database_utils import insert_header_row, set_up_sql_operations
     from multiprocessing.managers import BaseManager
-    from diyims.requests_utils import execute_request
+
+    # from diyims.requests_utils import execute_request
     from diyims.path_utils import get_path_dict, get_unique_file
-    from diyims.logger_utils import add_log
+
+    # from diyims.logger_utils import add_log
     import json
-    from diyims.sqlmodels import Header_Table
-    from sqlmodel import create_engine, Session, select, col
-    from diyims.general_utils import get_DTS
+    # from diyims.sqlmodels import Header_Table
+    # from sqlmodel import create_engine, Session, select, col
+    # from diyims.general_utils import get_DTS
 
     path_dict = get_path_dict()
     call_stack = call_stack + ":ipfs_header_add"

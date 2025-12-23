@@ -10,7 +10,7 @@ from sqlalchemy.exc import NoResultFound
 # from multiprocessing.managers import BaseManager
 # from queue import Empty
 # from diyims.requests_utils import execute_request
-# from diyims.database_utils import (
+
 #    insert_want_list_row,
 #    select_want_list_entry_by_key,
 #    update_last_update_DTS,

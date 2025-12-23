@@ -2,14 +2,6 @@ import json
 import os
 from rich import print
 
-# from diyims.database_utils import (
-# insert_network_row,
-# insert_peer_row,
-# refresh_network_table_from_template,
-# refresh_peer_row_from_template,
-# set_up_sql_operations,
-# add_shutdown_entry,
-# )
 from diyims.error_classes import (
     ApplicationNotInstalledError,
     PreExistingInstallationError,

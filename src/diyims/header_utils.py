@@ -16,10 +16,11 @@ def header_chain_maint(
     ipfs_sourced_header_CID,
     config_dict,
     out_bound,
-    peer_ID,
+    peer_ID,  # will never be self
     logging_enabled,
     queues_enabled,
     debug_enabled,
+    self,
 ):
     # from diyims.requests_utils import execute_request
     # from diyims.logger_utils import add_log
@@ -86,22 +87,13 @@ def header_chain_maint(
             object_type = header_dict["object_type"]
             object_type = object_type  # avoiding editor errors
         except KeyError:
-            msg = f"Invalid header: {ipfs_sourced_header_CID} from Peer: {peer_ID} ."
+            msg = f"Invalid header format: {ipfs_sourced_header_CID} from Peer: {peer_ID} ."
             add_log(
                 process=call_stack,
                 peer_type="Error",
                 msg=msg,
             )
             break  # the dictionary doesn't contain the object type so isn't a valid header object
-
-        if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
-            peer_manager(
-                call_stack,
-                logging_enabled,
-                engine,
-                config_dict,
-                response_dict,
-            )
 
         new_header = Header_Table(  # capture the published header
             version=header_dict["version"],
@@ -121,6 +113,20 @@ def header_chain_maint(
             except IntegrityError:
                 break  # header already exists so we are done
 
+        if (
+            object_type == "local_peer_entry"
+            or object_type == "provider_peer_entry"
+            or object_type == "remote_peer_entry"
+        ):  # process peer entry gor new header
+            peer_manager(
+                call_stack,
+                logging_enabled,
+                engine,
+                config_dict,
+                header_dict,
+                self,
+            )
+
         ipfs_sourced_header_CID = header_dict["prior_header_CID"]
 
         if ipfs_sourced_header_CID == "null":
@@ -137,7 +143,7 @@ def header_chain_maint(
                     session.commit()
                 except IntegrityError:
                     pass
-            break  # log chain complete
+            break  # header chain complete
 
         statement = (  # check for the previous header in the db
             select(Header_Table)
@@ -155,91 +161,171 @@ def header_chain_maint(
     return status_code
 
 
-def peer_manager(call_stack, logging_enabled, engine, config_dict, response_dict):
+def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, self):
     # from diyims.logger_utils import add_log
-    from diyims.ipfs_utils import unpack_object_from_cid
+    # from diyims.ipfs_utils import unpack_object_from_cid
+    from diyims.security_utils import verify_peer_row_from_cid
     # from diyims.general_utils import get_DTS
 
     # from diyims.sqlmodels import Peer_Table
     # from sqlmodel import Session, select
     # from sqlalchemy.exc import NoResultFound
+    update = False
 
-    object_type = response_dict["object_type"]
-    object_CID = response_dict["object_CID"]
+    object_type = header_dict["object_type"]
+    object_CID = header_dict["object_CID"]
 
-    if object_type == "local_peer_entry" or object_type == "provider_peer_entry":
-        status_code, remote_peer_row_dict = unpack_object_from_cid(
+    if (
+        object_type == "local_peer_entry"
+        or object_type == "provider_peer_entry"
+        or object_type == "remote_peer_entry"
+    ):
+        status_code, peer_verified, remote_peer_row_dict = verify_peer_row_from_cid(
             call_stack,
             object_CID,
         )
-        # TODO: disable peer if != 200
 
-        statement = (  # check for the previous header in the db
-            select(Peer_Table).where(
+        # TODO: disable peer if != 200
+        if peer_verified:
+            statement = select(Peer_Table).where(
                 Peer_Table.peer_ID == remote_peer_row_dict["peer_ID"]
             )
-        )
 
-        with Session(engine) as session:
-            try:
-                results = session.exec(statement)
-                peer_row = results.one()
+            with Session(engine) as session:
+                try:
+                    results = session.exec(statement)
+                    peer_row = results.one()
+                    peer_found = True
+                except NoResultFound:
+                    peer_found = False
+        else:
+            return status_code
+
+        if peer_found:
+            new_origin_value = remote_peer_row_dict[
+                "origin_update_DTS"
+            ]  # potential new values
+            if peer_row.origin_update_DTS is None:
+                current_origin_value = "0"  # There maybe nulls in legacy values
+            else:
+                current_origin_value = peer_row.origin_update_DTS
+
+            if current_origin_value < new_origin_value:
+                pass  # continue with update
+            else:
+                return status_code
+
+            if peer_row.peer_ID != self:
+                peer_row.peer_ID = remote_peer_row_dict["peer_ID"]
+                peer_row.IPNS_name = remote_peer_row_dict["IPNS_name"]
+                peer_row.id = remote_peer_row_dict["id"]
+                peer_row.signature = remote_peer_row_dict["signature"]
+                peer_row.signature_valid = remote_peer_row_dict["signature_valid"]
+                # peer_row.peer_type=remote_peer_row_dict["peer_type"]
+                peer_row.origin_update_DTS = remote_peer_row_dict["origin_update_DTS"]
+                peer_row.local_update_DTS = get_DTS()
+                peer_row.execution_platform = remote_peer_row_dict["execution_platform"]
+                peer_row.python_version = remote_peer_row_dict["python_version"]
+                peer_row.IPFS_agent = remote_peer_row_dict["IPFS_agent"]
+                # peer_row.processing_status = remote_peer_row_dict["processing_status"]
+                peer_row.agent = remote_peer_row_dict["agent"]
+                peer_row.version = remote_peer_row_dict["version"]
+                peer_row.disabled = remote_peer_row_dict["disabled"]
 
                 if object_type == "local_peer_entry":
                     # this will trigger peer maint by npp without change anything but the version, etc.
-
-                    peer_row.processing_status = "NCP"
-                    # with Session(engine) as session:
-                    session.add(peer_row)
-                    session.commit()
-
-                    msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
-                    if logging_enabled:
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg=msg,
+                    if (
+                        peer_row.peer_type == "PP"
+                        and peer_row.processing_status != "NPC"
+                    ):
+                        peer_row.processing_status = (
+                            "NPC"  # update from WLR, WLRX, WLW, WLWX
                         )
-                else:
-                    peer_row.processing_status = "NCP"
-                    peer_row.peer_type = "PR"
-
-                    # with Session(engine) as session:
-                    session.add(peer_row)
-                    session.commit()
-
-                    msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
-                    if logging_enabled:
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg=msg,
+                        peer_row.peer_type = (
+                            "PR"  # update from PP since that process is incomplete
                         )
 
-                # out_bound.put_nowait("wake up")
+                    update = True
+                elif object_type == "provider_peer_entry":
+                    if (
+                        peer_row.peer_type == "PP"
+                        and peer_row.processing_status != "NPC"
+                    ):
+                        peer_row.processing_status = (
+                            "NPC"  # update from WLR, WLRX, WLW, WLWX
+                        )
+                        peer_row.peer_type = (
+                            "PR"  # update from PP since that process is incomplete
+                        )
+                        # if peer_row.processing_status != "NPC":
+                        #    peer_row.processing_status = "NPC"
+                    # peer_row.peer_type = "RP"
+                    update = True
 
-            except NoResultFound:
-                # proto_remote_peer_row_dict = refresh_peer_row_from_template()
-                peer_row = Peer_Table(
-                    peer_ID=remote_peer_row_dict["peer_ID"],
-                    local_update_DTS=get_DTS(),
-                    peer_type=remote_peer_row_dict["peer_type"],
-                    original_peer_type=remote_peer_row_dict["peer_type"],
-                    processing_status="NPC",  # new provider with valid address
+                elif object_type == "remote_peer_entry":
+                    if (
+                        peer_row.peer_type == "PP"
+                        and peer_row.processing_status != "NPC"
+                    ):
+                        peer_row.processing_status = (
+                            "NPC"  # update from WLR, WLRX, WLW, WLWX
+                        )
+                        peer_row.peer_type = (
+                            "PR"  # update from PP since that process is incomplete
+                        )
+                        # if peer_row.processing_status != "NPC":
+                        #    peer_row.processing_status = "NPC"
+                    # peer_row.peer_type = "RP"
+                    update = True
+
+            else:
+                pass
+
+        if not peer_found:
+            # first time for the peer means its not a PP since that is local so it should ge in as RP meaning not a PP to start
+
+            peer_row = Peer_Table(
+                peer_ID=remote_peer_row_dict["peer_ID"],
+                IPNS_name=remote_peer_row_dict["IPNS_name"],
+                id=remote_peer_row_dict["id"],
+                signature=remote_peer_row_dict["signature"],
+                signature_valid=remote_peer_row_dict["signature_valid"],
+                peer_type="RP",  # TODO: verify peer type logic
+                origin_update_DTS=remote_peer_row_dict["origin_update_DTS"],
+                local_update_DTS=get_DTS(),
+                execution_platform=remote_peer_row_dict["execution_platform"],
+                python_version=remote_peer_row_dict["python_version"],
+                IPFS_agent=remote_peer_row_dict["IPFS_agent"],
+                processing_status="NPC",
+                agent=remote_peer_row_dict["agent"],
+                version=remote_peer_row_dict["version"],
+                disabled=remote_peer_row_dict["disabled"],
+            )
+            update = True
+
+    else:
+        pass
+
+    if update:
+        session.add(peer_row)
+        session.commit()
+        if peer_found:
+            msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
+            if logging_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=msg,
                 )
-
-                # with Session(engine) as session:
-                session.add(peer_row)
-                session.commit()
-
-                msg = f"Peer {remote_peer_row_dict['peer_ID']} added."
-                if logging_enabled:
-                    add_log(
-                        process=call_stack,
-                        peer_type="status",
-                        msg=msg,
-                    )
-                    # out_bound.put_nowait("wake up")
+        else:
+            msg = f"Peer {remote_peer_row_dict['peer_ID']} added."
+            if logging_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=msg,
+                )
+        # out_bound.put_nowait("wake up")
 
 
 def ipfs_header_add(

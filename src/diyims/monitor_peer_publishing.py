@@ -7,7 +7,7 @@ from multiprocessing import set_start_method, freeze_support
 from diyims.config_utils import get_peer_monitor_config_dict
 from diyims.requests_utils import execute_request
 from diyims.logger_utils import add_log
-from diyims.general_utils import get_DTS, shutdown_query, set_controls
+from diyims.general_utils import get_DTS, shutdown_query, set_controls, set_self
 from diyims.path_utils import get_path_dict
 from sqlmodel import create_engine, Session, select
 from diyims.sqlmodels import Peer_Table, Header_Table
@@ -31,7 +31,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     wait_time = int(config_dict["wait_time"])
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
-
+    SetSelfReturn = set_self()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
@@ -65,7 +65,11 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     else:
         out_bound = None
 
-    statement_1 = select(Peer_Table).where(Peer_Table.signature_valid == 1)
+    statement_1 = (
+        select(Peer_Table)
+        .where(Peer_Table.signature_valid == 1)
+        .where(Peer_Table.peer_ID != SetSelfReturn.self)
+    )
 
     while True:
         peer_list = []
@@ -80,7 +84,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                 break
 
             if (  # select peer to process. ignore the local peer and select only peers that have been processed
-                peer.peer_type != "LP" and peer.processing_status == "NPC"
+                peer.processing_status == "NPC"
             ):  # this single threads updates from a  remote peer
                 ipns_path = "/ipns/" + peer.IPNS_name
 
@@ -112,7 +116,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                         results = session.exec(statement_2)
                         current_peer = results.one()
                         current_peer.disabled = (
-                            1  # disable peer on first resolve failure
+                            0  # disable peer on first resolve failure #TODO: fix this
                         )
                         session.add(current_peer)
                         session.commit()
@@ -138,7 +142,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                         results = session.exec(statement)
 
                         try:
-                            results.one()  # dont need the data if a header exists
+                            results.one()  # dont need t0 process if a header exists
                             header_not_found = False
                         except NoResultFound:
                             header_not_found = True
@@ -150,10 +154,11 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                             ipfs_sourced_header_CID,
                             config_dict,
                             out_bound,
-                            peer_ID,
+                            peer_ID,  # will never be self
                             SetControlsReturn.logging_enabled,
                             SetControlsReturn.queues_enabled,
                             SetControlsReturn.debug_enabled,
+                            SetSelfReturn.self,
                         )  # add one or more headers
                         if SetControlsReturn.logging_enabled:
                             stop_DTS = get_DTS()

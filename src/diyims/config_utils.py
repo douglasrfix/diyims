@@ -169,17 +169,17 @@ def get_scheduler_config_dict():
         parser["Scheduler"]["provider_enable"] = "True"
         parser["Scheduler"]["wantlist_enable"] = "True"
         parser["Scheduler"]["publish_enable"] = "True"
-        parser["Scheduler"]["peer_maint_enable"] = "True"
+        parser["Scheduler"]["peer_maint_enable"] = "False"
         parser["Scheduler"]["remote_monitor_enable"] = "True"
-        parser["Scheduler"]["bitswap_enable"] = "True"
-        parser["Scheduler"]["swarm_enable"] = "False"
+        parser["Scheduler"]["bitswap_enable"] = "NA"
+        parser["Scheduler"]["swarm_enable"] = "NA"
         parser["Scheduler"]["submit_delay"] = "15"
         parser["Scheduler"]["worker_pool"] = "9"
         parser["Scheduler"]["shutdown_delay"] = "0"
         parser["Scheduler"]["wait_before_startup"] = "0"
         parser["Scheduler"]["queues_enabled"] = "1"
         parser["Scheduler"]["logging_enabled"] = "0"
-        parser["Scheduler"]["debug_enabled"] = "1"
+        parser["Scheduler"]["debug_enabled"] = "0"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -695,7 +695,7 @@ def get_want_list_config_dict():
     except KeyError:
         parser["Want_List"] = {}
         parser["Want_List"]["wait_for_new_peer_minutes"] = "10"
-        parser["Want_List"]["provider_zero_sample_count"] = "9999"
+        parser["Want_List"]["provider_zero_sample_count"] = "5"
         parser["Want_List"]["provider_pool_workers"] = "4"
         parser["Want_List"]["provider_maxtasks"] = "100"
         parser["Want_List"]["bitswap_zero_sample_count"] = "5"

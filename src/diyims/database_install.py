@@ -2,19 +2,19 @@ import json
 import os
 from rich import print
 
-from diyims.database_utils import (
-    insert_network_row,
-    insert_peer_row,
-    refresh_network_table_from_template,
-    refresh_peer_row_from_template,
-    set_up_sql_operations,
-    add_shutdown_entry,
-)
+# from diyims.database_utils import (
+# insert_network_row,
+# insert_peer_row,
+# refresh_network_table_from_template,
+# refresh_peer_row_from_template,
+# set_up_sql_operations,
+# add_shutdown_entry,
+# )
 from diyims.error_classes import (
     ApplicationNotInstalledError,
     PreExistingInstallationError,
 )
-from diyims.general_utils import get_DTS, get_agent
+from diyims.general_utils import get_DTS, get_agent, SetControlsReturn
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict, test_ipfs_version, wait_on_ipfs
 from diyims.path_utils import get_path_dict, get_unique_file
@@ -25,7 +25,9 @@ from diyims.requests_utils import execute_request
 # from diyims.logger_utils import get_logger
 from diyims.config_utils import get_db_init_config_dict
 from diyims.security_utils import sign_file, verify_file
-from sqlmodel import SQLModel, create_engine, Session, text
+from sqlmodel import SQLModel, create_engine, Session, text, select
+from diyims.sqlmodels import Peer_Table, Network_Table, Shutdown, Peer_Telemetry
+from sqlalchemy.exc import NoResultFound
 
 
 def create(call_stack):
@@ -61,6 +63,9 @@ def init(call_stack):
         raise
 
     url_dict = get_url_dict()
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
 
     config_dict = get_db_init_config_dict()
     # logger = get_logger(
@@ -68,14 +73,25 @@ def init(call_stack):
     #    "none",
     # )
     wait_on_ipfs(call_stack)
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 10})
 
-    conn, queries = set_up_sql_operations(config_dict)
-    Rconn, Rqueries = set_up_sql_operations(config_dict)
+    statement = select(Network_Table)
 
-    network_name = queries.select_network_name(conn)
+    with Session(engine) as session:
+        try:
+            results = session.exec(statement)
+            network_row = results.one()
+            network_row = network_row
+            network_found = True
+        except NoResultFound:
+            network_found = False
 
-    if network_name is not None:
-        conn.close()
+    # conn, queries = set_up_sql_operations(config_dict)
+    # Rconn, Rqueries = set_up_sql_operations(config_dict)
+
+    # network_name = queries.select_network_name(conn)
+
+    if network_found:
         raise (PreExistingInstallationError(" "))
 
     IPFS_agent = test_ipfs_version()
@@ -119,14 +135,14 @@ def init(call_stack):
     sign_dict = {}
     sign_dict["file_to_sign"] = proto_file_path
 
-    status_code, id, signature = sign_file(call_stack, sign_dict, config_dict)
+    status_code, id, signature = sign_file(call_stack, sign_dict)
 
     verify_dict = {}
     verify_dict["signed_file"] = proto_file_path
     verify_dict["id"] = id
     verify_dict["signature"] = signature
 
-    status_code, signature_valid = verify_file(call_stack, verify_dict, config_dict)
+    status_code, signature_valid = verify_file(call_stack, verify_dict)
 
     """
     Create the initial peer table entry for this peer.
@@ -134,8 +150,25 @@ def init(call_stack):
 
     DTS = get_DTS()
 
-    peer_row_dict = refresh_peer_row_from_template()
+    peer_row_partial = Peer_Table(
+        peer_ID=peer_ID,
+        # IPNS_name = IPNS_name,  # capture ipns_name
+        id=id,
+        signature=signature,
+        signature_valid=signature_valid,
+        peer_type="LP",  # local provider peer
+        origin_update_DTS=DTS,
+        local_update_DTS=DTS,
+        execution_platform=os_platform,
+        python_version=python_version,
+        IPFS_agent=IPFS_agent,
+        agent=agent,
+        processing_status="NPC",  # Normal peer processing complete
+        disabled="0",
+    )
 
+    # peer_row_dict = refresh_peer_row_from_template()
+    peer_row_partial_dict = dict(peer_row_partial)
     proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
@@ -144,7 +177,7 @@ def init(call_stack):
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "false"}
     with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
-        json.dump(peer_row_dict, write_file, indent=4)
+        json.dump(peer_row_partial_dict, write_file, indent=4)
 
     f = open(peer_file, "rb")
     add_files = {"file": f}
@@ -184,22 +217,27 @@ def init(call_stack):
         http_500_ignore=False,
     )
     # TODO: 700 later
+
     IPNS_name = response_dict["Name"]
 
-    peer_row_dict["peer_ID"] = peer_ID
-    peer_row_dict["IPNS_name"] = IPNS_name  # capture ipns_name
-    peer_row_dict["id"] = id
-    peer_row_dict["signature"] = signature
-    peer_row_dict["signature_valid"] = signature_valid
-    peer_row_dict["peer_type"] = "LP"  # local provider peer
-    peer_row_dict["origin_update_DTS"] = DTS
-    peer_row_dict["local_update_DTS"] = "null"
-    peer_row_dict["execution_platform"] = os_platform
-    peer_row_dict["python_version"] = python_version
-    peer_row_dict["IPFS_agent"] = IPFS_agent
-    peer_row_dict["agent"] = agent
-    peer_row_dict["processing_status"] = "NPC"  # Normal peer processing complete
-    peer_row_dict["disabled"] = "0"
+    peer_row = Peer_Table(
+        peer_ID=peer_ID,
+        IPNS_name=IPNS_name,  # capture ipns_name
+        id=id,
+        signature=signature,
+        signature_valid=signature_valid,
+        peer_type="LP",  # local provider peer
+        origin_update_DTS=DTS,
+        local_update_DTS=DTS,
+        execution_platform=os_platform,
+        python_version=python_version,
+        IPFS_agent=IPFS_agent,
+        agent=agent,
+        processing_status="NPC",  # Normal peer processing complete
+        disabled="0",
+    )
+
+    peer_row_dict = dict(peer_row)
 
     add_params = {
         "cid-version": 1,
@@ -225,8 +263,12 @@ def init(call_stack):
     )
     f.close()
     # TODO: 700 later
-    insert_peer_row(conn, queries, peer_row_dict)
-    conn.commit()
+    with Session(engine) as session:
+        session.add(peer_row)
+        session.commit()
+
+    # insert_peer_row(conn, queries, peer_row_dict)
+    # conn.commit()
 
     object_CID = response_dict["Hash"]
     peer_row_CID = object_CID
@@ -247,6 +289,7 @@ def init(call_stack):
         # conn,
         # queries,
         processing_status,
+        SetControlsReturn.queues_enabled,
         # Rconn,
         # Rqueries,
     )
@@ -254,14 +297,18 @@ def init(call_stack):
     print(f"Header containing the peer_row CID '{header_CID}'")
     DTS = get_DTS()
 
-    network_table_dict = refresh_network_table_from_template()
-    network_table_dict["network_name"] = import_car(call_stack)  # 3
+    network_table_dict = {}
+    network_table_dict["network_name"] = import_car(call_stack)
+    network_row = Network_Table(network_name=network_table_dict["network_name"])
+    with Session(engine) as session:
+        session.add(network_row)
+        session.commit()
 
-    network_name = network_table_dict["network_name"]  # abused table dict entry
-    insert_network_row(conn, queries, network_table_dict)
-    conn.commit()
+    # network_name = network_table_dict["network_name"]  # abused table dict entry
+    # insert_network_row(conn, queries, network_table_dict)
+    # conn.commit()
 
-    object_CID = network_table_dict["network_name"]
+    object_CID = network_table_dict["network_name"]  # TODO: package in json
     object_type = "network_name"
 
     mode = "init"
@@ -278,17 +325,77 @@ def init(call_stack):
         # conn,
         # queries,
         processing_status,
+        SetControlsReturn.queues_enabled,
         # Rconn,
         # Rqueries,
     )
+    shutdown_row = Shutdown(enabled=0)
+    with Session(engine) as session:
+        session.add(shutdown_row)
+        session.commit()
 
-    add_shutdown_entry(
-        conn,
-        queries,
+    telemetry_row = Peer_Telemetry(  # TODO: package in json and add header entry
+        peer_ID=peer_ID,
+        insert_DTS=DTS,
+        update_DTS=DTS,
+        execution_platform=os_platform,
+        python_version=python_version,
+        IPFS_agent=IPFS_agent,
+        DIYIMS_agent=agent,
     )
-    conn.commit()
-    conn.close()
-    return
+    with Session(engine) as session:
+        session.add(telemetry_row)
+        session.commit()
+
+    telemetry_dict = dict(telemetry_row)
+
+    proto_file = path_dict["peer_file"]
+    param = {
+        "cid-version": 1,
+        "only-hash": "false",
+        "pin": "true",
+        "pin-name": "update_telemetry",
+    }
+    with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file:
+        json.dump(telemetry_dict, write_file, indent=4)
+
+    f = open(proto_file, "rb")
+    add_file = {"file": f}
+    response, status_code, response_dict = execute_request(
+        url_key="add",
+        url_dict=url_dict,
+        config_dict=config_dict,
+        file=add_file,
+        param=param,
+        call_stack=call_stack,
+        http_500_ignore=False,
+    )
+    f.close()
+
+    object_CID = response_dict["Hash"]  # new peer row cid
+    object_type = "telemetry_entry"
+    mode = object_type
+    processing_status = DTS
+
+    status_code = ipfs_header_add(
+        call_stack,
+        DTS,
+        object_CID,
+        object_type,
+        peer_ID,
+        config_dict,
+        mode,
+        processing_status,
+        SetControlsReturn.queues_enabled,
+    )
+
+    # add_shutdown_entry(
+    #    conn,
+    #    queries,
+    # )
+    # conn.commit()
+    # conn.close()
+    return status_code
 
 
 def import_car(call_stack: str):
@@ -351,4 +458,4 @@ def import_car(call_stack: str):
 
 
 if __name__ == "__main__":
-    init()
+    init("__main__")

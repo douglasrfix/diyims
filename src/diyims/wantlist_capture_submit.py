@@ -230,13 +230,14 @@ def capture_wantlist_peers(
     peers_processed = 0
 
     statement = (
-        select(Peer_Table).where(
+        select(Peer_Table)
+        .where(
             or_(
                 Peer_Table.processing_status == "WLR",
                 Peer_Table.processing_status == "WLW",
             )
         )
-        # .where(Peer_Table.peer_type == peer_type)
+        .where(Peer_Table.peer_type != "LP")
     )
     with Session(engine) as session:
         results = session.exec(statement)

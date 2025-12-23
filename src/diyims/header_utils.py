@@ -369,7 +369,7 @@ def ipfs_header_add(
     statement = (
         select(Header_Table)
         .where(Header_Table.peer_ID == peer_ID)
-        .where(Header_Table.object_type == "local_peer_entry")
+        # .where(Header_Table.object_type == "local_peer_entry")
         .order_by(col(Header_Table.insert_DTS).desc())
     )
     header_dict = {}

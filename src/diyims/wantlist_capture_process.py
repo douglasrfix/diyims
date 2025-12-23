@@ -776,64 +776,71 @@ def filter_wantlist(
                                 Peer_Address.peer_ID == provider_peer_ID,
                                 Peer_Address.in_use == 1,
                             )
+
                             with Session(engine) as session:
                                 results = session.exec(statement)
                                 address = results.first()
+
+                            address_found = False
+                            if address.multiaddress is not None:
+                                address_found = True
+
+                            if address_found:
                                 provider_address = address.multiaddress
 
-                            param = {
-                                "arg": provider_peer_ID,
-                            }
-                            response, status_code, response_dict = execute_request(
-                                url_key="peering_remove",
-                                param=param,
-                                call_stack=call_stack,
-                            )
-                            if status_code != 200 and status_code != 500:
-                                if debug_enabled:
-                                    add_log(
-                                        process=call_stack,
-                                        peer_type="status",
-                                        msg=f"peering remove for {provider_peer_ID} failed with {status_code}.",
-                                    )
-                                break
+                                param = {
+                                    "arg": provider_peer_ID,
+                                }
+                                response, status_code, response_dict = execute_request(
+                                    url_key="peering_remove",
+                                    param=param,
+                                    call_stack=call_stack,
+                                )
+                                if status_code != 200 and status_code != 500:
+                                    if debug_enabled:
+                                        add_log(
+                                            process=call_stack,
+                                            peer_type="status",
+                                            msg=f"peering remove for {provider_peer_ID} failed with {status_code}.",
+                                        )
+                                    break
 
-                            if status_code == 200:
-                                peering_removed = True
+                                if status_code == 200:
+                                    peering_removed = True
 
-                            param = {
-                                "arg": provider_address,
-                            }
+                                param = {
+                                    "arg": provider_address,
+                                }
 
-                            response, status_code, response_dict = execute_request(
-                                url_key="dis_connect",
-                                param=param,
-                                call_stack=call_stack,
-                            )
+                                response, status_code, response_dict = execute_request(
+                                    url_key="dis_connect",
+                                    param=param,
+                                    call_stack=call_stack,
+                                )
 
-                            if status_code != 200 and status_code != 500:
-                                if debug_enabled:
-                                    add_log(
-                                        process=call_stack,
-                                        peer_type="status",
-                                        msg=f"dis connect failed for {provider_peer_ID} with {status_code}.",
-                                    )
-                                break
+                                if status_code != 200 and status_code != 500:
+                                    if debug_enabled:
+                                        add_log(
+                                            process=call_stack,
+                                            peer_type="status",
+                                            msg=f"dis connect failed for {provider_peer_ID} with {status_code}.",
+                                        )
+                                    break
 
-                            if status_code == 200:
-                                disconnected = True
+                                if status_code == 200:
+                                    disconnected = True
 
-                            with Session(engine) as session:
-                                results = session.exec(statement)
-                                address = results.first()
-                                address.in_use = False
-                                if peering_removed:
-                                    address.peering_remove_DTS = get_DTS()
-                                if disconnected:
-                                    address.dis_connect_DTS = get_DTS()
-                                session.add(address)
-                                session.commit()
-                                session.refresh(address)
+                                with Session(engine) as session:
+                                    results = session.exec(statement)
+                                    address = results.first()
+                                    address.in_use = False
+                                    if peering_removed:
+                                        address.peering_remove_DTS = get_DTS()
+                                    if disconnected:
+                                        address.dis_connect_DTS = get_DTS()
+                                    session.add(address)
+                                    session.commit()
+                                    session.refresh(address)
 
                     else:
                         log_string = f"Unknown dictionary for {provider_peer_row_CID}."

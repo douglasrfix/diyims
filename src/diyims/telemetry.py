@@ -14,6 +14,7 @@ from diyims.header_utils import ipfs_header_add
 from diyims.requests_utils import execute_request
 from sqlmodel import create_engine, Session, select
 from diyims.sqlmodels import Peer_Table, Peer_Telemetry
+from fastapi.encoders import jsonable_encoder
 
 
 def select_local_peer_and_update_metrics(call_stack):
@@ -71,7 +72,8 @@ def select_local_peer_and_update_metrics(call_stack):
         DTS = get_DTS()
 
         telemetry.update_DTS = DTS
-        telemetry_dict = dict(telemetry)
+        # telemetry_dict = dict(telemetry)
+        telemetry_dict = jsonable_encoder(telemetry)
 
         with Session(engine) as session:
             session.add(telemetry)

@@ -782,7 +782,7 @@ def filter_wantlist(
                                 address = results.first()
 
                             address_found = False
-                            if address.multiaddress is not None:
+                            if address is not None:
                                 address_found = True
 
                             if address_found:

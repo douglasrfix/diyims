@@ -20,6 +20,7 @@ from diyims.security_utils import sign_file, verify_file
 from sqlmodel import SQLModel, create_engine, Session, text, select
 from diyims.sqlmodels import Peer_Table, Network_Table, Shutdown, Peer_Telemetry
 from sqlalchemy.exc import NoResultFound
+# from fastapi.encoders import jsonable_encoder
 
 
 def create(call_stack):
@@ -156,11 +157,11 @@ def init(call_stack):
         IPFS_agent=IPFS_agent,
         agent=agent,
         processing_status="NPC",  # Normal peer processing complete
-        disabled="0",
+        disabled=0,
     )
 
-    # peer_row_dict = refresh_peer_row_from_template()
     peer_row_partial_dict = dict(peer_row_partial)
+    # peer_row_partial_dict = jsonable_encoder(peer_row_partial)
     proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
@@ -226,10 +227,11 @@ def init(call_stack):
         IPFS_agent=IPFS_agent,
         agent=agent,
         processing_status="NPC",  # Normal peer processing complete
-        disabled="0",
+        disabled=0,
     )
 
     peer_row_dict = dict(peer_row)
+    # peer_row_dict = jsonable_encoder(peer_row)
 
     add_params = {
         "cid-version": 1,
@@ -335,11 +337,14 @@ def init(call_stack):
         IPFS_agent=IPFS_agent,
         DIYIMS_agent=agent,
     )
+
+    telemetry_dict = dict(telemetry_row)
+    # telemetry_dict = jsonable_encoder(telemetry_row)
+
     with Session(engine) as session:
         session.add(telemetry_row)
         session.commit()
-
-    telemetry_dict = dict(telemetry_row)
+        session.refresh(telemetry_row)
 
     proto_file = path_dict["peer_file"]
     param = {

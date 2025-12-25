@@ -7,7 +7,12 @@ from datetime import datetime
 # from sqlite3 import IntegrityError
 from diyims.path_utils import get_path_dict
 from sqlmodel import create_engine, Session, select, col
-from diyims.sqlmodels import Header_Table, Header_Chain_Status, Peer_Table
+from diyims.sqlmodels import (
+    Header_Table,
+    Header_Chain_Status,
+    Peer_Table,
+    Peer_Telemetry,
+)
 from sqlalchemy.exc import NoResultFound, IntegrityError
 
 
@@ -119,6 +124,15 @@ def header_chain_maint(
             or object_type == "remote_peer_entry"
         ):  # process peer entry gor new header
             peer_manager(
+                call_stack,
+                logging_enabled,
+                engine,
+                config_dict,
+                header_dict,
+                self,
+            )
+        elif object_type == "telemetry_entry":
+            telemetry_manager(
                 call_stack,
                 logging_enabled,
                 engine,
@@ -326,6 +340,52 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                     msg=msg,
                 )
         # out_bound.put_nowait("wake up")
+
+
+def telemetry_manager(
+    call_stack, logging_enabled, engine, config_dict, header_dict, self
+):
+    from diyims.ipfs_utils import unpack_object_from_cid
+
+    # object_type = header_dict["object_type"]
+    object_CID = header_dict["object_CID"]
+
+    status_code, object_dict = unpack_object_from_cid(call_stack, object_CID)
+
+    statement = select(Peer_Telemetry).where(
+        Peer_Telemetry.peer_ID == object_dict["peer_ID"]
+    )
+
+    with Session(engine) as session:
+        try:
+            results = session.exec(statement)
+            telemetry_row = results.one()
+            found = True
+        except NoResultFound:
+            found = False
+
+        if found:
+            telemetry_row.peer_ID = object_dict["peer_ID"]
+            telemetry_row.insert_DTS = object_dict["insert_DTS"]
+            telemetry_row.update_DTS = get_DTS()
+            telemetry_row.execution_platform = object_dict["execution_platform"]
+            telemetry_row.python_version = object_dict["python_version"]
+            telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
+            telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
+
+        else:
+            telemetry_row = Peer_Telemetry(
+                peer_ID=object_dict["peer_ID"],
+                insert_DTS=object_dict["insert_DTS"],
+                update_DTS=get_DTS(),
+                execution_platform=object_dict["execution_platform"],
+                python_version=object_dict["python_version"],
+                IPFS_agent=object_dict["IPFS_agent"],
+                DIYIMS_agent=object_dict["DIYIMS_agent"],
+            )
+
+        session.add(telemetry_row)
+        session.commit()
 
 
 def ipfs_header_add(

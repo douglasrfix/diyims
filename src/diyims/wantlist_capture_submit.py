@@ -19,7 +19,7 @@ from diyims.path_utils import get_path_dict
 from diyims.sqlmodels import Peer_Address, Peer_Table
 from diyims.wantlist_capture_process import wantlist_capture_process_main
 from diyims.class_imports import SetControlsReturn, WantlistCaptureProcessMainArgs
-# from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder
 
 
 def wantlist_capture_submit_main(
@@ -297,8 +297,8 @@ def capture_wantlist_peers(
             session.add(peer_table_row)
             session.commit()
             session.refresh(peer_table_row)
-        # peer_table_row_dict = jsonable_encoder(peer_table_row)
-        peer_table_row_dict = dict(peer_table_row)
+        peer_table_row_dict = jsonable_encoder(peer_table_row)
+        # peer_table_row_dict = dict(peer_table_row)
 
         start_DTS = get_DTS()
         Args = WantlistCaptureProcessMainArgs(

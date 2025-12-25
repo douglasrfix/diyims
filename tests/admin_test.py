@@ -52,7 +52,7 @@ def test_create_schema():
 # @pytest.mark.skip(reason="native")
 def test_init_db():
     """testing  initializing database with no previous initialization"""
-    command_string = "install-utils init-database --roaming='RoamingDev'"
+    command_string = "install-utils init-database"
     result = runner.invoke(app, shlex.split(command_string))
     print(result.stdout.rstrip())
     assert result.exit_code == 0

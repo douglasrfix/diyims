@@ -198,3 +198,5 @@
 ## [x]: #65 implement cleanup in beacon
 
 ## [x]: #67 Test ipfs version 37
+
+## TODO: #70 enable foreign connect

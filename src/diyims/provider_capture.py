@@ -522,6 +522,7 @@ def decode_findprovs_structure(
                                 peer_type=peer_type,
                                 original_peer_type=peer_type,
                                 processing_status="WLR",  # new provider with valid address
+                                version="1",  # WLR
                                 disabled=0,
                             )
                             added += 1
@@ -534,6 +535,7 @@ def decode_findprovs_structure(
                                 peer_type=peer_type,
                                 original_peer_type=peer_type,
                                 processing_status="WLW",  # new provider without valid address, may be a firewall issue
+                                version="4",  # undefined
                                 disabled=0,
                             )
                             added += 1

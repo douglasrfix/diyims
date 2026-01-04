@@ -67,7 +67,9 @@ def reset_peer_table_status(call_stack):
 
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
-    statement = select(Peer_Address).where(Peer_Address.in_use == 1)
+    statement = select(Peer_Address).where(
+        Peer_Address.in_use == 1
+    )  # TODO handle reconnect after restart for reverse connect
     with Session(engine) as session:
         results = session.exec(statement).all()
         for address in results:

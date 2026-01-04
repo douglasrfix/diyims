@@ -95,14 +95,14 @@ class Peer_Table(SQLModel, table=True):
     processing_status: str
     agent: str | None = None
     version: str | None = "0"
-    disabled: int | None = 1
+    disabled: int | None = 0
 
 
 class Peer_Control(SQLModel, table=True):
     peer_ID: str = Field(primary_key=True)
     insert_DTS: str | None = None
     processing_status: str
-    disabled: int | None = 1
+    disabled: int | None = 0
     WLW_retry_enabled: bool | None = False
     WLW_retry_count: int | None = 1
 

@@ -12,6 +12,7 @@ from diyims.sqlmodels import (
     Header_Chain_Status,
     Peer_Table,
     Peer_Telemetry,
+    Peer_Address,
 )
 from sqlalchemy.exc import NoResultFound, IntegrityError
 
@@ -188,6 +189,7 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
 
     object_type = header_dict["object_type"]
     object_CID = header_dict["object_CID"]
+    peer_ID = header_dict["peer_ID"]
 
     if (
         object_type == "local_peer_entry"
@@ -199,7 +201,6 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
             object_CID,
         )
 
-        # TODO: disable peer if != 200
         if peer_verified:
             statement = select(Peer_Table).where(
                 Peer_Table.peer_ID == remote_peer_row_dict["peer_ID"]
@@ -212,6 +213,87 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                     peer_found = True
                 except NoResultFound:
                     peer_found = False
+
+            if remote_peer_row_dict["peer_ID"] == self:
+                provider_peer_ID = peer_ID
+
+                statement = (
+                    select(Peer_Address)
+                    .where(Peer_Address.peer_ID == provider_peer_ID)
+                    .where(Peer_Address.in_use == "1")
+                )
+
+                with Session(engine) as session:
+                    try:
+                        results = session.exec(statement).one()
+                        address = results
+                        peer_connected = True
+                    except NoResultFound:
+                        peer_connected = False
+
+                if peer_connected:
+                    provider_address = address.multiaddress
+
+                    param = {
+                        "arg": provider_peer_ID,
+                    }
+                    response, status_code, response_dict = execute_request(
+                        url_key="peering_remove",
+                        param=param,
+                        call_stack=call_stack,
+                    )
+                    # if status_code != 200 and status_code != 500:
+                    #    if debug_enabled:
+                    #        add_log(
+                    #            process=call_stack,
+                    #            peer_type="status",
+                    #            msg=f"peering remove for {provider_peer_ID} failed with {status_code}.",
+                    #        )
+                    #    break
+
+                    if status_code == 200:
+                        peering_removed = True
+
+                    param = {
+                        "arg": provider_address,
+                    }
+
+                    response, status_code, response_dict = execute_request(
+                        url_key="dis_connect",
+                        param=param,
+                        call_stack=call_stack,
+                    )
+
+                    # if status_code != 200 and status_code != 500:
+                    #    if debug_enabled:
+                    #        add_log(
+                    #            process=call_stack,
+                    #            peer_type="status",
+                    #            msg=f"dis connect failed for {provider_peer_ID} with {status_code}.",
+                    #        )
+                    #    break
+
+                    if status_code == 200:
+                        disconnected = True
+
+                    with Session(engine) as session:
+                        # results = session.exec(statement)
+                        # address = results.first()
+                        address.in_use = False
+                        if peering_removed:
+                            address.peering_remove_DTS = get_DTS()
+                        if disconnected:
+                            address.dis_connect_DTS = get_DTS()
+                        session.add(address)
+                        session.commit()
+                        session.refresh(address)
+
+                add_log(
+                    process=call_stack,
+                    peer_type="Status",
+                    msg=f"Disconnect point for peer {provider_peer_ID}",
+                )
+
         else:
             return status_code
 

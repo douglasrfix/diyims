@@ -1,21 +1,22 @@
 [project]
 name = "diyims"
-version = "0.0.0a163"
-#general_utils agent = 0.0.0a54
+version = "0.0.0a164"
+# general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"
 authors = [
     { name = "Douglas R Fix", email = "douglasrfix@prairieobserver.com" }
 ]
-#license = "GPL-3.0-or-later"
-#repository = "https://github.com/douglasrfix/diyims"
+# license = "GPL-3.0-or-later"
+# repository = "https://github.com/douglasrfix/diyims"
 requires-python = ">=3.11.2"
 dependencies = [
     "aiosql>=13.4",
+    "anyio>=4.12.0",
     "email-validator>=2.2.0",
     "fastapi-cli>=0.0.8",
     # fastapi requires manual install on remote
-    "fastapi[standard]>=0.116.1",
+    "fastapi[standard]>=0.128.0",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "psutil>=7.0.0",
@@ -24,10 +25,10 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "python-multipart>=0.0.20",
     "requests>=2.32.4",
-    "sqlmodel>=0.0.24",
+    "sqlmodel>=0.0.31",
     "typer<=16.0",
     "ujson>=5.10.0",
-    "uvicorn>=0.34.3",
+    "uvicorn>=0.40.0",
 ]
 [project.scripts]
 diyims = "diyims.diyims_cmd:app"
@@ -54,11 +55,18 @@ dev = [
     "pytest-cov>=6.1.1",
     "pytest-xdist>=3.7.0",
     "python-dateutil>=2.9.0.post0",
-    "ruff>=0.11.13",
+    "ruff>=0.14.10",
     "types-psutil>=7.0.0.20250601",
     "types-python-dateutil>=2.9.0.20250516",
     "types-requests>=2.32.4.20250611",
 ]
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [

@@ -1,45 +1,9 @@
-# from os import close
-
-
-def set_up_sql_operations(config_dict):  # TODO: row v s cursor set up ?
-    from diyims.path_utils import get_path_dict
-    from diyims.py_version_dep import get_sql_str
-    import aiosql
-    import sqlite3
-
-    path_dict = get_path_dict()
-    sql_str = get_sql_str()
-    connect_path = path_dict["db_file"]
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
-    # conn = sqlite3.connect(connect_path, timeout=int(600))
-    conn.row_factory = sqlite3.Row
-    # conn.execute("PRAGMA busy_timeout = 100000;")
-    return conn, queries
-
-
-def set_up_sql_operations_list(config_dict):
-    from diyims.path_utils import get_path_dict
-    from diyims.py_version_dep import get_sql_str
-    import aiosql
-    import sqlite3
-
-    path_dict = get_path_dict()
-    sql_str = get_sql_str()
-    connect_path = path_dict["db_file"]
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
-    # conn.execute("PRAGMA busy_timeout = 100000;")
-    # conn = sqlite3.connect(connect_path, timeout=int(600))
-    return conn, queries
-
-
 def reset_peer_table_status(call_stack):
     # from diyims.config_utils import get_want_list_config_dict
     from diyims.path_utils import get_path_dict
-    from diyims.py_version_dep import get_sql_str
-    import aiosql
-    import sqlite3
+    # from diyims.py_version_dep import get_sql_str
+
+    # import sqlite3
     from sqlmodel import create_engine, Session, select, or_
     from diyims.sqlmodels import Peer_Address, Shutdown, Peer_Table
     from diyims.general_utils import get_DTS
@@ -47,25 +11,46 @@ def reset_peer_table_status(call_stack):
     # config_dict = get_want_list_config_dict()
     call_stack = call_stack + ":reset_peer_table_status"
     path_dict = get_path_dict()
-    sql_str = get_sql_str()
+    # sql_str = get_sql_str()
     connect_path = path_dict["db_file"]
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
-    conn = sqlite3.connect(connect_path, timeout=int(600))
-    conn.row_factory = sqlite3.Row
+    db_url = f"sqlite:///{connect_path}"
 
-    queries.reset_peer_table_status(
-        conn,
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+
+    # conn = sqlite3.connect(connect_path, timeout=int(config_dict["sql_timeout"]))
+    # conn = sqlite3.connect(connect_path, timeout=int(600))
+    # conn.row_factory = sqlite3.Row
+
+    # update peer_table set processing_status = "WLR"
+    # where processing_status  = "WLRX" or processing_status = "WLP"
+
+    statement = select(Peer_Table).where(
+        or_(
+            Peer_Table.processing_status == "WLRX",
+            Peer_Table.processing_status == "WLWX",
+            Peer_Table.processing_status == "WLRP",
+            Peer_Table.processing_status == "WLWP",
+        )
     )
-    conn.commit()
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for peer in results:
+            if peer.processing_status == "WLRX" or peer.processing_status == "WLRP":
+                peer.processing_status = "WLR"
+            if peer.processing_status == "WLWX" or peer.processing_status == "WLWP":
+                peer.processing_status = "WLW"
+
+            session.add(peer)
+        session.commit()
+
+    # queries.reset_peer_table_status(
+    #    conn,
+    # )
+    # conn.commit()
 
     # update_shutdown_enabled_0(conn, queries)
     # conn.commit()
     # conn.close
-
-    db_url = f"sqlite:///{connect_path}"
-
-    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
     statement = select(Peer_Address).where(
         Peer_Address.in_use == 1
@@ -88,7 +73,7 @@ def reset_peer_table_status(call_stack):
 
             session.add(row)
         session.commit()
-
+    """
     statement = select(Peer_Table).where(
         or_(
             Peer_Table.processing_status == "WLRX",
@@ -106,11 +91,12 @@ def reset_peer_table_status(call_stack):
 
             session.add(peer)
         session.commit()
+        """
 
     return
 
 
-def add_header_chain_status_entry(conn, queries, header_chain_status_dict):
+def aadd_header_chain_status_entry(conn, queries, header_chain_status_dict):
     queries.add_header_chain_status_entry(
         conn,
         insert_DTS=header_chain_status_dict["insert_DTS"],
@@ -121,35 +107,35 @@ def add_header_chain_status_entry(conn, queries, header_chain_status_dict):
     return
 
 
-def add_shutdown_entry(conn, queries):
+def aadd_shutdown_entry(conn, queries):
     queries.add_shutdown_entry(
         conn,
     )
     return
 
 
-def update_shutdown_enabled_1(conn, queries):
+def uupdate_shutdown_enabled_1(conn, queries):
     queries.update_shutdown_enabled_1(
         conn,
     )
     return
 
 
-def update_shutdown_enabled_0(conn, queries):
+def uupdate_shutdown_enabled_0(conn, queries):
     queries.update_shutdown_enabled_0(
         conn,
     )
     return
 
 
-def select_shutdown_entry(conn, queries):
+def sselect_shutdown_entry(conn, queries):
     shutdown_row_dict = queries.select_shutdown_entry(
         conn,
     )
     return shutdown_row_dict
 
 
-def insert_peer_row(conn, queries, peer_table_dict):
+def iinsert_peer_row(conn, queries, peer_table_dict):
     queries.insert_peer_row(
         conn,
         peer_ID=peer_table_dict["peer_ID"],
@@ -171,7 +157,7 @@ def insert_peer_row(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_row_by_key_status(conn, queries, peer_row_dict):
+def uupdate_peer_row_by_key_status(conn, queries, peer_row_dict):
     queries.update_peer_row_by_key_status(
         conn,
         IPNS_name=peer_row_dict["IPNS_name"],
@@ -192,7 +178,7 @@ def update_peer_row_by_key_status(conn, queries, peer_row_dict):
     return
 
 
-def select_peer_table_entry_by_key(conn, queries, peer_table_dict):
+def sselect_peer_table_entry_by_key(conn, queries, peer_table_dict):
     """_summary_
 
     Args:
@@ -210,14 +196,14 @@ def select_peer_table_entry_by_key(conn, queries, peer_table_dict):
     return peer_table_entry
 
 
-def select_peer_table_local_peer_entry(conn, queries, peer_table_dict):
+def sselect_peer_table_local_peer_entry(conn, queries, peer_table_dict):
     peer_table_entry = queries.select_peer_table_local_peer_entry(
         conn,
     )
     return peer_table_entry
 
 
-def update_peer_table_version(conn, queries, peer_table_dict):
+def uupdate_peer_table_version(conn, queries, peer_table_dict):
     queries.update_peer_table_version(
         conn,
         local_update_DTS=peer_table_dict["local_update_DTS"],
@@ -227,7 +213,7 @@ def update_peer_table_version(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_peer_type_status(conn, queries, peer_table_dict):
+def uupdate_peer_table_peer_type_status(conn, queries, peer_table_dict):
     queries.update_peer_table_peer_type_status(
         conn,
         peer_type=peer_table_dict["peer_type"],
@@ -239,7 +225,7 @@ def update_peer_table_peer_type_status(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_peer_type_BP_to_PP(conn, queries, peer_table_dict):
+def uupdate_peer_table_peer_type_BP_to_PP(conn, queries, peer_table_dict):
     queries.update_peer_table_peer_type_BP_to_PP(
         conn,
         local_update_DTS=peer_table_dict["local_update_DTS"],
@@ -248,7 +234,7 @@ def update_peer_table_peer_type_BP_to_PP(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_peer_type_SP_to_PP(conn, queries, peer_table_dict):
+def uupdate_peer_table_peer_type_SP_to_PP(conn, queries, peer_table_dict):
     queries.update_peer_table_peer_type_SP_to_PP(
         conn,
         local_update_DTS=peer_table_dict["local_update_DTS"],
@@ -257,7 +243,7 @@ def update_peer_table_peer_type_SP_to_PP(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WLR(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_WLR(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLR(
         conn,
         # processing_status=peer_table_dict["processing_status"],
@@ -267,7 +253,7 @@ def update_peer_table_status_WLR(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WLW_to_WLR(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_WLW_to_WLR(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLW_to_WLR(
         conn,
         # processing_status=peer_table_dict["processing_status"],
@@ -278,7 +264,7 @@ def update_peer_table_status_WLW_to_WLR(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WLP(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_WLP(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLP(
         conn,
         # processing_status=peer_table_dict["processing_status"],
@@ -288,7 +274,7 @@ def update_peer_table_status_WLP(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WLX(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_WLX(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLX(
         conn,
         # processing_status=peer_table_dict["processing_status"],
@@ -298,7 +284,7 @@ def update_peer_table_status_WLX(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_WLZ(conn, queries, peer_table_dict):
     queries.update_peer_table_status_WLZ(
         conn,
         # processing_status=peer_table_dict["processing_status"],
@@ -308,7 +294,7 @@ def update_peer_table_status_WLZ(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_NPP(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -333,7 +319,7 @@ def update_peer_table_status_to_NPP(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_PMP(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_PMP(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -358,7 +344,7 @@ def update_peer_table_status_to_PMP(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPP_type_PR(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_NPP_type_PR(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -383,7 +369,7 @@ def update_peer_table_status_to_NPP_type_PR(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_PMP_type_PR(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_PMP_type_PR(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -408,7 +394,7 @@ def update_peer_table_status_to_PMP_type_PR(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_NPC(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -441,7 +427,7 @@ def update_peer_table_status_to_NPC(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_status_to_NPC_no_update(conn, queries, peer_table_dict):
+def uupdate_peer_table_status_to_NPC_no_update(conn, queries, peer_table_dict):
     """
     Summary:
 
@@ -465,7 +451,7 @@ def update_peer_table_status_to_NPC_no_update(conn, queries, peer_table_dict):
     return
 
 
-def update_peer_table_metrics(conn, queries, peer_table_dict):
+def uupdate_peer_table_metrics(conn, queries, peer_table_dict):
     queries.update_peer_table_metrics(
         conn,
         origin_update_DTS=peer_table_dict["origin_update_DTS"],
@@ -477,7 +463,7 @@ def update_peer_table_metrics(conn, queries, peer_table_dict):
     return
 
 
-def refresh_peer_row_from_template():
+def rrefresh_peer_row_from_template():
     peer_row_dict = {}
     peer_row_dict["peer_ID"] = "null"
     peer_row_dict["IPNS_name"] = "null"
@@ -497,66 +483,7 @@ def refresh_peer_row_from_template():
     return peer_row_dict
 
 
-def export_local_peer_row(
-    config_dict,
-):  # NOTE: need a header table version by header cid
-    conn, queries = set_up_sql_operations(config_dict)
-    peer_table_dict = {}
-    peer_table_entry = select_peer_table_local_peer_entry(
-        conn, queries, peer_table_dict
-    )
-
-    peer_row_dict = {}
-    peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]
-    peer_row_dict["IPNS_name"] = peer_table_entry["IPNS_name"]
-    peer_row_dict["id"] = peer_table_entry["id"]
-    peer_row_dict["signature"] = peer_table_entry["signature"]
-    peer_row_dict["signature_valid"] = peer_table_entry["signature_valid"]
-    peer_row_dict["peer_type"] = peer_table_entry["peer_type"]
-    peer_row_dict["origin_update_DTS"] = peer_table_entry["origin_update_DTS"]
-    peer_row_dict["local_update_DTS"] = peer_table_entry["local_update_DTS"]
-    peer_row_dict["execution_platform"] = peer_table_entry["execution_platform"]
-    peer_row_dict["python_version"] = peer_table_entry["python_version"]
-    peer_row_dict["IPFS_agent"] = peer_table_entry["IPFS_agent"]
-    peer_row_dict["processing_status"] = peer_table_entry["processing_status"]
-    peer_row_dict["agent"] = peer_table_entry["agent"]
-    peer_row_dict["version"] = peer_table_entry["version"]
-
-    conn.close()
-
-    return peer_row_dict
-
-
-def export_peer_row_for_peerID(
-    peerID, config_dict
-):  # NOTE: need a header table version by header cid
-    conn, queries = set_up_sql_operations(config_dict)
-    peer_table_dict = {}
-    peer_table_dict["peer_ID"] = peerID
-    peer_table_entry = select_peer_table_entry_by_key(conn, queries, peer_table_dict)
-
-    peer_row_dict = {}
-    peer_row_dict["peer_ID"] = peer_table_entry["peer_ID"]
-    peer_row_dict["IPNS_name"] = peer_table_entry["IPNS_name"]
-    peer_row_dict["id"] = peer_table_entry["id"]
-    peer_row_dict["signature"] = peer_table_entry["signature"]
-    peer_row_dict["signature_valid"] = peer_table_entry["signature_valid"]
-    peer_row_dict["peer_type"] = peer_table_entry["peer_type"]
-    peer_row_dict["origin_update_DTS"] = peer_table_entry["origin_update_DTS"]
-    peer_row_dict["local_update_DTS"] = peer_table_entry["local_update_DTS"]
-    peer_row_dict["execution_platform"] = peer_table_entry["execution_platform"]
-    peer_row_dict["python_version"] = peer_table_entry["python_version"]
-    peer_row_dict["IPFS_agent"] = peer_table_entry["IPFS_agent"]
-    peer_row_dict["processing_status"] = peer_table_entry["processing_status"]
-    peer_row_dict["agent"] = peer_table_entry["agent"]
-    peer_row_dict["version"] = peer_table_entry["version"]
-
-    conn.close()
-
-    return peer_row_dict
-
-
-def insert_network_row(conn, queries, network_table_dict):
+def iinsert_network_row(conn, queries, network_table_dict):
     queries.insert_network_row(
         conn,
         network_name=network_table_dict["network_name"],
@@ -564,7 +491,7 @@ def insert_network_row(conn, queries, network_table_dict):
     return
 
 
-def select_network_name(conn, queries, network_table_dict):
+def sselect_network_name(conn, queries, network_table_dict):
     network_table_dict = queries.select_network_name(
         conn,
     )
@@ -578,9 +505,8 @@ def refresh_network_table_from_template():
     return network_table_dict
 
 
-def insert_want_list_row(conn, queries, want_list_table_dict):
+def iinsert_want_list_row(conn, queries, want_list_table_dict):
     # sql_str = get_sql_str()
-    # queries = aiosql.from_str(sql_str, "sqlite3")
 
     queries.insert_want_list_row(
         conn,
@@ -594,9 +520,8 @@ def insert_want_list_row(conn, queries, want_list_table_dict):
     return
 
 
-def update_last_update_DTS(conn, queries, want_list_table_dict):
+def uupdate_last_update_DTS(conn, queries, want_list_table_dict):
     # sql_str = get_sql_str()
-    # queries = aiosql.from_str(sql_str, "sqlite3")
 
     queries.update_last_update_DTS(
         conn,
@@ -608,9 +533,8 @@ def update_last_update_DTS(conn, queries, want_list_table_dict):
     return
 
 
-def select_want_list_entry_by_key(conn, queries, want_list_table_dict):
+def sselect_want_list_entry_by_key(conn, queries, want_list_table_dict):
     # sql_str = get_sql_str()
-    # queries = aiosql.from_str(sql_str, "sqlite3")
 
     want_list_entry = queries.select_want_list_entry_by_key(
         conn,
@@ -620,7 +544,7 @@ def select_want_list_entry_by_key(conn, queries, want_list_table_dict):
     return want_list_entry
 
 
-def refresh_want_list_table_dict():
+def rrefresh_want_list_table_dict():
     want_list_table_dict = {}
     want_list_table_dict["peer_ID"] = "null"
     want_list_table_dict["object_CID"] = "null"
@@ -631,7 +555,7 @@ def refresh_want_list_table_dict():
     return want_list_table_dict
 
 
-def get_header_table_dict():
+def gget_header_table_dict():
     header_table_dict = {}
     header_table_dict["version"] = "0"
     header_table_dict["object_CID"] = "null"
@@ -644,7 +568,7 @@ def get_header_table_dict():
     return header_table_dict
 
 
-def refresh_header_dict_from_template():
+def rrefresh_header_dict_from_template():
     header_dict = {}
     header_dict["version"] = "0"
     header_dict["object_CID"] = "null"
@@ -658,7 +582,7 @@ def refresh_header_dict_from_template():
     return header_dict
 
 
-def insert_header_row(conn, queries, header_dict, header_CID):
+def iinsert_header_row(conn, queries, header_dict, header_CID):
     queries.insert_header_row(
         conn,
         version=header_dict["version"],
@@ -672,7 +596,7 @@ def insert_header_row(conn, queries, header_dict, header_CID):
     )
 
 
-def insert_log_row(conn, queries, log_dict):
+def iinsert_log_row(conn, queries, log_dict):
     from time import sleep
 
     sleep(1)
@@ -687,7 +611,7 @@ def insert_log_row(conn, queries, log_dict):
     return
 
 
-def refresh_log_dict():
+def rrefresh_log_dict():
     log_dict = {}
     log_dict["DTS"] = "null"
     log_dict["process"] = "null"
@@ -705,7 +629,7 @@ def refresh_clean_up_dict():
     return clean_up_dict
 
 
-def insert_clean_up_row(conn, queries, clean_up_dict):
+def iinsert_clean_up_row(conn, queries, clean_up_dict):
     queries.insert_clean_up_row(
         conn,
         insert_DTS=clean_up_dict["insert_DTS"],
@@ -716,7 +640,7 @@ def insert_clean_up_row(conn, queries, clean_up_dict):
     return
 
 
-def select_clean_up_rows_by_date(conn, queries, clean_up_dict):
+def sselect_clean_up_rows_by_date(conn, queries, clean_up_dict):
     with queries.select_clean_up_rows_by_date_cursor(
         conn,
         insert_DTS=clean_up_dict["insert_DTS"],
@@ -732,7 +656,7 @@ def select_clean_up_rows_by_date(conn, queries, clean_up_dict):
     return cursor_tuples, key_dict
 
 
-def delete_clean_up_row_by_date(conn, queries, clean_up_dict):
+def ddelete_clean_up_row_by_date(conn, queries, clean_up_dict):
     queries.delete_clean_up_row_by_date(
         conn,
         insert_DTS=clean_up_dict["insert_DTS"],
@@ -741,7 +665,7 @@ def delete_clean_up_row_by_date(conn, queries, clean_up_dict):
     return
 
 
-def delete_log_rows_by_date(conn, queries, clean_up_dict):
+def ddelete_log_rows_by_date(conn, queries, clean_up_dict):
     queries.delete_log_rows_by_date(
         conn,
         DTS=clean_up_dict["insert_DTS"],
@@ -750,7 +674,7 @@ def delete_log_rows_by_date(conn, queries, clean_up_dict):
     return
 
 
-def delete_want_list_table_rows_by_date(conn, queries, clean_up_dict):
+def ddelete_want_list_table_rows_by_date(conn, queries, clean_up_dict):
     queries.delete_want_list_table_rows_by_date(
         conn,
         DTS1=clean_up_dict["insert_DTS"],

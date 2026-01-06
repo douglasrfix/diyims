@@ -1,17 +1,16 @@
-import sqlite3
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse
 import os
 
 # from dataclasses import dataclass
-import aiosql
 from pathlib import Path
 from sqlmodel import create_engine, Session, select
-from diyims.sqlmodels import Clean_Up, Peer_Table
+
 from sqlalchemy.exc import NoResultFound
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.path_utils import get_path_dict
-from diyims.py_version_dep import get_sql_str
+
+# from diyims.py_version_dep import get_sql_str
 from diyims.config_utils import (
     get_clean_up_config_dict,
     get_shutdown_config_dict,
@@ -19,12 +18,7 @@ from diyims.config_utils import (
 )
 from diyims.logger_utils import add_log
 from diyims.database_utils import (
-    # delete_want_list_table_rows_by_date,
-    set_up_sql_operations,
     refresh_clean_up_dict,
-    set_up_sql_operations_list,
-    delete_log_rows_by_date,
-    update_shutdown_enabled_1,
 )
 from diyims.requests_utils import execute_request
 
@@ -56,15 +50,20 @@ def exec_fastapi(roaming: str) -> None:
 
 
 def get_network_name() -> str:
+    from diyims.sqlmodels import Network_Table
+
     path_dict = get_path_dict()
-    sql_str = get_sql_str()
-    queries = aiosql.from_str(sql_str, "sqlite3")
-    connect_path = path_dict["db_file"]
-    conn = sqlite3.connect(connect_path)
-    conn.row_factory = sqlite3.Row
-    query_row = queries.select_network_name(conn)
-    network_name = query_row["network_name"]
-    conn.close()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement_1 = select(Network_Table)
+
+    with Session(engine) as session:
+        results = session.exec(statement_1)
+        network = results.one()
+        network_name = network.network_name
     return network_name
 
 
@@ -207,6 +206,8 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
 
 
 def set_self() -> SetSelfReturn:
+    from diyims.sqlmodels import Peer_Table
+
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -251,17 +252,38 @@ def get_shutdown_target(config_dict: dict) -> str:
 
 def shutdown_cmd(call_stack):
     from multiprocessing.managers import BaseManager
+    from diyims.sqlmodels import Shutdown
 
     call_stack = call_stack + ":shutdown_cmd"
     config_dict = get_shutdown_config_dict()
     queue_dict = get_scheduler_config_dict()
-    conn, queries = set_up_sql_operations(config_dict)
-    update_shutdown_enabled_1(
-        conn,
-        queries,
-    )
-    conn.commit()
-    conn.close()
+
+    # conn, queries = set_up_sql_operations(config_dict)
+
+    #    conn,
+    #    queries,
+    # )
+    # conn.commit()
+    # conn.close()
+    call_stack = call_stack + ":reset_shutdown"
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement = select(Shutdown)
+    with Session(engine) as session:
+        results = session.exec(statement)
+        try:
+            shutdown = results.one()
+            if shutdown.enabled == 0:
+                shutdown.enabled = 1
+                session.add(shutdown)
+                session.commit()
+        except NoResultFound:
+            pass
 
     q_server_port = int(config_dict["q_server_port"])
 
@@ -278,6 +300,7 @@ def shutdown_cmd(call_stack):
         queue_server.connect()
     except ConnectionRefusedError:
         return
+
     satisfy_queue = queue_server.get_satisfy_queue()
     provider_queue = queue_server.get_provider_queue()
     wantlist_process_queue = queue_server.get_wantlist_process_queue()
@@ -351,14 +374,16 @@ def reset_shutdown(call_stack: str) -> None:
     return
 
 
-def clean_up(call_stack, roaming):  # TODO: roaming should be set by caller
+def clean_up(call_stack, roaming):
+    from diyims.sqlmodels import Log, Clean_Up
+
     call_stack = call_stack + ":clean_up"
     config_dict = get_clean_up_config_dict()
 
     hours_to_delay = config_dict["hours_to_delay"]
     end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
 
-    clean_up_dict = refresh_clean_up_dict()
+    clean_up_dict = refresh_clean_up_dict()  # TODO
     clean_up_dict["insert_DTS"] = end_time.isoformat()
     clean_up_dict["DTS"] = end_time.isoformat()
 
@@ -394,20 +419,29 @@ def clean_up(call_stack, roaming):  # TODO: roaming should be set by caller
             session.delete(clean_up)
             session.commit()
 
-        conn, queries = set_up_sql_operations_list(config_dict)
-        delete_log_rows_by_date(conn, queries, clean_up_dict)
-        conn.commit()
+        # conn, queries = set_up_sql_operations_list(config_dict)
+
+        # delete_log_rows_by_date(conn, queries, clean_up_dict)
+
+    statement = select(Log).where(Log.DTS <= end_time.isoformat())
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for log in results:
+            session.delete(log)
+        session.commit
+        # DTS=clean_up_dict["insert_DTS"],
+        # conn.commit()
 
         # conn, queries = set_up_sql_operations_list(config_dict)
         # delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
         # conn.commit()
-        conn.close()
+        # conn.close()
 
-    network_name = get_network_name()
+    # network_name = get_network_name()
 
-    param = {
-        "arg": network_name,
-    }
+    # param = {
+    #    "arg": network_name,
+    # }
 
     """
     response, status_code, response_dict = execute_request(

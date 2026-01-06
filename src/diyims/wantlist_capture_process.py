@@ -2,7 +2,8 @@ import os
 import json
 from datetime import datetime, timedelta, timezone
 from time import sleep
-from sqlite3 import IntegrityError
+
+# from sqlite3 import IntegrityError
 from sqlmodel import create_engine, Session, select, col
 
 # from sqlalchemy.exc import NoResultFound
@@ -10,21 +11,21 @@ from multiprocessing import set_start_method, freeze_support
 from multiprocessing.managers import BaseManager
 from queue import Empty
 from diyims.requests_utils import execute_request
-from diyims.database_utils import (
-    insert_want_list_row,
-    select_want_list_entry_by_key,
-    update_last_update_DTS,
-    refresh_peer_row_from_template,
-    refresh_want_list_table_dict,
-    set_up_sql_operations,
-    select_peer_table_entry_by_key,
-)
+# from diyims.database_utils import (
+# insert_want_list_row,
+# select_want_list_entry_by_key,
+# update_last_update_DTS,
+# refresh_peer_row_from_template,
+# refresh_want_list_table_dict,
+# set_up_sql_operations,
+
+# )
 from diyims.general_utils import get_DTS, shutdown_query, set_self
 from diyims.ipfs_utils import unpack_object_from_cid
 from diyims.logger_utils import add_log
 from diyims.config_utils import get_want_list_config_dict
 from diyims.path_utils import get_path_dict, get_unique_file
-from diyims.sqlmodels import Peer_Address, Want_List_Table, Peer_Table
+
 from diyims.class_imports import WantlistCaptureProcessMainArgs, SetControlsReturn
 from fastapi.encoders import jsonable_encoder
 from diyims.security_utils import verify_peer_row_from_cid
@@ -51,6 +52,8 @@ def submitted_wantlist_process_for_peer(
     provider_peer_table_row: dict,
     SetControlsReturn: SetControlsReturn,
 ) -> str:
+    from diyims.sqlmodels import Peer_Table
+
     call_stack = call_stack + ":submitted_wantlist_process_for_peer"
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
@@ -426,7 +429,15 @@ def decode_want_list_structure(
     logging_enabled,
     debug_enabled,
 ):
+    from diyims.sqlmodels import Want_List_Table
+    from sqlalchemy.exc import NoResultFound
+
     call_stack = call_stack + ":decode_want_list_structure"
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+
     found = 0
     added = 0
     updated = 0
@@ -435,48 +446,29 @@ def decode_want_list_structure(
     level_one_list = response_dict["Keys"]
     # if str(level_one_list) != "None":
 
-    # TODO: convert to SQLalchemy
     for level_two_dict in level_one_list:
         want_item = level_two_dict["/"]
         provider_peer_ID = peer_row_dict["peer_ID"]
 
-        want_list_table_dict = refresh_want_list_table_dict()
-        want_list_table_dict["peer_ID"] = provider_peer_ID
-        want_list_table_dict["object_CID"] = want_item
-        want_list_table_dict["insert_DTS"] = get_DTS()
-        want_list_table_dict["source_peer_type"] = peer_row_dict["peer_type"]
-        # peer_type = peer_row_dict["peer_type"]
-        conn, queries = set_up_sql_operations(want_list_config_dict)
-        try:
-            insert_want_list_row(conn, queries, want_list_table_dict)
-            conn.commit()
-            conn.close()
-            added += 1
-            log_string = f"new want item for {provider_peer_ID}"
-            if debug_enabled:
-                add_log(
-                    process=call_stack,
-                    peer_type="status",
-                    msg=log_string,
-                )
+        statement = (
+            select(Want_List_Table)
+            .where(Want_List_Table.peer_ID == provider_peer_ID)
+            .where(Want_List_Table.object_CID == want_item)
+        )
+        with Session(engine) as session:
+            try:
+                results = session.exec(statement).one()
+                current_want_item = results
+                want_item_found = True
+            except NoResultFound:
+                want_item_found = False
 
-        except IntegrityError:  # assumed to be dup key error
-            conn.rollback()
-            conn.close()
-            conn, queries = set_up_sql_operations(want_list_config_dict)
-
-            want_list_entry = select_want_list_entry_by_key(
-                conn, queries, want_list_table_dict
-            )
-            conn.close()
-            want_list_table_dict["last_update_DTS"] = get_DTS()
-            insert_dt = datetime.fromisoformat(want_list_entry["insert_DTS"])
-            update_dt = datetime.fromisoformat(want_list_table_dict["last_update_DTS"])
+        if want_item_found:
+            current_want_item.last_update_DTS = get_DTS()
+            insert_dt = datetime.fromisoformat(current_want_item.insert_DTS)
+            update_dt = datetime.fromisoformat(current_want_item.last_update_DTS)
             delta = update_dt - insert_dt
-            want_list_table_dict["insert_update_delta"] = int(delta.total_seconds())
-            conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
-            update_last_update_DTS(conn, queries, want_list_table_dict)
-            conn.commit()
+            current_want_item.insert_update_delta = int(delta.total_seconds())
 
             updated += 1
 
@@ -487,6 +479,54 @@ def decode_want_list_structure(
                     peer_type="status",
                     msg=log_string,
                 )
+
+        else:
+            current_want_item = Want_List_Table(
+                peer_ID=provider_peer_ID,
+                object_CID=want_item,
+                insert_DTS=get_DTS(),
+                source_peer_type=peer_row_dict["peer_type"],
+            )
+            added += 1
+            log_string = f"new want item for {provider_peer_ID}"
+            if debug_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=log_string,
+                )
+
+        with Session(engine) as session:
+            session.add(current_want_item)
+            session.commit()
+
+        # want_list_table_dict = refresh_want_list_table_dict()
+
+        # want_list_table_dict["peer_ID"] = provider_peer_ID
+        # want_list_table_dict["object_CID"] = want_item
+
+        # want_list_table_dict["insert_DTS"] = get_DTS()
+        # want_list_table_dict["source_peer_type"] = peer_row_dict["peer_type"]
+        # peer_type = peer_row_dict["peer_type"]
+        # conn, queries = set_up_sql_operations(want_list_config_dict)
+        # try:
+        # insert_want_list_row(conn, queries, want_list_table_dict) #Reade first
+        #    conn.commit()
+        #    conn.close()
+
+        # except IntegrityError:  # assumed to be dup key error
+        #    conn.rollback()
+        #    conn.close()
+        # conn, queries = set_up_sql_operations(want_list_config_dict)
+
+        # want_list_entry = select_want_list_entry_by_key(
+        #    conn, queries, want_list_table_dict
+        # )
+        #    conn.close()
+
+        # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
+        # update_last_update_DTS(conn, queries, want_list_table_dict)
+        #    conn.commit()
 
         found += 1
 
@@ -506,6 +546,8 @@ def filter_wantlist(
     """
     doc string
     """
+    from diyims.sqlmodels import Peer_Address, Want_List_Table, Peer_Table
+
     call_stack = call_stack + ":filter_wantlist"
     current_DT = datetime.now(timezone.utc)
     start_off_set = timedelta(hours=1)
@@ -532,18 +574,18 @@ def filter_wantlist(
     connect_path = path_dict["db_file"]
     db_url = f"sqlite:///{connect_path}"
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
-    with Session(engine) as session:
-        statement = (
-            select(Want_List_Table)
-            .where(Want_List_Table.peer_ID == provider_peer_ID)
-            .where(
-                col(Want_List_Table.last_update_DTS) >= query_start_dts,
-                col(Want_List_Table.last_update_DTS) <= query_stop_dts,
-                col(Want_List_Table.insert_update_delta) <= largest_delta,
-                col(Want_List_Table.insert_update_delta) >= smallest_delta,
-            )
-            .order_by(col(Want_List_Table.insert_update_delta).desc())
+    statement = (
+        select(Want_List_Table)
+        .where(Want_List_Table.peer_ID == provider_peer_ID)
+        .where(
+            col(Want_List_Table.last_update_DTS) >= query_start_dts,
+            col(Want_List_Table.last_update_DTS) <= query_stop_dts,
+            col(Want_List_Table.insert_update_delta) <= largest_delta,
+            col(Want_List_Table.insert_update_delta) >= smallest_delta,
         )
+        .order_by(col(Want_List_Table.insert_update_delta).desc())
+    )
+    with Session(engine) as session:
         results = session.exec(statement).all()
         line_list = []
         for want_list_item in results:
@@ -556,19 +598,24 @@ def filter_wantlist(
         if shutdown_query(call_stack):
             break
 
-        conn, queries = set_up_sql_operations(config_dict)
+        # conn, queries = set_up_sql_operations(config_dict)
 
-        peer_row_dict = refresh_peer_row_from_template()
-        peer_row_dict["peer_ID"] = provider_peer_ID
-        peer_row_entry = select_peer_table_entry_by_key(
-            conn, queries, peer_row_dict
-        )  # for checking only
-        conn.close()
+        # peer_row_dict = refresh_peer_row_from_template()
+        # peer_row_dict["peer_ID"] = provider_peer_ID
+
+        statement = select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
+        with Session(engine) as session:
+            results = session.exec(statement)
+            peer_row_entry = results.one()
+
+        #    conn, queries, peer_row_dict
+        # )  # for checking only
+        # conn.close()
 
         if (
-            peer_row_entry["processing_status"] == "WLRX"
-            or peer_row_entry["processing_status"] == "WLWX"
-            or peer_row_entry["processing_status"] == "WLWFX"
+            peer_row_entry.processing_status == "WLRX"
+            or peer_row_entry.processing_status == "WLWX"
+            or peer_row_entry.processing_status == "WLWFX"
         ):  # check that we are still WLX status
             want_list_object_CID = line_list[item_number].object_CID
             # This is the json file containing the peer row cid
@@ -611,7 +658,7 @@ def filter_wantlist(
 
             if status_code == 200:
                 X_Content_Length = int(response.headers["X-Content-Length"])
-                conn, queries = set_up_sql_operations(config_dict)  # + 1
+                # conn, queries = set_up_sql_operations(config_dict)  # + 1
                 log_string = f"CAT result {status_code} used {duration} with dictionary of {response_dict} with {X_Content_Length} for {provider_peer_ID}."
                 if debug_enabled:
                     add_log(

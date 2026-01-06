@@ -261,7 +261,6 @@ def init(call_stack):
         session.add(peer_row)
         session.commit()
 
-    # insert_peer_row(conn, queries, peer_row_dict)
     # conn.commit()
 
     object_CID = response_dict["Hash"]
@@ -386,7 +385,6 @@ def init(call_stack):
         SetControlsReturn.queues_enabled,
     )
 
-    # add_shutdown_entry(
     #    conn,
     #    queries,
     # )

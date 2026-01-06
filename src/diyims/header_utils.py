@@ -481,7 +481,6 @@ def ipfs_header_add(
     processing_status,
     queues_enabled,
 ):
-    # from diyims.database_utils import insert_header_row, set_up_sql_operations
     from multiprocessing.managers import BaseManager
 
     # from diyims.requests_utils import execute_request

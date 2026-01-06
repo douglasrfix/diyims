@@ -54,6 +54,7 @@ def publish_main(call_stack: str, mode: str) -> None:
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+    status_code = 200
 
     while True:
         if shutdown_query(call_stack):
@@ -170,7 +171,7 @@ def publish_main(call_stack: str, mode: str) -> None:
     add_log(
         process=call_stack,
         peer_type="status",
-        msg=f"Publish complete {status_code}.",
+        msg=f"Publish complete {status_code}.",  # TODO:
     )
     return
 

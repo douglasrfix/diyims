@@ -3,11 +3,12 @@ import os
 from queue import Empty
 from multiprocessing import set_start_method, freeze_support
 from diyims.config_utils import get_peer_table_maint_config_dict
-from diyims.database_utils import (
-    set_up_sql_operations,
-    update_peer_table_status_to_NPC,
-    update_peer_table_status_to_NPC_no_update,
-)
+
+# from diyims.database_utils import (
+# set_up_sql_operations,
+# update_peer_table_status_to_NPC,
+# update_peer_table_status_to_NPC_no_update,
+# )
 from diyims.general_utils import get_DTS, shutdown_query, set_controls, set_self
 from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.logger_utils import add_log
@@ -153,19 +154,19 @@ def peer_maintenance_main(call_stack: str) -> None:
                 else:
                     # local database values
                     if current_origin_value < new_origin_value:
-                        conn, queries = set_up_sql_operations(config_dict)
-                        update_peer_table_status_to_NPC(
-                            conn, queries, peer_row_verify_dict
-                        )
-                        conn.commit()
+                        # conn, queries = set_up_sql_operations(config_dict)
+                        # update_peer_table_status_to_NPC(
+                        #    conn, queries, peer_row_verify_dict
+                        # )
+                        # conn.commit()
 
                         log_string = f"Peer {peer_row_verify_dict['peer_ID']}  {peer_row_verify_dict['peer_type']} {peer_type} updated."
                     else:  # this would happen if we are processing updates that occurred prior to the current entry created bt a beacon_CID
-                        conn, queries = set_up_sql_operations(config_dict)
-                        update_peer_table_status_to_NPC_no_update(
-                            conn, queries, peer_row_verify_dict
-                        )
-                        conn.commit()
+                        # conn, queries = set_up_sql_operations(config_dict)
+                        # update_peer_table_status_to_NPC_no_update(
+                        #    conn, queries, peer_row_verify_dict
+                        # )
+                        # conn.commit()
 
                         log_string = f"Peer {peer_row_verify_dict['peer_ID']}  {peer_row_verify_dict['peer_type']} {peer_type} updated to clear NPP."
                         if SetControlsReturn.logging_enabled:

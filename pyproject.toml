@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a164"
+version = "0.0.0a165"
 # general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"
@@ -11,23 +11,22 @@ authors = [
 # repository = "https://github.com/douglasrfix/diyims"
 requires-python = ">=3.11.2"
 dependencies = [
-    "aiosql>=13.4",
-    "anyio>=4.12.0",
-    "email-validator>=2.2.0",
-    "fastapi-cli>=0.0.8",
+    "anyio>=4.12.1",
+    "email-validator>=2.3.0",
+    "fastapi-cli>=0.0.20",
     # fastapi requires manual install on remote
     "fastapi[standard]>=0.128.0",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
-    "psutil>=7.0.0",
-    "pydantic-extra-types>=2.10.5",
-    "pydantic-settings>=2.9.1",
+    "psutil>=7.2.1",
+    "pydantic-extra-types>=2.11.0",
+    "pydantic-settings>=2.12.0",
     "python-dateutil>=2.9.0.post0",
-    "python-multipart>=0.0.20",
-    "requests>=2.32.4",
+    "python-multipart>=0.0.21",
+    "requests>=2.32.5",
     "sqlmodel>=0.0.31",
-    "typer<=16.0",
-    "ujson>=5.10.0",
+    "typer>=0.21.0",
+    "ujson>=5.11.0",
     "uvicorn>=0.40.0",
 ]
 [project.scripts]
@@ -49,16 +48,15 @@ packages = ["src/diyims"]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.16.0",
-    "pre-commit>=4.2.0",
-    "pytest>=8.4.0",
-    "pytest-cov>=6.1.1",
-    "pytest-xdist>=3.7.0",
-    "python-dateutil>=2.9.0.post0",
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.14.10",
-    "types-psutil>=7.0.0.20250601",
-    "types-python-dateutil>=2.9.0.20250516",
-    "types-requests>=2.32.4.20250611",
+    "types-psutil>=7.2.1.20251231",
+    "types-python-dateutil>=2.9.0.20251115",
+    "types-requests>=2.32.4.20250913",
 ]
 [[tool.uv.index]]
 name = "testpypi"

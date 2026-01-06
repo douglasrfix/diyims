@@ -24,7 +24,7 @@ from diyims.requests_utils import execute_request
 
 
 def get_agent() -> str:
-    agent = "0.0.0a164"  # NOTE: How to extract at run time
+    agent = "0.0.0a165"  # NOTE: How to extract at run time
 
     return agent
 

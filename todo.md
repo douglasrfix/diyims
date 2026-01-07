@@ -23,7 +23,7 @@
 
 ## [x]: 0.0.0a0 test 3.8 and 3.9 for import lib behavior
 
-## [ ]: 0.0.0a0 Verify installation behavior on a different platform (Linux) need install logic
+## [x]: 0.0.0a0 Verify installation behavior on a different platform (Linux) need install logic
 
 ## [x]: run full test suite against v22/3_8_1
 
@@ -177,9 +177,9 @@
 
 ## [x]: #47 Finish basic templates
 
-## BUG: #48 discovered detail peering remove not being set
+## [x]: #48 discovered detail peering remove not being set
 
-## BUG: #49 satisfy_maine line 315 failed when shutdown issued before startup was complete
+## [x]: #49 satisfy_maine line 315 failed when shutdown issued before startup was complete
 
 ## [x]: #50 fastapi_app.py", line 421, in html_want_detail, starlette.routing.NoMatchFound: No route exists. selecting want item detail from peer detail
 
@@ -187,7 +187,7 @@
 
 ## [x]: #54 capture_provider_addresses overwrites address_available flag
 
-## TODO: #56 add data and logging to capture connect processing
+## [x]: add data and logging to capture connect processing
 
 ## [x]: #57 connect logic appears faulty
 
@@ -199,4 +199,4 @@
 
 ## [x]: #67 Test ipfs version 37
 
-## TODO: #70 enable foreign connect
+## [x]: #70 enable foreign connect

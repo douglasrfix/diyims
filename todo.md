@@ -200,3 +200,5 @@
 ## [x]: #67 Test ipfs version 37
 
 ## [x]: #70 enable foreign connect
+
+## TODO: #72 provide peer reconnect after platform shutdown

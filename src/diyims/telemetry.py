@@ -1,8 +1,6 @@
 import json
 import os
 from multiprocessing import set_start_method, freeze_support
-
-# from diyims.class_imports import SetControlsReturn
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.ipfs_utils import test_ipfs_version
 from diyims.config_utils import get_metrics_config_dict
@@ -116,7 +114,7 @@ def select_local_peer_and_update_metrics(call_stack):
         mode = object_type
         processing_status = DTS
 
-        status_code = ipfs_header_add(
+        status_code, header_CID = ipfs_header_add(
             call_stack,
             DTS,
             object_CID,
@@ -137,10 +135,6 @@ def select_local_peer_and_update_metrics(call_stack):
             return status_code
 
     return status_code
-
-
-def test1(telemetry):
-    return
 
 
 if __name__ == "__main__":

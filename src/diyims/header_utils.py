@@ -4,7 +4,6 @@ from diyims.logger_utils import add_log
 from diyims.general_utils import get_DTS
 from datetime import datetime
 
-# from sqlite3 import IntegrityError
 from diyims.path_utils import get_path_dict
 from sqlmodel import create_engine, Session, select, col
 from diyims.sqlmodels import (
@@ -28,15 +27,6 @@ def header_chain_maint(
     debug_enabled,
     self,
 ):
-    # from diyims.requests_utils import execute_request
-    # from diyims.logger_utils import add_log
-    # from diyims.general_utils import get_DTS
-    # from datetime import datetime
-    # from sqlite3 import IntegrityError
-    # from diyims.path_utils import get_path_dict
-    # from sqlmodel import create_engine, Session, select
-    # from diyims.sqlmodels import Header_Table, Header_Chain_Status
-
     """
     docstring
     """
@@ -177,14 +167,8 @@ def header_chain_maint(
 
 
 def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, self):
-    # from diyims.logger_utils import add_log
-    # from diyims.ipfs_utils import unpack_object_from_cid
     from diyims.security_utils import verify_peer_row_from_cid
-    # from diyims.general_utils import get_DTS
 
-    # from diyims.sqlmodels import Peer_Table
-    # from sqlmodel import Session, select
-    # from sqlalchemy.exc import NoResultFound
     update = False
 
     object_type = header_dict["object_type"]
@@ -242,14 +226,6 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                         param=param,
                         call_stack=call_stack,
                     )
-                    # if status_code != 200 and status_code != 500:
-                    #    if debug_enabled:
-                    #        add_log(
-                    #            process=call_stack,
-                    #            peer_type="status",
-                    #            msg=f"peering remove for {provider_peer_ID} failed with {status_code}.",
-                    #        )
-                    #    break
 
                     if status_code == 200:
                         peering_removed = True
@@ -264,21 +240,10 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                         call_stack=call_stack,
                     )
 
-                    # if status_code != 200 and status_code != 500:
-                    #    if debug_enabled:
-                    #        add_log(
-                    #            process=call_stack,
-                    #            peer_type="status",
-                    #            msg=f"dis connect failed for {provider_peer_ID} with {status_code}.",
-                    #        )
-                    #    break
-
                     if status_code == 200:
                         disconnected = True
 
                     with Session(engine) as session:
-                        # results = session.exec(statement)
-                        # address = results.first()
                         address.in_use = False
                         if peering_removed:
                             address.peering_remove_DTS = get_DTS()
@@ -317,13 +282,11 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                 peer_row.id = remote_peer_row_dict["id"]
                 peer_row.signature = remote_peer_row_dict["signature"]
                 peer_row.signature_valid = remote_peer_row_dict["signature_valid"]
-                # peer_row.peer_type=remote_peer_row_dict["peer_type"]
                 peer_row.origin_update_DTS = remote_peer_row_dict["origin_update_DTS"]
                 peer_row.local_update_DTS = get_DTS()
                 peer_row.execution_platform = remote_peer_row_dict["execution_platform"]
                 peer_row.python_version = remote_peer_row_dict["python_version"]
                 peer_row.IPFS_agent = remote_peer_row_dict["IPFS_agent"]
-                # peer_row.processing_status = remote_peer_row_dict["processing_status"]
                 peer_row.agent = remote_peer_row_dict["agent"]
                 peer_row.version = remote_peer_row_dict["version"]
                 peer_row.disabled = remote_peer_row_dict["disabled"]
@@ -353,8 +316,6 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                         peer_row.peer_type = (
                             "PR"  # update from PP since that process is incomplete
                         )
-                        # if peer_row.processing_status != "NPC":
-                        #    peer_row.processing_status = "NPC"
                     # peer_row.peer_type = "RP"
                     update = True
 
@@ -369,8 +330,6 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                         peer_row.peer_type = (
                             "PR"  # update from PP since that process is incomplete
                         )
-                        # if peer_row.processing_status != "NPC":
-                        #    peer_row.processing_status = "NPC"
                     # peer_row.peer_type = "RP"
                     update = True
 
@@ -429,7 +388,6 @@ def telemetry_manager(
 ):
     from diyims.ipfs_utils import unpack_object_from_cid
 
-    # object_type = header_dict["object_type"]
     object_CID = header_dict["object_CID"]
 
     status_code, object_dict = unpack_object_from_cid(call_stack, object_CID)
@@ -482,15 +440,8 @@ def ipfs_header_add(
     queues_enabled,
 ):
     from multiprocessing.managers import BaseManager
-
-    # from diyims.requests_utils import execute_request
     from diyims.path_utils import get_path_dict, get_unique_file
-
-    # from diyims.logger_utils import add_log
     import json
-    # from diyims.sqlmodels import Header_Table
-    # from sqlmodel import create_engine, Session, select, col
-    # from diyims.general_utils import get_DTS
 
     path_dict = get_path_dict()
     call_stack = call_stack + ":ipfs_header_add"

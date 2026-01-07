@@ -2,7 +2,6 @@ from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse
 import os
 
-# from dataclasses import dataclass
 from pathlib import Path
 from sqlmodel import create_engine, Session, select
 
@@ -10,21 +9,19 @@ from sqlalchemy.exc import NoResultFound
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.path_utils import get_path_dict
 
-# from diyims.py_version_dep import get_sql_str
 from diyims.config_utils import (
     get_clean_up_config_dict,
     get_shutdown_config_dict,
     get_scheduler_config_dict,
 )
 from diyims.logger_utils import add_log
-from diyims.database_utils import (
-    refresh_clean_up_dict,
-)
 from diyims.requests_utils import execute_request
 
 
 def get_agent() -> str:
-    agent = "0.0.0a165"  # NOTE: How to extract at run time
+    from importlib.metadata import version
+
+    agent = version("DIYIMS")
 
     return agent
 
@@ -258,15 +255,6 @@ def shutdown_cmd(call_stack):
     config_dict = get_shutdown_config_dict()
     queue_dict = get_scheduler_config_dict()
 
-    # conn, queries = set_up_sql_operations(config_dict)
-
-    #    conn,
-    #    queries,
-    # )
-    # conn.commit()
-    # conn.close()
-    call_stack = call_stack + ":reset_shutdown"
-
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -369,7 +357,7 @@ def reset_shutdown(call_stack: str) -> None:
                 session.add(shutdown)
                 session.commit()
         except NoResultFound:
-            pass  # TODO: issue not found message
+            pass
 
     return
 
@@ -382,10 +370,6 @@ def clean_up(call_stack, roaming):
 
     hours_to_delay = config_dict["hours_to_delay"]
     end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
-
-    clean_up_dict = refresh_clean_up_dict()  # TODO
-    clean_up_dict["insert_DTS"] = end_time.isoformat()
-    clean_up_dict["DTS"] = end_time.isoformat()
 
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
@@ -419,62 +403,14 @@ def clean_up(call_stack, roaming):
             session.delete(clean_up)
             session.commit()
 
-        # conn, queries = set_up_sql_operations_list(config_dict)
-
-        # delete_log_rows_by_date(conn, queries, clean_up_dict)
-
     statement = select(Log).where(Log.DTS <= end_time.isoformat())
     with Session(engine) as session:
         results = session.exec(statement).all()
         for log in results:
             session.delete(log)
         session.commit
-        # DTS=clean_up_dict["insert_DTS"],
-        # conn.commit()
-
-        # conn, queries = set_up_sql_operations_list(config_dict)
-        # delete_want_list_table_rows_by_date(conn, queries, clean_up_dict)
-        # conn.commit()
-        # conn.close()
-
-    # network_name = get_network_name()
-
-    # param = {
-    #    "arg": network_name,
-    # }
-
-    """
-    response, status_code, response_dict = execute_request(
-        url_key="pin_add",
-        logger=logger,
-        url_dict=url_dict,
-        config_dict=config_dict,
-        param=param,
-    )
-    """
-    # response, status_code, response_dict = execute_request(
-    #    url_key="provide",
-    #    logger=logger,
-    #    url_dict=url_dict,
-    #    config_dict=config_dict,
-    #    param=param,
-    # )
-    # print(status_code)
 
     return
-
-
-def test():
-    from datetime import datetime
-    from time import sleep
-
-    start_DTS = get_DTS()
-    start = datetime.fromisoformat(start_DTS)
-    sleep(58)
-    stop_DTS = get_DTS()
-    stop = datetime.fromisoformat(stop_DTS)
-    duration = stop - start
-    print(duration)
 
 
 if __name__ == "__main__":

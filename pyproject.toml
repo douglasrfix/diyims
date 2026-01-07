@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a165"
+version = "0.0.0a169"
 # general_utils agent = 0.0.0a54
 description = "A diy independent media services app that provides the modern version of the single person printing press."
 readme = "README.md"
@@ -33,8 +33,12 @@ dependencies = [
 diyims = "diyims.diyims_cmd:app"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
+
+#[build-system]
+#requires = ["hatchling"]
+#build-backend = "hatchling.build"
 
 #[tool.hatch.build.targets.sdist]
 #include = [
@@ -43,8 +47,8 @@ build-backend = "hatchling.build"
 #  "/src/diyims/sql/*.sql"
 #]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/diyims"]
+#[tool.hatch.build.targets.wheel]
+#packages = ["src/diyims"]
 
 [dependency-groups]
 dev = [

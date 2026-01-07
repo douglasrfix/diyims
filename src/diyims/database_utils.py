@@ -621,7 +621,7 @@ def rrefresh_log_dict():
     return log_dict
 
 
-def refresh_clean_up_dict():
+def rrefresh_clean_up_dict():
     clean_up_dict = {}
     clean_up_dict["insert_DTS"] = "null"
     clean_up_dict["want_item_file"] = "null"

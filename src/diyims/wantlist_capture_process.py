@@ -2,30 +2,16 @@ import os
 import json
 from datetime import datetime, timedelta, timezone
 from time import sleep
-
-# from sqlite3 import IntegrityError
 from sqlmodel import create_engine, Session, select, col
-
-# from sqlalchemy.exc import NoResultFound
 from multiprocessing import set_start_method, freeze_support
 from multiprocessing.managers import BaseManager
 from queue import Empty
 from diyims.requests_utils import execute_request
-# from diyims.database_utils import (
-# insert_want_list_row,
-# select_want_list_entry_by_key,
-# update_last_update_DTS,
-# refresh_peer_row_from_template,
-# refresh_want_list_table_dict,
-# set_up_sql_operations,
-
-# )
 from diyims.general_utils import get_DTS, shutdown_query, set_self
 from diyims.ipfs_utils import unpack_object_from_cid
 from diyims.logger_utils import add_log
 from diyims.config_utils import get_want_list_config_dict
 from diyims.path_utils import get_path_dict, get_unique_file
-
 from diyims.class_imports import WantlistCaptureProcessMainArgs, SetControlsReturn
 from fastapi.encoders import jsonable_encoder
 from diyims.security_utils import verify_peer_row_from_cid
@@ -141,7 +127,7 @@ def submitted_wantlist_process_for_peer(
     total_updated = 0
     NCW_count = 0
     status_code = 200
-    # conn, queries = set_up_sql_operations(want_list_config_dict)
+
     while (
         samples < number_of_samples_per_interval
         and zero_sample_count <= max_zero_sample_count
@@ -149,10 +135,7 @@ def submitted_wantlist_process_for_peer(
     ):
         if shutdown_query(call_stack):
             break
-        statement = (
-            select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
-            # .where(Peer_Table.processing_status == "WLP")
-        )
+        statement = select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
         with Session(engine) as session:
             results = session.exec(statement)
             peer_table_row = results.one()
@@ -180,7 +163,7 @@ def submitted_wantlist_process_for_peer(
                         peer_type="status",
                         msg=f"Capture want list by ID failed with {status_code}.",
                     )
-                if status_code == 401 or status_code != 401:
+                if status_code == 401 or status_code != 401:  # TODO:
                     if peer_table_row.processing_status == "WLWX":
                         peer_table_row.processing_status = "WLW"
                     elif peer_table_row.processing_status == "WLWFX":
@@ -376,7 +359,6 @@ def capture_peer_want_list_by_id(
     if shutdown_query(call_stack):
         return status_code, found, added, updated
 
-    # level_zero_dict = json.loads(response.text)
     if status_code == 200:
         log_string = f"Want list capture for {provider_peer_ID} results {response_dict} completed with {status_code}."
         if debug_enabled:
@@ -500,34 +482,6 @@ def decode_want_list_structure(
             session.add(current_want_item)
             session.commit()
 
-        # want_list_table_dict = refresh_want_list_table_dict()
-
-        # want_list_table_dict["peer_ID"] = provider_peer_ID
-        # want_list_table_dict["object_CID"] = want_item
-
-        # want_list_table_dict["insert_DTS"] = get_DTS()
-        # want_list_table_dict["source_peer_type"] = peer_row_dict["peer_type"]
-        # peer_type = peer_row_dict["peer_type"]
-        # conn, queries = set_up_sql_operations(want_list_config_dict)
-        # try:
-        # insert_want_list_row(conn, queries, want_list_table_dict) #Reade first
-        #    conn.commit()
-        #    conn.close()
-
-        # except IntegrityError:  # assumed to be dup key error
-        #    conn.rollback()
-        #    conn.close()
-        # conn, queries = set_up_sql_operations(want_list_config_dict)
-
-        # want_list_entry = select_want_list_entry_by_key(
-        #    conn, queries, want_list_table_dict
-        # )
-        #    conn.close()
-
-        # conn, queries = set_up_sql_operations(want_list_config_dict)  # + 1
-        # update_last_update_DTS(conn, queries, want_list_table_dict)
-        #    conn.commit()
-
         found += 1
 
     return status_code, found, added, updated
@@ -546,7 +500,7 @@ def filter_wantlist(
     """
     doc string
     """
-    from diyims.sqlmodels import Peer_Address, Want_List_Table, Peer_Table
+    from diyims.sqlmodels import Want_List_Table, Peer_Table
 
     call_stack = call_stack + ":filter_wantlist"
     current_DT = datetime.now(timezone.utc)
@@ -598,19 +552,10 @@ def filter_wantlist(
         if shutdown_query(call_stack):
             break
 
-        # conn, queries = set_up_sql_operations(config_dict)
-
-        # peer_row_dict = refresh_peer_row_from_template()
-        # peer_row_dict["peer_ID"] = provider_peer_ID
-
         statement = select(Peer_Table).where(Peer_Table.peer_ID == provider_peer_ID)
         with Session(engine) as session:
             results = session.exec(statement)
             peer_row_entry = results.one()
-
-        #    conn, queries, peer_row_dict
-        # )  # for checking only
-        # conn.close()
 
         if (
             peer_row_entry.processing_status == "WLRX"
@@ -658,7 +603,6 @@ def filter_wantlist(
 
             if status_code == 200:
                 X_Content_Length = int(response.headers["X-Content-Length"])
-                # conn, queries = set_up_sql_operations(config_dict)  # + 1
                 log_string = f"CAT result {status_code} used {duration} with dictionary of {response_dict} with {X_Content_Length} for {provider_peer_ID}."
                 if debug_enabled:
                     add_log(
@@ -783,7 +727,6 @@ def filter_wantlist(
                                     )
                                 return status_code, peer_verified
 
-                            # object_CID = peer_row_CID
                             DTS = get_DTS()
 
                             # if peer_type == "PP":
@@ -819,80 +762,6 @@ def filter_wantlist(
                                         peer_type="status",
                                         msg="Sent wakeup.",
                                     )
-                            if False and True:
-                                statement = select(Peer_Address).where(
-                                    Peer_Address.peer_ID == provider_peer_ID,
-                                    Peer_Address.in_use == 1,
-                                )
-
-                                with Session(engine) as session:
-                                    results = session.exec(statement)
-                                    address = results.first()
-
-                                address_found = False
-                                if address is not None:
-                                    address_found = True
-
-                                if address_found:
-                                    provider_address = address.multiaddress
-
-                                    param = {
-                                        "arg": provider_peer_ID,
-                                    }
-                                    response, status_code, response_dict = (
-                                        execute_request(
-                                            url_key="peering_remove",
-                                            param=param,
-                                            call_stack=call_stack,
-                                        )
-                                    )
-                                    if status_code != 200 and status_code != 500:
-                                        if debug_enabled:
-                                            add_log(
-                                                process=call_stack,
-                                                peer_type="status",
-                                                msg=f"peering remove for {provider_peer_ID} failed with {status_code}.",
-                                            )
-                                        break
-
-                                    if status_code == 200:
-                                        peering_removed = True
-
-                                    param = {
-                                        "arg": provider_address,
-                                    }
-
-                                    response, status_code, response_dict = (
-                                        execute_request(
-                                            url_key="dis_connect",
-                                            param=param,
-                                            call_stack=call_stack,
-                                        )
-                                    )
-
-                                    if status_code != 200 and status_code != 500:
-                                        if debug_enabled:
-                                            add_log(
-                                                process=call_stack,
-                                                peer_type="status",
-                                                msg=f"dis connect failed for {provider_peer_ID} with {status_code}.",
-                                            )
-                                        break
-
-                                    if status_code == 200:
-                                        disconnected = True
-
-                                    with Session(engine) as session:
-                                        results = session.exec(statement)
-                                        address = results.first()
-                                        address.in_use = False
-                                        if peering_removed:
-                                            address.peering_remove_DTS = get_DTS()
-                                        if disconnected:
-                                            address.dis_connect_DTS = get_DTS()
-                                        session.add(address)
-                                        session.commit()
-                                        session.refresh(address)
 
                     else:
                         log_string = f"Unknown dictionary for {provider_peer_row_CID}."

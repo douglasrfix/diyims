@@ -68,15 +68,11 @@ def force_purge(call_stack):
     import json
     import requests
     from diyims.config_utils import get_ipfs_config_dict
-
-    # from diyims.logger_utils import get_logger
     from diyims.requests_utils import execute_request
 
     call_stack = call_stack + ":force_purge"
     ipfs_config_dict = get_ipfs_config_dict()
     url_dict = get_url_dict()
-    # peer_type = "none"
-    # logger = get_logger(ipfs_config_dict["log_file"], peer_type)
 
     with requests.post(url_dict["pin_list"], stream=False) as r:  # NOTE: fix
         r.raise_for_status()
@@ -87,7 +83,6 @@ def force_purge(call_stack):
                 param = {"arg": key}
                 execute_request(
                     url_key="pin_remove",
-                    # logger=logger,
                     url_dict=url_dict,
                     config_dict=ipfs_config_dict,
                     param=param,
@@ -111,17 +106,14 @@ def wait_on_ipfs(call_stack):  # TODO: redo this logic to use exec
     ipfs_config_dict = get_ipfs_config_dict()
     i = 0
     not_found = True
-    # logger.debug("ipfs wait started.")
     sleep(int(ipfs_config_dict["connect_retry_delay"]))
     while i < 30 and not_found:
         try:
             with requests.post(url=url_dict["id"]) as r:
                 r.raise_for_status()
                 not_found = False
-                # logger.debug("ipfs wait completed.")
         except requests.exceptions.ConnectionError:
             i += 1
-            # logger.exception(f"wait on ipfs iteration {i}.")
             sleep(int(ipfs_config_dict["connect_retry_delay"]))
 
     return
@@ -165,4 +157,3 @@ if __name__ == "__main__":
     os.environ["DIYIMS_ROAMING"] = "RoamingDev"
     os.environ["COMPONENT_TEST"] = "1"
     os.environ["QUEUES_ENABLED"] = "0"
-    # ("__main__", "init")

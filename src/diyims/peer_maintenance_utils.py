@@ -21,7 +21,7 @@ from sqlalchemy.exc import NoResultFound
 #    update_peer_table_status_WLX,
 #    update_peer_table_status_WLZ,
 #    update_peer_table_status_to_NPP,
-#    select_peer_table_entry_by_key,
+#
 # )
 # from diyims.general_utils import get_DTS, shutdown_query
 # from diyims.ipfs_utils import unpack_object_from_cid

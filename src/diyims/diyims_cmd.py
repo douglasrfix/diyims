@@ -17,7 +17,7 @@ from diyims import install_cli
 from diyims import beacon_cli
 from diyims.scheduler import scheduler_main
 from diyims.general_utils import clean_up, shutdown_cmd
-from diyims.ipfs_utils import purge, refresh_network_name, force_purge
+from diyims.ipfs_utils import force_purge
 from diyims.queue_server import queue_main
 from diyims.provider_capture import provider_capture_main
 from diyims.wantlist_capture_submit import wantlist_capture_submit_main
@@ -78,19 +78,19 @@ def shutdown_dev(
     os.environ["DIYIMS_ROAMING"] = str(roaming)
     shutdown_cmd("cmd-dev")
 
+    # @app.command()
+    # def refresh_name():
+    #    refresh_network_name("cmd")
 
-@app.command()
-def refresh_name():
-    refresh_network_name("cmd")
-
-
-@app.command()
-def ipfs_purge():
+    # @app.command()
+    # def ipfs_purge():
     """
     ipfs purge for test cid.
 
     """
-    purge("cmd")
+
+
+#    purge("cmd")
 
 
 @app.command()

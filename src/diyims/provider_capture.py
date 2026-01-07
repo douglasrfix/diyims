@@ -2,8 +2,6 @@ import os
 import json
 import ipaddress
 from queue import Empty
-
-# from diyims.class_imports import SetSelfReturn
 from diyims.requests_utils import execute_request
 from datetime import datetime
 from time import sleep
@@ -23,7 +21,6 @@ from diyims.config_utils import get_provider_capture_config_dict
 from diyims.path_utils import get_path_dict
 from diyims.sqlmodels import Peer_Address, Peer_Table
 from sqlalchemy.exc import NoResultFound, IntegrityError
-# from diyims.peer_maintenance_utils import peer_add_update
 
 
 def provider_capture_main(call_stack: str, peer_type: str) -> None:
@@ -412,12 +409,6 @@ def decode_findprovs_structure(
 
                     peer_maint_dict = {}
                     peer_maint_dict["peer_ID"] = peer_ID
-                    # execution_mode = "read"
-
-                    # peer_dict = {}
-
-                    # if execution_mode == "read":
-                    # peer_ID = peer_maint_dict["peer_ID"]
                     statement = (
                         select(Peer_Table)
                         .where(Peer_Table.peer_ID == peer_ID)
@@ -442,35 +433,6 @@ def decode_findprovs_structure(
                             status_code = 200
                             existing_peer = False
 
-                    # status_code, current_peer = peer_add_update(call_stack, execution_mode, peer_maint_dict)
-
-                    # f status_code == 402:
-                    #    peer_available = False
-                    # else:
-                    #    peer_available = True
-
-                    # statement = select(Peer_Table).where(Peer_Table.peer_ID == peer_ID) #: factor peer table create and update out
-                    # with Session(engine) as session:
-                    #    results = session.exec(statement)
-                    #    try:
-                    #        current_peer = results.one()
-                    #        peer_available = True
-                    #        if current_peer.processing_status == "WLW":
-                    #            peer_waiting = True
-
-                    # except NoResultFound:
-                    #   peer_available = False
-
-                    # if not peer_available:
-                    #    status_code, address_available = capture_provider_addresses(
-                    #        call_stack,
-                    #        address_list,
-                    #        peer_ID,
-                    #        logging_enabled,
-                    #        engine,
-                    #    )
-                    #    status_code = 200  # tolerate absence of peer entry
-
                     if existing_peer:
                         if (
                             current_peer.processing_status == "WLW"
@@ -487,15 +449,6 @@ def decode_findprovs_structure(
                             )
 
                             status_code = 200  # ignore any address capture failure
-                            # if address_available: # update peer_dict of update
-                            #    current_peer.processing_status = "WLR" # from waiting to ready transition
-                            #    current_peer.local_update_DTS = get_DTS()
-                            #    current_peer.disabled = 0
-                            #    add_required = True
-                            #    modified += 1
-                            #    released += 1
-                            # else:
-                            #    pass  # ignore and move on
                         else:
                             pass  # in wlr or something else status and won't look for addresses
                     else:  # new provider found
@@ -522,6 +475,7 @@ def decode_findprovs_structure(
                                 peer_type=peer_type,
                                 original_peer_type=peer_type,
                                 processing_status="WLR",  # new provider with valid address
+                                version="1",  # WLR
                                 disabled=0,
                             )
                             added += 1
@@ -534,6 +488,7 @@ def decode_findprovs_structure(
                                 peer_type=peer_type,
                                 original_peer_type=peer_type,
                                 processing_status="WLW",  # new provider without valid address, may be a firewall issue
+                                version="4",  # undefined
                                 disabled=0,
                             )
                             added += 1

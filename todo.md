@@ -201,4 +201,4 @@
 
 ## [x]: #70 enable foreign connect
 
-## TODO: #72 provide peer reconnect after platform shutdown
+## [x]: #72 provide peer reconnect after platform shutdown

@@ -253,11 +253,11 @@ def peer_manager(call_stack, logging_enabled, engine, config_dict, header_dict, 
                         session.commit()
                         session.refresh(address)
 
-                add_log(
-                    process=call_stack,
-                    peer_type="Status",
-                    msg=f"Disconnect point for peer {provider_peer_ID}",
-                )
+                # add_log(
+                #    process=call_stack,
+                #    peer_type="Status",
+                #    msg=f"Disconnect point for peer {provider_peer_ID}",
+                # )
 
         else:
             return status_code
@@ -405,27 +405,29 @@ def telemetry_manager(
             found = False
 
         if found:
-            telemetry_row.peer_ID = object_dict["peer_ID"]
-            telemetry_row.insert_DTS = object_dict["insert_DTS"]
-            telemetry_row.update_DTS = get_DTS()
-            telemetry_row.execution_platform = object_dict["execution_platform"]
-            telemetry_row.python_version = object_dict["python_version"]
-            telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
-            telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
+            if telemetry_row.update_DTS <= object_dict["update_DTS"]:
+                telemetry_row.peer_ID = object_dict["peer_ID"]
+                telemetry_row.insert_DTS = object_dict["insert_DTS"]
+                telemetry_row.update_DTS = object_dict["update_DTS"]
+                telemetry_row.execution_platform = object_dict["execution_platform"]
+                telemetry_row.python_version = object_dict["python_version"]
+                telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
+                telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
+                session.add(telemetry_row)
+                session.commit()
 
         else:
             telemetry_row = Peer_Telemetry(
                 peer_ID=object_dict["peer_ID"],
                 insert_DTS=object_dict["insert_DTS"],
-                update_DTS=get_DTS(),
+                update_DTS=object_dict["update_DTS"],
                 execution_platform=object_dict["execution_platform"],
                 python_version=object_dict["python_version"],
                 IPFS_agent=object_dict["IPFS_agent"],
                 DIYIMS_agent=object_dict["DIYIMS_agent"],
             )
-
-        session.add(telemetry_row)
-        session.commit()
+            session.add(telemetry_row)
+            session.commit()
 
 
 def ipfs_header_add(

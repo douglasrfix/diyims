@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }} in {{ roaming }}</h1>
+  <div class="Wrap">
+
+    {% for subscription in subscription_list %}
+
+
+        <div class="Left">
+          <a href="{{ url_for('html_subscription_detail') }}?id={{ subscription.id }}">
+            {{ subscription.snippet_title }}
+          </a>
+        </div>
+
+
+
+    {% endfor %}
+
+  </div>
+{% endblock content %}

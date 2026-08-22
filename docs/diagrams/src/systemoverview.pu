@@ -1,0 +1,10 @@
+@startuml systemoverview
+
+[DIYIMS] <..> [IPFS] : use
+[HTML5\nBrowser] <..> [HTTP\nuvicorn\nServer] : use
+[SQLite\nSQLAlchemy\nDatabase] <..> [DIYIMS]
+[HTTP\nuvicorn\nServer] ..> [Jinja2] : use
+[HTTP\nuvicorn\nServer] ..> [DIYIMS] : use
+
+
+@enduml

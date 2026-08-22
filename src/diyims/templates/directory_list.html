@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }} in {{ roaming }}</h1>
+  <div class="Wrap">
+
+    {% for directory in directory_list %}
+
+      {%  if directory.file == ""    %}
+
+        <div class="Left">
+          {{ directory.root }}
+        </div>
+
+      {% else %}
+
+        <div class="indent">
+          <a href="{{ url_for('html_directory_detail') }}?root={{ directory.root }}&file={{ directory.file }}">
+            {{ directory.file }}
+          </a>
+        </div>
+
+      {% endif %}
+
+    {% endfor %}
+
+  </div>
+{% endblock content %}

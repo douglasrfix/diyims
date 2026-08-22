@@ -1,0 +1,22 @@
+[project]
+name = "diyims"
+version = "0.0.0a205"
+description = "DIY Independent Media Services"
+readme = "README.md"
+authors = [
+    { name = "Douglas R Fix", email = "douglasrfix@prairieobserver.com" }
+]
+requires-python = ">=3.12.10"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "requests>=2.34.2",
+    "sqlmodel>=0.0.39",
+    "uvicorn>=0.52.4",
+]
+
+[project.scripts]
+diyims = "diyims:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

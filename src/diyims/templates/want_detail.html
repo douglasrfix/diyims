@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Want Item Detail : {{ object_CID }}</h1>
+
+    <div class="Wrap">
+
+      <div class="item">Peer ID : {{ want_item.peer_ID }}</div>
+      <div class="item">Insert DTS : {{ want_item.insert_DTS }}</div>
+      <div class="item">Last Update DTS : {{ want_item.last_update_DTS }}</div>
+      <div class="item">Insert Update Delta : {{ want_item.insert_update_delta }}</div>
+      <div class="item">Source Peer Type : {{ want_item.source_peer_type }}</div>
+
+
+	  </div>
+
+
+
+{% endblock content %}

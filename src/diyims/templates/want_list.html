@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>{{ title }} in {{ roaming }}</h1>
+
+  <div class="Wrap">
+
+    {% if peer_ID is defined  %}
+      {% for want_item in want_list %}
+        <div class="item">definedItem</div>
+        <div class="item"> {{ want_item.peer_ID }} </div>
+
+      {% endfor %}
+    {% else %}
+      {% for want_item in want_list %}
+
+        <div class="item"> <a href="{{ url_for('html_want_detail') }}?object_CID={{ want_item.object_CID  }}">{{ want_item.object_CID }}</a> </div>
+
+        {% endfor %}
+    {% endif %}
+  </div>
+{% endblock content %}

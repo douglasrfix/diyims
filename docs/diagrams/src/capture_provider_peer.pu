@@ -1,0 +1,35 @@
+@startuml capture_provider
+start
+while (no shutdown request ?) is (true)
+    :execute ipfs find_providers;
+    :parse providers into list;
+    repeat
+        :get next list entry;
+        if (list entry found ?) then (true)
+            if (peer is new ?) then (true)
+                :add peer with processing status "WLW";
+            endif
+            :execute ipfs id for peer;
+            :capture new addresses for peer;
+            :test available addresses for peer;
+            if (address available ?) then (true)
+                :connect and add peer to peering pool;
+                :set processing status to "WLR" for peer;
+            endif
+            :execute ipfs want_list for peer;
+            :test for beacon availability;
+            if (beacon available ?) then (true)
+                :set processing status to "WLR" for peer;
+            endif
+            if (peer changed ?) then (true)
+                :update peer;
+                :add header;
+            endif
+        else (false)
+            break
+        endif
+    repeat while (no shutdown request ?) is (true)
+    :wait for message with timer;
+endwhile
+stop
+@enduml

@@ -1,0 +1,85 @@
+@font-face {
+    font-family: "Inter-Regular";
+    src: url("../fonts/Inter-Regular.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: fallback;
+}
+
+html,
+body {
+	    font-family: "Inter-Regular";
+		margin: 0;
+		padding: 0;
+}
+body {
+	overflow-x: hidden;
+	overflow-y: scroll;
+}
+
+
+.container {
+    background-color: indigo;
+    font-family: "Inter-Regular";
+    font-size: 1rem;
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+
+}
+ol.u {list-style-type: none;}
+
+.item,
+.last-item {
+
+    color: #ebebeb;
+    text-decoration: none;
+
+}
+.item {
+
+    margin-right: 1rem;
+
+}
+.last-item {
+
+    margin-left: auto;
+}
+
+
+
+
+
+
+
+
+.Wrap {
+	/* max-width: 1400px; */
+	display: flex;
+	margin: 0 auto;
+	flex-direction: column;
+    flex-wrap: wrap;
+}
+
+
+
+.Left {
+
+	width: 100%;
+    margin-left: 30px;
+	/* background-color: #03A66A; */
+	/* display: inline-block; */
+	/* position: absolute; */
+
+}
+
+.indent {
+
+	width: 100%;
+    margin-left: 60px;
+	/* background-color: #03A66A; */
+	/* display: inline-block; */
+	/* position: absolute; */
+
+}

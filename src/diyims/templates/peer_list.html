@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }} in {{ roaming }}</h1>
+  <ol class="u">
+
+
+    {% for peer in peer_list %}
+
+
+        <li><a href="{{ url_for('html_peer_detail') }}?peer_ID={{ peer.peer_ID  }}">{{ peer.peer_ID  }} : {{ peer.processing_status }}</a></li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

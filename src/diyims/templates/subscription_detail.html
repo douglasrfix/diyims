@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1> {{ title }}</h1>
+
+    <div class="Wrap">
+
+      <div class="item">Subscription Id : {{ id }}</div>
+      <div class="item">Published Date : {{ snippet_publishedAt }}</div>
+      <div class="item">Title : {{ snippet_title }}</div>
+      <div class="item">Description : {{ snippet_description }}</div>
+      <div class="item">Channel Id : {{ snippet_resourceId_channelId }}</div>
+      <div class="item">New items : {{ contentDetails_newItemCount }}</div>
+
+
+    </div>
+
+{% endblock content %}

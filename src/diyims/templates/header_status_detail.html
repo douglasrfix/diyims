@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Details for Header : </h1>
+
+    <div class="Wrap">
+
+      <div class="item">Insert DTS : {{ header_status_detail.insert_DTS }}</div>
+      <div class="item">Peer ID : {{ header_status_detail.peer_ID }}</div>
+      <div class="item">Missing Header CID : {{ header_status_detail.missing_header_CID }}</div>
+      <div class="item">Message : {{ header_status_detail.message}}</div>
+
+	  </div>
+
+
+{% endblock content %}

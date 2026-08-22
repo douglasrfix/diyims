@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1> {{ title }} : {{ file  }}</h1>
+
+    <div class="Wrap">
+
+      <div class="item">Root : {{ root }}</div>
+      <div class="item">File : {{ file }}</div>
+      <div class="item">Size (bytes) : {{ size }}</div>
+      <div class="item">Most recent access (seconds) : {{ atime }}</div>
+      <div class="item">Most recent modification (seconds) : {{ mtime }}</div>
+      <div class="item">Birth time (seconds) : {{ birthtime }}</div>
+
+
+    </div>
+
+{% endblock content %}

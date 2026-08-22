@@ -1,0 +1,25 @@
+# Source - https://codereview.stackexchange.com/q
+# Posted by Woask, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-01-09, License - CC BY-SA 4.0
+
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <p>Current file: {{ currentFile }}</p>
+    <p>
+        <table>
+            {% for key, value in fileProperties.items() %}
+            <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </p>
+</body>
+</html>

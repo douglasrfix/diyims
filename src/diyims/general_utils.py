@@ -1,0 +1,463 @@
+from datetime import datetime, timezone, timedelta
+from dateutil.parser import parse
+import os
+
+from pathlib import Path
+from sqlmodel import create_engine, Session, select, or_
+
+from sqlalchemy.exc import NoResultFound
+from diyims.error_classes import (
+    IPFSIDDoesNotMatchPeerTableID,
+    UnSupportedIPFSVersionError,
+    CommunicationsError,
+)
+from diyims.class_imports import SetControlsReturn, SetSelfReturn
+from diyims.path_utils import get_path_dict
+from diyims.ipfs_utils import wait_on_ipfs
+
+
+from diyims.config_utils import (
+    get_clean_up_config_dict,
+    get_shutdown_config_dict,
+    get_scheduler_config_dict,
+)
+from diyims.logger_utils import add_log
+from diyims.requests_utils import execute_request
+from diyims.sqlmodels import Peer_Table
+
+
+def verify_peerID(call_stack) -> dict:
+    call_stack = call_stack + "verify_peerID"
+
+    try:
+        # wait_dict contains the full ipfs "id" command response
+        wait_dict = wait_on_ipfs(call_stack)
+        # print(wait_dict.keys())
+    except UnSupportedIPFSVersionError:
+        raise
+    except CommunicationsError:
+        raise
+    path_dict = get_path_dict()
+    connect_path = path_dict["db_file"]
+    db_url = f"sqlite:///{connect_path}"
+    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
+
+    statement = (
+        select(Peer_Table)
+        .where(Peer_Table.peer_ID == wait_dict["ID"])
+        .where(Peer_Table.peer_type == "LP")
+    )
+
+    with Session(engine) as session:
+        try:
+            session.exec(statement).one()
+        except NoResultFound:
+            raise IPFSIDDoesNotMatchPeerTableID("")
+
+    return wait_dict  # wait_dict contains the full ipfs "id" command response
+
+
+def get_agent() -> str:
+    from importlib.metadata import version
+
+    agent = version("DIYIMS")
+
+    return agent
+
+
+def exec_uvicorn(roaming: str) -> None:
+    import os
+    import uvicorn
+
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
+    uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
+
+    return
+
+
+def exec_fastapi(roaming: str) -> None:
+    import os
+    import uvicorn
+
+    os.environ["DIYIMS_ROAMING"] = str(roaming)
+    uvicorn.run("diyims.fastapi_app:myapp", host="127.0.0.1", port=8001)
+
+    return
+
+
+def get_network_name() -> str:
+    from diyims.sqlmodels import Network_Table
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement_1 = select(Network_Table)
+
+    with Session(engine) as session:
+        results = session.exec(statement_1)
+        network = results.one()
+        network_name = network.network_name
+    return network_name
+
+
+def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
+    """
+    set_controls _summary_
+
+    _extended_summary_
+
+    Arguments:
+        call_stack {str} -- _description_
+        config_dict {dict} -- _description_
+
+    Returns:
+        tuple[bool, bool, bool, bool, bool] -- _description_
+    """
+
+    queues_enabled = bool(int(config_dict["queues_enabled"]))
+    try:
+        queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
+    except KeyError:
+        pass
+
+    try:
+        component_test = bool(int(os.environ["COMPONENT_TEST"]))
+    except KeyError:
+        component_test = False
+
+    logging_enabled = bool(int(config_dict["logging_enabled"]))
+    try:
+        logging_enabled = bool(int(os.environ["LOGGING_ENABLED"]))
+    except KeyError:
+        pass
+
+    debug_enabled = bool(int(config_dict["debug_enabled"]))
+    try:
+        debug_enabled = bool(int(os.environ["DEBUG_ENABLED"]))
+    except KeyError:
+        pass
+
+    try:
+        single_thread = bool(int(config_dict["single_thread"]))
+    except KeyError:
+        single_thread = bool(1)
+    try:
+        single_thread = bool(int(os.environ["SINGLE_THREAD"]))
+    except KeyError:
+        pass
+
+    try:
+        metrics_enabled = bool(int(config_dict["metrics_enabled"]))
+    except KeyError:
+        metrics_enabled = bool(1)
+    try:
+        metrics_enabled = bool(int(os.environ["METRICS_ENABLED"]))
+    except KeyError:
+        pass
+
+    set_controls_return = SetControlsReturn()
+    set_controls_return.component_test = component_test
+    set_controls_return.debug_enabled = debug_enabled
+    set_controls_return.logging_enabled = logging_enabled
+    set_controls_return.queues_enabled = queues_enabled
+    set_controls_return.single_thread = single_thread
+    set_controls_return.metrics_enabled = metrics_enabled
+
+    if component_test:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Logging enabled",
+        )
+
+        if queues_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Queues enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Queues disabled",
+            )
+
+        if debug_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Debug enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Debug disabled",
+            )
+
+        if component_test:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Component Test enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Component Test disabled",
+            )
+
+        if single_thread:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Single Thread enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Single Thread disabled",
+            )
+
+        if metrics_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Metrics enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Metrics disabled",
+            )
+
+    return set_controls_return
+
+
+def set_self() -> SetSelfReturn:
+    from diyims.sqlmodels import Peer_Table
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement_1 = select(Peer_Table).where(Peer_Table.peer_type == "LP")
+
+    with Session(engine) as session:
+        results = session.exec(statement_1)
+        current_peer = results.one()
+        self = current_peer.peer_ID
+        IPNS_name = current_peer.IPNS_name
+
+    set_self = SetSelfReturn(self=self, IPNS_name=IPNS_name)
+    return set_self
+
+
+def get_DTS() -> str:
+    """Generates an iso6??? formatted UTC time string
+    suitable for timestamp use. if the value is to be passed to a url query string the
+    + in the iso format must be replaced with a %2B
+
+    Returns:
+        str: UTC datetime.now() in an iso format
+    """
+    DTS = datetime.now(timezone.utc).isoformat()
+    # DTSTemp = DTS.replace('+', '%2B')
+
+    return DTS
+
+
+def get_shutdown_target(config_dict: dict) -> str:
+    current_date = datetime.today()
+    shutdown_time = config_dict["shutdown_time"]
+    if shutdown_time == "99:99:99":
+        shutdown_time = str(current_date + timedelta(weeks=10))
+    target_DT = parse(shutdown_time, default=current_date)
+
+    return target_DT
+
+
+def shutdown_cmd(call_stack):
+    from multiprocessing.managers import BaseManager
+    from diyims.sqlmodels import Shutdown
+
+    call_stack = call_stack + ":shutdown_cmd"
+    config_dict = get_shutdown_config_dict()
+    queue_dict = get_scheduler_config_dict()
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement = select(Shutdown)
+    with Session(engine) as session:
+        results = session.exec(statement)
+        try:
+            shutdown = results.one()
+            if shutdown.enabled == 0:
+                shutdown.enabled = 1
+                session.add(shutdown)
+                session.commit()
+        except NoResultFound:
+            pass
+
+    q_server_port = int(config_dict["q_server_port"])
+
+    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+    queue_server.register("get_satisfy_queue")
+    queue_server.register("get_provider_queue")
+    queue_server.register("get_wantlist_submit_queue")
+    queue_server.register("get_wantlist_process_queue")
+    queue_server.register("get_remote_monitor_queue")
+    queue_server.register("get_publish_queue")
+    queue_server.register("get_peer_maint_queue")
+
+    try:
+        queue_server.connect()
+    except ConnectionRefusedError:
+        return
+
+    satisfy_queue = queue_server.get_satisfy_queue()
+    provider_queue = queue_server.get_provider_queue()
+    wantlist_process_queue = queue_server.get_wantlist_process_queue()
+    wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
+    remote_monitor_queue = queue_server.get_remote_monitor_queue()
+    publish_queue = queue_server.get_publish_queue()
+    peer_maint_queue = queue_server.get_peer_maint_queue()
+    if bool(queue_dict["beacon_enable"]):
+        satisfy_queue.put_nowait("0")
+    if bool(queue_dict["provider_enable"]):
+        provider_queue.put_nowait("1")
+    if bool(queue_dict["wantlist_enable"]):
+        wantlist_process_queue.put_nowait("2")
+        wantlist_submit_queue.put_nowait("2")
+    if bool(queue_dict["remote_monitor_enable"]):
+        remote_monitor_queue.put_nowait("3")
+    if bool(queue_dict["publish_enable"]):
+        publish_queue.put_nowait("4")
+    if bool(queue_dict["peer_maint_enable"]):
+        peer_maint_queue.put_nowait("5")
+
+    return
+
+
+def shutdown_query(call_stack: str) -> bool:
+    from diyims.sqlmodels import Shutdown
+
+    call_stack = call_stack + ":shutdown_query"
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement = select(Shutdown)
+    with Session(engine) as session:
+        results = session.exec(statement)
+        try:
+            shutdown = results.one()
+            enabled = shutdown.enabled
+        except NoResultFound:
+            pass
+
+    return bool(enabled)
+
+
+def reset_shutdown(call_stack: str) -> None:
+    from diyims.sqlmodels import Shutdown
+
+    call_stack = call_stack + ":reset_shutdown"
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    statement = select(Shutdown)
+    with Session(engine) as session:
+        results = session.exec(statement)
+        try:
+            shutdown = results.one()
+            if shutdown.enabled == 1:
+                shutdown.enabled = 0
+                session.add(shutdown)
+                session.commit()
+        except NoResultFound:
+            pass
+
+    return
+
+
+def clean_up(call_stack, roaming):
+    from diyims.sqlmodels import Log, Clean_Up
+
+    call_stack = call_stack + ":clean_up"
+    config_dict = get_clean_up_config_dict()
+
+    hours_to_delay = config_dict["hours_to_delay"]
+    end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
+
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    #print(sqlite_file_name)
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+
+    # statement = select(Clean_Up)
+    statement = select(Clean_Up).where(
+        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new")
+    )
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+
+        for clean_up in results:
+            want_item_file = clean_up.want_item_file
+            beacon_CID = clean_up.beacon_CID
+
+            try:
+                Path(want_item_file).unlink()
+            except FileNotFoundError:
+                pass
+
+            param = {
+                "arg": beacon_CID,
+            }
+
+            response, status_code, response_dict = execute_request(
+                url_key="pin_remove",
+                param=param,
+                call_stack=call_stack,
+            )
+            # TODO: 700
+            session.delete(clean_up)
+            session.commit()
+
+    statement = select(Log).where(Log.DTS <= end_time.isoformat())
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+        for log in results:
+            session.delete(log)
+        session.commit
+
+    return
+
+
+if __name__ == "__main__":
+    os.environ["DIYIMS_ROAMING"] = "Roaming"
+    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["QUEUES_ENABLED"] = "0"
+    clean_up("CMD", "Roaming")

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ title }} in {{ roaming }}</h1>
+  <ol class="u">
+
+
+    {% for address in address_list %}
+
+
+        <li><a href="{{ url_for('html_address_detail') }}?address_string={{ address.address_string  }}">
+          {{ address.address_string }} Available:{{ address.available}} Used: {{ address.connect_DTS}}</a></li>
+
+
+    {% endfor %}
+  </ol>
+{% endblock content %}

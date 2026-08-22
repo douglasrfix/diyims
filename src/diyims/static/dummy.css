@@ -1,0 +1,118 @@
+body {
+background-color: #212F3C;
+color: #FFFFF0;
+}
+body a {
+color: #00BFFF !important;
+}
+.li-container {
+
+    display: grid;
+
+}
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: #038C5A;
+}
+@media screen and (min-width: 320px){
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: green;
+}
+}
+@media screen and (min-width: 550px){
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: yellow;
+}
+}
+@media screen and (min-width: 768px){
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: orange;
+}
+}
+
+@media screen and (min-width: 960px){
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: red;
+}
+}
+@media screen and (min-width: 1920px){
+.Header {
+	width: 100vh;
+	height: 10vh;
+	background-color: gray;
+}
+}
+.WrapMiddle {
+	width: 100vh;
+	font-size: 0;
+	position: relative;
+}
+.OffCanvas-Active .Left,
+.OffCanvas-Active .Middle {
+	transform: translate3d(200px, 0, 0);
+	transition: transform .3s;
+}
+
+.Left {
+
+	width: 100%;
+	background-color: #03A66A;
+	display: inline-block;
+	position: absolute;
+	transition: transform .3s;
+}
+
+@media (min-width: 40rem) {
+	.Leftt {
+		width: 20.8333333%;
+		left: 0;
+		position: relative;
+	}
+}
+
+.Middle {
+	height: 80vh;
+	background-color: #bbbf90;
+	transition: transform .3s;
+	font-size: .9rem;
+
+	display: inline-block;
+}
+
+@media (min-width: 40rem) {
+	.Middlet {
+		display: inline-block;
+		width: 68.75%;
+	}
+}
+
+.Right {
+	height: 80vh;
+	width: 20vh;
+	background-color: #03A66A;
+	font-size: .9rem;
+
+	display: inline-block;
+}
+
+@media (min-width: 40rem) {
+	.Rightt {
+		width: 10.4166667%;
+		display: inline-block;
+	}
+}
+
+.Footer {
+	height: 10vh;
+	width: 100vh;
+	background-color: #025059;
+}

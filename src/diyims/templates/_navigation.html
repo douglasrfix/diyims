@@ -1,0 +1,12 @@
+<nav>
+{% for menu_item in ["root", "peer_list", "peer_addresses"] %}
+{% if request.query_params.get("mode") == "dark" %}
+
+            <a href="{{ url_for(menu_item) }}?mode=dark">{{ menu_item | capitalize }}</a>
+        {% else %}
+
+            <a href="{{ url_for(menu_item) }}">{{ menu_item | capitalize }}</a>
+        {% endif %}
+
+{% endfor %}
+</nav>

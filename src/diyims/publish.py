@@ -163,7 +163,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                                 peer_type="status",
                                 msg=f"Publish {header_CID} failed with {status_code}.",
                             )
-                        statement = (  # check for the previous header in the db
+                        statement = ( # FIXME: factor into a header completion function
                             select(Header_Table).where(Header_Table.header_CID == header_CID)
                                 )
                         DTS = get_DTS()
@@ -180,7 +180,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                                 pass
 
                 else:
-                    statement = (  # check for the previous header in the db
+                    statement = (
                                 select(Header_Table).where(Header_Table.header_CID == header_CID)
                             )
                     DTS = get_DTS()
@@ -197,7 +197,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                             pass
 
             else:
-                statement = (  # check for the previous header in the db
+                statement = (
                                 select(Header_Table).where(Header_Table.header_CID == header_CID)
                             )
                 DTS = get_DTS()

@@ -130,7 +130,7 @@ def cli_file_add(call_stack, src_file_path):
 
     mode = object_type
     processing_status = "publish"
-    processing_status_DTS = DTS
+    #processing_status_DTS = DTS
 
     _status_code, _header_CID = ipfs_header_add(
         call_stack,
@@ -141,7 +141,7 @@ def cli_file_add(call_stack, src_file_path):
         config_dict,
         mode,
         processing_status,
-        processing_status_DTS,
+        #processing_status_DTS,
         "1",
     )
 

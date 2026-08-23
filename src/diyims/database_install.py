@@ -283,7 +283,7 @@ def init(call_stack):
 
     mode = "init"
     processing_status = "publish"
-    processing_status_DTS = DTS
+    #processing_status_DTS = DTS
     # FIXME: add meta data first the header pointing to meta
     header_CID = ipfs_header_add(
         call_stack,
@@ -297,7 +297,7 @@ def init(call_stack):
         # conn,
         # queries,
         processing_status,
-        processing_status_DTS,
+        #processing_status_DTS,
         SetControlsReturn.queues_enabled,
         # Rconn,
         # Rqueries,
@@ -322,7 +322,7 @@ def init(call_stack):
 
     mode = "init"
     processing_status = "publish"
-    processing_status_DTS = DTS
+    #processing_status_DTS = DTS
     header_CID = ipfs_header_add(
         call_stack,  # header for network name
         DTS,
@@ -335,7 +335,7 @@ def init(call_stack):
         # conn,
         # queries,
         processing_status,
-        processing_status_DTS,
+        #processing_status_DTS,
         SetControlsReturn.queues_enabled,
         # Rconn,
         # Rqueries,
@@ -390,7 +390,7 @@ def init(call_stack):
     object_type = "telemetry_entry"
     mode = object_type
     processing_status = "publish"
-    processing_status_DTS = DTS
+    #processing_status_DTS = DTS
 
     status_code = ipfs_header_add(
         call_stack,
@@ -401,7 +401,7 @@ def init(call_stack):
         config_dict,
         mode,
         processing_status,
-        processing_status_DTS,
+        #processing_status_DTS,
         SetControlsReturn.queues_enabled,
     )
 

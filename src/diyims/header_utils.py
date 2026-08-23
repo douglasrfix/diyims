@@ -68,7 +68,7 @@ def header_chain_maint(
                     session.commit()
 
                 except IntegrityError:
-                    pass  # ignore duplicate message error
+                    pass  # ignore duplicate message error could be restart
 
             break  # log chain broken so report and move on
 
@@ -108,7 +108,7 @@ def header_chain_maint(
             origin_insert_DTS=origin_insert_DTS,
             peer_ID=header_dict["peer_ID"],
             processing_status="added",
-            processing_status_DTS= DTS,
+            processing_status_DTS= "",
             prior_header_CID=header_dict[
                 "prior_header_CID"
             ],  # will contain "null" if this is the chain header
@@ -120,7 +120,7 @@ def header_chain_maint(
                 session.add(new_header)
                 session.commit()
             except IntegrityError:
-                break  # header already exists so we are done
+                pass
 
         if (
             object_type == "local_peer_entry"
@@ -234,7 +234,7 @@ def ipfs_header_add(
     config_dict,
     mode,
     processing_status,
-    processing_status_DTS,
+    #processing_status_DTS,
     queues_enabled,
 ):
     import json
@@ -279,7 +279,7 @@ def ipfs_header_add(
     header_dict["origin_insert_DTS"] = DTS
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = processing_status
-    header_dict["processing_status_DTS"] = processing_status_DTS
+    header_dict["processing_status_DTS"] = ""
     proto_path = path_dict["header_path"]
     proto_file = path_dict["header_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)

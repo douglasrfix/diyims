@@ -8,20 +8,19 @@ need the if __name__ == "__main__":.
 """
 
 import os
-import typer
-from typing import Optional
-from typing_extensions import Annotated
 from time import sleep
+from typing import Annotated, Optional
 
-from diyims import install_cli
-from diyims import beacon_cli
-from diyims.scheduler import scheduler_main
+import typer
+
+from diyims import beacon_cli, install_cli
 from diyims.general_utils import clean_up, shutdown_cmd
 from diyims.ipfs_utils import force_purge
-from diyims.queue_server import queue_main
-from diyims.provider_capture import provider_capture_main
-from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 from diyims.proto_publish import cli_file_add
+from diyims.provider_capture import provider_capture_main
+from diyims.queue_server import queue_main
+from diyims.scheduler import scheduler_main
+from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 # from diyims.test import test
 
@@ -55,7 +54,7 @@ def publish_file(
 @app.command()
 def danger(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -70,7 +69,7 @@ def danger(
 @app.command()
 def shutdown(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -85,7 +84,7 @@ def shutdown(
 @app.command()
 def shutdown_dev(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -129,7 +128,7 @@ def capture_bitswap_peers():
 @app.command()
 def run_scheduler(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -145,7 +144,7 @@ def run_scheduler(
 @app.command()
 def run_clean_up(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -166,7 +165,7 @@ def run_queue_server():
 @app.command()
 def wantlist_capture(
     peer_type: Annotated[
-        Optional[str], typer.Option(help="Peer Type", rich_help_panel="Peer Type")
+        Optional[str], typer.Option(help="Peer Type", rich_help_panel="Peer Type")  # noqa: UP045
     ] = "PP",
 ):
     wantlist_capture_submit_main("cmd", peer_type)
@@ -175,7 +174,7 @@ def wantlist_capture(
 @app.command()
 def run_test(
     roaming: Annotated[
-        Optional[str],
+        Optional[str],  # noqa: UP045
         typer.Option(
             help="Set alternate Roaming value.",
             show_default=False,
@@ -186,3 +185,6 @@ def run_test(
     os.environ["DIYIMS_ROAMING"] = str(roaming)
 
     sleep(300)
+
+if __name__ == "__main__":
+    app()

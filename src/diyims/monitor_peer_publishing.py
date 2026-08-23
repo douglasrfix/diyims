@@ -138,7 +138,8 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     statement = (  # look for an existing header
                         select(Header_Table)
                         .where(Header_Table.peer_ID == peer_ID)
-                        
+                        .where(Header_Table.peer_ID != resolved_header_CID)
+                        .where(Header_Table.processing_status == "added")
                         .order_by(
                             col(Header_Table.origin_insert_DTS).asc()
                         )
@@ -154,38 +155,37 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
 
                     for header in header_list:
                         start_DTS = get_DTS()
-                        if resolved_header_CID != header.header_CID:
-                            status_code = header_chain_maint(
-                                call_stack,
-                                resolved_header_CID,
-                                config_dict,
-                                out_bound,
-                                peer_ID,  # will never be self
-                                SetControlsReturn.logging_enabled,
-                                SetControlsReturn.queues_enabled,
-                                SetControlsReturn.debug_enabled,
-                                SetSelfReturn.self,
-                            )  # add one or more headers
+                        
+                        status_code = header_chain_maint(
+                            call_stack,
+                            resolved_header_CID,
+                            config_dict,
+                            out_bound,
+                            peer_ID,  # will never be self
+                            SetControlsReturn.logging_enabled,
+                            SetControlsReturn.queues_enabled,
+                            SetControlsReturn.debug_enabled,
+                            SetSelfReturn.self,
+                        )  # add one or more headers
+                        if SetControlsReturn.logging_enabled:
+                            stop_DTS = get_DTS()
+                            start = datetime.fromisoformat(start_DTS)
+                            stop = datetime.fromisoformat(stop_DTS)
+                            duration = stop - start
+                            add_log(
+                                process=call_stack,
+                                peer_type="status",
+                                msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
+                            )
+                        if status_code != 200:  # noqa: SIM102
                             if SetControlsReturn.logging_enabled:
-                                stop_DTS = get_DTS()
-                                start = datetime.fromisoformat(start_DTS)
-                                stop = datetime.fromisoformat(stop_DTS)
-                                duration = stop - start
                                 add_log(
                                     process=call_stack,
-                                    peer_type="status",
-                                    msg=f"header_chain_maint for {peer.peer_ID} completed in {duration} seconds with {status_code}.",
+                                    peer_type="Error",
+                                    msg=f"Remote Monitor Panic {status_code}.",
                                 )
-                            if status_code != 200:  # noqa: SIM102
-                                if SetControlsReturn.logging_enabled:
-                                    add_log(
-                                        process=call_stack,
-                                        peer_type="Error",
-                                        msg=f"Remote Monitor Panic {status_code}.",
-                                    )
                             # out_bound.put_nowait("wake up")
-                        else:
-                            pass # already seen this entry
+                       
                     # out_bound.put_nowait("wake up")
         try:  # peer list completed
             if SetControlsReturn.queues_enabled:

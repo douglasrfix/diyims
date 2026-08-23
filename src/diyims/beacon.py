@@ -6,25 +6,27 @@ Beacon creates a unique CID that is used to generate a item in a nodes wantlist.
 # to discover and access the local peer's communication and verification information.
 # """
 # from rich import print
-from time import sleep
+import json
 from datetime import datetime, timedelta
-from multiprocessing import Process, set_start_method, freeze_support
-from diyims.requests_utils import execute_request
+from multiprocessing import Process, freeze_support, set_start_method
+from time import sleep
+
+from sqlalchemy.exc import NoResultFound
+from sqlmodel import Session, col, create_engine, select
+
 from diyims.config_utils import get_beacon_config_dict
-from diyims.logger_utils import add_log
 from diyims.general_utils import (
+    get_DTS,
     get_shutdown_target,
-    shutdown_query,
     set_controls,
     set_self,
+    shutdown_query,
 )
-from diyims.satisfy import satisfy_main
-import json
-from sqlalchemy.exc import NoResultFound
-from sqlmodel import create_engine, Session, select, col
-from diyims.sqlmodels import Header_Table, Beacon
+from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
-from diyims.general_utils import get_DTS
+from diyims.requests_utils import execute_request
+from diyims.satisfy import satisfy_main
+from diyims.sqlmodels import Beacon, Header_Table
 
 
 def beacon_main(call_stack: str) -> None:

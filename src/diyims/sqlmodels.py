@@ -81,7 +81,7 @@ class Header_Table(SQLModel, table=True):
             comment="peer_ID appears in this table as human readable source of entry",
         )
     )
-    processing_status: str | None = None
+    processing_status: str
     processing_status_DTS: str | None = None
 
 

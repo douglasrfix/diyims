@@ -1,27 +1,25 @@
-from datetime import datetime, timezone, timedelta
-from dateutil.parser import parse
 import os
-
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from sqlmodel import create_engine, Session, select, or_
 
+from dateutil.parser import parse
 from sqlalchemy.exc import NoResultFound
-from diyims.error_classes import (
-    IPFSIDDoesNotMatchPeerTableID,
-    UnSupportedIPFSVersionError,
-    CommunicationsError,
-)
+from sqlmodel import Session, create_engine, or_, select
+
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
-from diyims.path_utils import get_path_dict
-from diyims.ipfs_utils import wait_on_ipfs
-
-
 from diyims.config_utils import (
     get_clean_up_config_dict,
-    get_shutdown_config_dict,
     get_scheduler_config_dict,
+    get_shutdown_config_dict,
 )
+from diyims.error_classes import (
+    CommunicationsError,
+    IPFSIDDoesNotMatchPeerTableID,
+    UnSupportedIPFSVersionError,
+)
+from diyims.ipfs_utils import wait_on_ipfs
 from diyims.logger_utils import add_log
+from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
 from diyims.sqlmodels import Peer_Table
 
@@ -33,9 +31,9 @@ def verify_peerID(call_stack) -> dict:
         # wait_dict contains the full ipfs "id" command response
         wait_dict = wait_on_ipfs(call_stack)
         # print(wait_dict.keys())
-    except UnSupportedIPFSVersionError:
+    except UnSupportedIPFSVersionError:  # noqa: TRY203
         raise
-    except CommunicationsError:
+    except CommunicationsError:  # noqa: TRY203
         raise
     path_dict = get_path_dict()
     connect_path = path_dict["db_file"]
@@ -67,22 +65,24 @@ def get_agent() -> str:
 
 def exec_uvicorn(roaming: str) -> None:
     import os
+
     import uvicorn
 
     os.environ["DIYIMS_ROAMING"] = str(roaming)
     uvicorn.run("diyims.fastapi_app:myapp", host="0.0.0.0", port=8000)
 
-    return
+    #return
 
 
 def exec_fastapi(roaming: str) -> None:
     import os
+
     import uvicorn
 
     os.environ["DIYIMS_ROAMING"] = str(roaming)
     uvicorn.run("diyims.fastapi_app:myapp", host="127.0.0.1", port=8001)
 
-    return
+    #diyimsreturn
 
 
 def get_network_name() -> str:

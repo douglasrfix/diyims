@@ -1,4 +1,5 @@
 import typer
+
 from diyims.beacon import beacon_main, satisfy_main
 
 app = typer.Typer(

@@ -129,7 +129,6 @@ def peer_manager(
                 session.commit()
             except NoResultFound:
                 pass
-        
         return status_code
 
     if peer_found:
@@ -160,7 +159,6 @@ def peer_manager(
                     session.commit()
                 except NoResultFound:
                     pass
-        
             return status_code
 
         if peer_row.peer_ID != self:
@@ -217,7 +215,7 @@ def peer_manager(
                     session.commit()
                 except NoResultFound:
                     pass
-        
+                return
 
     if not peer_found:
         # first time for the peer means its not a PP since that is local so it should ge in as RP meaning not a PP to start
@@ -263,7 +261,7 @@ def peer_manager(
                     peer_type="status",
                     msg=msg,
                 )
-        statement = (  # check for the previous header in the db
+        statement = (
                                 select(Header_Table).where(Header_Table.header_CID == new_header_CID)
                             )
                     
@@ -328,7 +326,7 @@ def telemetry_manager(
         session.commit()
 
     
-        statement = (  # check for the previous header in the db
+        statement = (
             select(Header_Table).where(Header_Table.header_CID == new_header_CID)
         )
 
@@ -407,7 +405,7 @@ def update_manager(
 
     # print(status_code)
     if status_code == "200":
-        statement = (  # check for the previous header in the db
+        statement = (
             select(Header_Table).where(Header_Table.header_CID == new_header_CID)
         )
 
@@ -511,7 +509,7 @@ def generic_manager(
             peer_type="info",
             msg=msg,
         )
-        statement = (  # check for the previous header in the db
+        statement = (
             select(Header_Table).where(Header_Table.header_CID == new_header_CID)
         )
         DTS = get_DTS()

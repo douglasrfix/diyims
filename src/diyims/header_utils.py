@@ -22,7 +22,8 @@ from diyims.sqlmodels import (
 
 def header_chain_maint(
     call_stack,
-    resolved_header_CID,
+    header_CID,
+    #resolved_header_CID,
     config_dict,
     out_bound,
     peer_ID,  # will never be self
@@ -41,7 +42,8 @@ def header_chain_maint(
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
     status_code = 200
-    new_header_CID = resolved_header_CID
+    #new_header_CID = resolved_header_CID
+    new_header_CID = header_CID
 
     while True:
         start_DTS = get_DTS()

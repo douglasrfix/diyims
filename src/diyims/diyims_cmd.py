@@ -47,7 +47,7 @@ def publish_file(
         ),
     ],
 ):
-    # os.environ["DIYIMS_ROAMING"] = str(roaming)
+    #os.environ["DIYIMS_ROAMING"] = str(roaming)
     cli_file_add("cmd", file_path)
 
 

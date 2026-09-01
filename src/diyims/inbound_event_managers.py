@@ -309,8 +309,8 @@ def telemetry_manager(
                 telemetry_row.python_version = object_dict["python_version"]
                 telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
                 telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
-                session.add(telemetry_row)
-                session.commit()
+                #session.add(telemetry_row)
+                #session.commit()
 
         else:
             telemetry_row = Peer_Telemetry(

@@ -154,3 +154,4 @@ if __name__ == "__main__":
     os.environ["COMPONENT_TEST"] = "1"
     os.environ["QUEUES_ENABLED"] = "0"
     select_local_peer_and_update_metrics("__main__")
+

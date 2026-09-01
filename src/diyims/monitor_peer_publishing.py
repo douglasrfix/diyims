@@ -17,8 +17,6 @@ from diyims.sqlmodels import Header_Table, Peer_Table
 
 # from rich import print
 
-# FIXME: if a header is added but not completed, there is currently no provision for recovery!!!!!!!!!!
-
 def monitor_peer_publishing_main(call_stack: str) -> None:
     """
     docstring
@@ -138,7 +136,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     statement = (  # look for an existing header
                         select(Header_Table)
                         .where(Header_Table.peer_ID == peer_ID)
-                        .where(Header_Table.peer_ID != resolved_header_CID)
+                        .where(Header_Table.header_CID != resolved_header_CID) # resolved already been published
                         .where(Header_Table.processing_status == "added")
                         .order_by(
                             col(Header_Table.origin_insert_DTS).asc()
@@ -158,7 +156,8 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                         
                         status_code = header_chain_maint(
                             call_stack,
-                            resolved_header_CID,
+                            header.header_CID,
+                            #resolved_header_CID,
                             config_dict,
                             out_bound,
                             peer_ID,  # will never be self

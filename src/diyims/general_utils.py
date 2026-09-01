@@ -288,6 +288,7 @@ def get_shutdown_target(config_dict: dict) -> str:
 
 def shutdown_cmd(call_stack):
     from multiprocessing.managers import BaseManager
+
     from diyims.sqlmodels import Shutdown
 
     call_stack = call_stack + ":shutdown_cmd"

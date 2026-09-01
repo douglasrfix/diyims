@@ -1,13 +1,16 @@
 import configparser
 import json
-import requests
-from time import sleep
 from pathlib import Path
-from diyims.ipfs_utils import get_url_dict
+from time import sleep
+
+import requests
+
 from diyims.error_classes import ApplicationNotInstalledError
+from diyims.ipfs_utils import get_url_dict
 from diyims.path_utils import (
     get_install_template_dict,
 )
+
 # NOTE: update defaults and provide a set to system defaults function
 
 

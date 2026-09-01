@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlmodel import Session, col, create_engine, select
 
 from diyims.config_utils import get_publish_config_dict
-from diyims.general_utils import get_DTS, set_self
+from diyims.general_utils import get_DTS, set_controls, set_self
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
 from diyims.logger_utils import add_log
@@ -33,6 +33,11 @@ from diyims.sqlmodels import (
 
 def cli_file_add(call_stack, src_file_path):
     call_stack = call_stack + ":cli_file_add"
+    
+    
+
+    SetControlsReturn = set_controls(call_stack, config_dict)
+    if SetControlsReturn.queues_enabled:
     path_dict = get_path_dict()
     work_path = Path(src_file_path)
     file_name = work_path.name
@@ -173,7 +178,7 @@ def file_add(call_stack, file_name):
     with open(src_path, "rb") as f:
         # print("file opened")
         add_file = {"file": f}
-        _, status_code, response_dict = execute_request(
+        _response, status_code, response_dict = execute_request(
             url_key="add",
             url_dict=url_dict,
             config_dict=config_dict,
@@ -261,8 +266,8 @@ def ipfs_header_add_t(
     processing_status,
     queues_enabled,
 ):
-    # from multiprocessing.managers import BaseManager
     import json
+    from multiprocessing.managers import BaseManager
 
     from diyims.path_utils import get_path_dict, get_unique_file
 
@@ -272,6 +277,14 @@ def ipfs_header_add_t(
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+    if queues_enabled:
+        q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+        queue_server.register(
+            "get_publish_queue"
+        )
+        queue_server.connect()
+        publish_queue = queue_server.get_publish_queue()
 
     statement = (
         select(Header_Table)
@@ -335,6 +348,11 @@ def ipfs_header_add_t(
         header_CID=header_CID,
     )
 
+    
+            
+    if queues_enabled:
+            publish_queue.put_nowait("wake up")
+    
     with Session(engine) as session:
         session.add(new_header)
         session.commit()

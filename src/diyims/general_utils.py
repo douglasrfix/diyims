@@ -403,7 +403,7 @@ def reset_shutdown(call_stack: str) -> None:
 
 
 def clean_up(call_stack, roaming):
-    from diyims.sqlmodels import Log, Clean_Up
+    from diyims.sqlmodels import Clean_Up, Log
 
     call_stack = call_stack + ":clean_up"
     config_dict = get_clean_up_config_dict()
@@ -452,7 +452,7 @@ def clean_up(call_stack, roaming):
         results = session.exec(statement).all()
         for log in results:
             session.delete(log)
-        session.commit
+        session.commit  # noqa: B018
 
     return
 

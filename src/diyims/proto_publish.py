@@ -36,9 +36,9 @@ def cli_file_add(call_stack, src_file_path):
     
     
 
-    SetControlsReturn = set_controls(call_stack, config_dict)
+    SetControlsReturn = set_controls(call_stack, 'config_dict')
     if SetControlsReturn.queues_enabled:
-    path_dict = get_path_dict()
+        path_dict = get_path_dict()
     work_path = Path(src_file_path)
     file_name = work_path.name
     file_type = work_path.suffix

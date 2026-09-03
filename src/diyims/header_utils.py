@@ -9,7 +9,7 @@ from diyims.inbound_event_managers import (
     generic_manager,
     peer_manager,
     telemetry_manager,
-    update_manager,
+    #update_manager,
 )
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
@@ -161,7 +161,7 @@ def header_chain_maint(
                 peer_type="Error",
                 msg=msg,
             )
-            update_manager(
+            generic_manager(
                 call_stack,
                 logging_enabled,
                 engine,

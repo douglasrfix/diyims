@@ -354,33 +354,36 @@ def update_manager(
     # header_dict["object_CID"] = "bafkreiccz6lm2hb4kzcmmrnv6ffjrllrjsg7upubw54kryojdbzzs65m6i"
 
     meta_CID = header_dict["object_CID"]
-    # msg = f'meta_CID from header {header_dict["object_CID"]}.'
-    # add_log(
-    #    process=call_stack,
-    #    peer_type="status",
-    #    msg=msg,
-    # )
-    # print("HeaderCID",  object_CID,)
+    #msg = f'meta_CID from header {header_dict["object_CID"]}.'
+    #add_log(
+    #   process=call_stack,
+    #   peer_type="status",
+    #   msg=msg,
+    #)
+    #print("HeaderCID",  object_CID,)
 
     status_code, meta_dict = unpack_object_from_cid(call_stack, meta_CID)
-    # msg = f'meta_dict {meta_dict}.'
-    # add_log(
-    #    process=call_stack,
-    #    peer_type="status",
-    #    msg=msg,
-    # )
+    #msg = f'meta_dict {meta_dict}.'
+    #add_log(
+    #   process=call_stack,
+    #   peer_type="status",
+    #   msg=msg,
+    #.)
     # print("HeaderDict", status_code, object_dict)
 
     whl_CID = meta_dict["object_CID"]
-    meta_data_dict = meta_dict["meta_data"]
+    status_code, meta_meta_dict = unpack_object_from_cid(call_stack, whl_CID)
+
+    
+    meta_data_dict = meta_meta_dict["meta_data"]
 
     whl_name = meta_data_dict["file_name"]
-    # msg = f'whl_cid from meta_dict {meta_dict["object_CID"]}.'
-    # add_log(
-    #    process=call_stack,
-    #    peer_type="status",
-    #    msg=msg,
-    # )
+    msg = f'whl_cid from meta_dict {meta_dict["object_CID"]}.'
+    add_log(
+       process=call_stack,
+       peer_type="status",
+       msg=msg,
+    )
     # print("MetaCID", status_code, meta_CID)
 
     # status_code, meta_dict = unpack_object_from_cid(call_stack, meta_CID)

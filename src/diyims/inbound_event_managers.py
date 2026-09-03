@@ -439,7 +439,11 @@ def generic_manager(
     meta_CID = header_dict["object_CID"]
     status_code, meta_dict = unpack_object_from_cid(call_stack, meta_CID)
     generic_CID = meta_dict["object_CID"]
-    generic_data_dict = meta_dict["meta_data"]
+    try:
+        generic_data_dict = meta_dict["meta_data"]
+    except KeyError:
+        return
+        
     work_path = Path(generic_data_dict["file_name"])
     file_name = work_path.name
     file_type = work_path.suffix

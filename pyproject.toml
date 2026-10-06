@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a215"
+version = "0.0.0a216"
 description = "DIY Independent Media Services"
 readme = "README.md"
 authors = [
@@ -13,6 +13,9 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "requests>=2.34.2",
     "sqlmodel>=0.0.39",
+    "types-authlib>=1.8.0.20260911",
+    "types-psutil>=7.2.2.20260906",
+    "types-python-dateutil>=2.9.0.20260807",
     "uvicorn>=0.52.4",
 ]
 
@@ -22,3 +25,8 @@ diyims = "diyims.diyims_cmd:app"
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+]

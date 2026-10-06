@@ -2,8 +2,9 @@ import typer
 from rich import print
 
 # from config_utils import list_config
-
-app = typer.Typer(no_args_is_help=True, help="Configuration activities.")
+if __name__ == '__main__':
+    
+    app = typer.Typer(no_args_is_help=True, help="Configuration activities.")
 
 
 @app.command()

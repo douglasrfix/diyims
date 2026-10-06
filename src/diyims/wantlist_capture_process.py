@@ -20,7 +20,7 @@ from diyims.requests_utils import execute_request
 from diyims.security_utils import verify_peer_row_from_cid
 
 
-def wantlist_capture_process_main(Args: WantlistCaptureProcessMainArgs) -> str:
+def wantlist_capture_process_main(Args: WantlistCaptureProcessMainArgs) -> str: # process startup limitation
     if Args.set_controls_return.component_test:
         pass
     else:

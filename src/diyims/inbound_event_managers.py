@@ -1,8 +1,11 @@
 from pathlib import Path
 
-from sqlalchemy.exc import NoResultFound
+#from sqlite3 import IntegrityError
+from rich import print
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, select
 
+from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.general_utils import get_DTS
 from diyims.ipfs_utils import unpack_object_from_cid
 from diyims.logger_utils import add_log
@@ -19,25 +22,33 @@ from diyims.sqlmodels import (
 
 
 def peer_manager(
-    call_stack, logging_enabled, engine, config_dict, header_dict, new_header_CID, self
-):
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, header, peer_ID):
+    """
+    peer_manager maintains an image of the remote peer's Peer_Table
+
+    _extended_summary_
+
+    Arguments:
+        call_stack {_type_} -- _description_
+        set_self_return {SetSelfReturn} -- _description_
+        set_controls_return {SetControlsReturn} -- _description_
+        engine {_type_} -- _description_
+        config_dict {_type_} -- _description_
+        header {_type_} -- _description_
+
+    Returns:
+        _type_ -- _description_
+    """
+
     call_stack = call_stack + ":peer_manager"
     update = False
-
-    object_type = header_dict["object_type"]
-    object_CID = header_dict["object_CID"]
-    peer_ID = header_dict["peer_ID"]
-
-    # if (
-    #    object_type == "local_peer_entry"
-    #    or object_type == "provider_peer_entry"
-    #    or object_type == "remote_peer_entry"
-    # ):
+       
     status_code, peer_verified, remote_peer_row_dict = verify_peer_row_from_cid(
         call_stack,
-        object_CID,
+        header.object_CID,
+        peer_ID,
     )
-    # FIXME: address handling should be factored into separate module
+    # TODO: address handling should be factored into separate module
     if peer_verified:
         statement = select(Peer_Table).where(
             Peer_Table.peer_ID == remote_peer_row_dict["peer_ID"]
@@ -48,12 +59,16 @@ def peer_manager(
                 results = session.exec(statement)
                 peer_row = results.one()
                 peer_found = True
+                # if header.object type = provider peer the entry was created on the remote system via the want list process
+                # if header.object type = local peer the entry was created on the remote system via the installation process
+                # if header.object type = remote peer the entry was created on the remote system via the peer manager process(this process)
             except NoResultFound:
                 peer_found = False
-
-        if remote_peer_row_dict["peer_ID"] == self:
-            provider_peer_ID = peer_ID
-
+        # If this condition is true, then the remote system has "discovered" the local system and created a valid peer table entry
+        # and published a provider peer entry
+        if remote_peer_row_dict["peer_ID"] == set_self_return.self: 
+            provider_peer_ID = header.peer_ID
+            # This checks for an active in use flag which can now be cleaned up since the discovery process is complete 
             statement = (
                 select(Peer_Address)
                 .where(Peer_Address.peer_ID == provider_peer_ID)
@@ -114,8 +129,9 @@ def peer_manager(
 
     else:
 
-        statement = (  # check for the previous header in the db
-            select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+        statement = (
+            #select(Header_Table).where(Header_Table.header_CID == new_header_CID)#TODO: why check for previous header ?
+            select(Header_Table).where(Header_Table.header_CID == header.object_CID)
         )
 
         with Session(engine) as session:
@@ -127,25 +143,27 @@ def peer_manager(
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()
-            except NoResultFound:
+            except NoResultFound: # shouldn't happen
                 pass
         return status_code
 
     if peer_found:
-        new_origin_value = remote_peer_row_dict[
-            "origin_update_DTS"
-        ]  # potential new values
-        if peer_row.origin_update_DTS is None:
+        #new_origin_update_value = remote_peer_row_dict[
+        #    "origin_update_DTS"
+        #]  # potential new values
+        if peer_row.origin_update_DTS is None: #TODO: is this logic correct ??
             current_origin_value = "0"  # There maybe nulls in legacy values
         else:
             current_origin_value = peer_row.origin_update_DTS
 
-        if current_origin_value < new_origin_value:
+        if current_origin_value == current_origin_value:  # noqa: PLR0124
+        #if current_origin_value < new_origin_update_value:
             pass  # continue with update
         else:
 
-            statement = (  # check for the previous header in the db
-                        select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            statement = (
+                        #select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+                        select(Header_Table).where(Header_Table.header_CID == header.header_CID)
                     )
             
             with Session(engine) as session:
@@ -161,7 +179,7 @@ def peer_manager(
                     pass
             return status_code
 
-        if peer_row.peer_ID != self:
+        if peer_row.peer_ID != set_self_return.self: #TODO: shouldn't need this
             peer_row.peer_ID = remote_peer_row_dict["peer_ID"]
             peer_row.IPNS_name = remote_peer_row_dict["IPNS_name"]
             peer_row.id = remote_peer_row_dict["id"]
@@ -176,18 +194,22 @@ def peer_manager(
             peer_row.version = remote_peer_row_dict["version"]
             peer_row.disabled = remote_peer_row_dict["disabled"]
 
-            if object_type == "local_peer_entry":
+
+
+            # A remote entry for a peer table was received and there is a current entry for
+            # the peer where the want list processing is not complete
+            if header.object_type == "local_peer_entry":#TODO: it appears the this logic is duplicated 
                 # this will trigger peer maint by npp without change anything but the version, etc.
                 if peer_row.peer_type == "PP" and peer_row.processing_status != "NPC":
                     peer_row.processing_status = (
                         "NPC"  # update from WLR, WLRX, WLW, WLWX
                     )
                     peer_row.peer_type = (
-                        "PR"  # update from PP since that process is incomplete
+                        "PR"  # update from PP since that process is incomplete at this arrival time
                     )
 
                 update = True
-            elif object_type == "provider_peer_entry" or object_type == "remote_peer_entry":
+            elif header.object_type == "provider_peer_entry" or header.object_type == "remote_peer_entry":
                 if peer_row.peer_type == "PP" and peer_row.processing_status != "NPC":
                     peer_row.processing_status = (
                         "NPC"  # update from WLR, WLRX, WLW, WLWX
@@ -198,10 +220,11 @@ def peer_manager(
                 # peer_row.peer_type = "RP"
                 update = True
 
-        else:
+        else: # This won't happen
 
-            statement = (  # check for the previous header in the db
-                                    select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            statement = (
+                                    #select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+                                    select(Header_Table).where(Header_Table.header_CID == header.header_CID)
                                 )
                         
             with Session(engine) as session:
@@ -247,7 +270,7 @@ def peer_manager(
         session.commit()
         if peer_found:
             msg = f"Peer {remote_peer_row_dict['peer_ID']} updated."
-            if logging_enabled:
+            if set_controls_return.logging_enabled:
                 add_log(
                     process=call_stack,
                     peer_type="status",
@@ -255,14 +278,15 @@ def peer_manager(
                 )
         else:
             msg = f"Peer {remote_peer_row_dict['peer_ID']} added."
-            if logging_enabled:
+            if set_controls_return.logging_enabled:
                 add_log(
                     process=call_stack,
                     peer_type="status",
                     msg=msg,
                 )
         statement = (
-                                select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+                                select(Header_Table).where(Header_Table.header_CID == header.header_CID)
+                                #select(Header_Table).where(Header_Table.header_CID == new_header_CID)
                             )
                     
         with Session(engine) as session:
@@ -281,12 +305,12 @@ def peer_manager(
 
 
 def telemetry_manager(
-    call_stack, logging_enabled, engine, config_dict, header_dict, new_header_CID, self
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, header,
 ):
     call_stack = call_stack + ":telemetry_manager"
-    object_CID = header_dict["object_CID"]
 
-    _status_code, object_dict = unpack_object_from_cid(call_stack, object_CID)
+    _status_code, object_dict = unpack_object_from_cid(call_stack, header.object_CID)
+    # in this case the object is the telemetry file not a meta record#TODO: add meta record
 
     statement = select(Peer_Telemetry).where(
         Peer_Telemetry.peer_ID == object_dict["peer_ID"]
@@ -301,17 +325,15 @@ def telemetry_manager(
             found = False
 
         if found:
-            if telemetry_row.update_DTS <= object_dict["update_DTS"]:
-                telemetry_row.peer_ID = object_dict["peer_ID"]
-                telemetry_row.insert_DTS = object_dict["insert_DTS"]
-                telemetry_row.update_DTS = object_dict["update_DTS"]
-                telemetry_row.execution_platform = object_dict["execution_platform"]
-                telemetry_row.python_version = object_dict["python_version"]
-                telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
-                telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
-                #session.add(telemetry_row)
-                #session.commit()
-
+            
+            telemetry_row.peer_ID = object_dict["peer_ID"]
+            telemetry_row.insert_DTS = object_dict["insert_DTS"]
+            telemetry_row.update_DTS = object_dict["update_DTS"]
+            telemetry_row.execution_platform = object_dict["execution_platform"]
+            telemetry_row.python_version = object_dict["python_version"]
+            telemetry_row.IPFS_agent = object_dict["IPFS_agent"]
+            telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
+            
         else:
             telemetry_row = Peer_Telemetry(
                 peer_ID=object_dict["peer_ID"],
@@ -327,9 +349,10 @@ def telemetry_manager(
 
     
         statement = (
-            select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            
+            select(Header_Table).where(Header_Table.header_CID == header.header_CID)
         )
-
+        print(header.header_CID)
         with Session(engine) as session:
             try:
                 results = session.exec(statement)
@@ -339,13 +362,15 @@ def telemetry_manager(
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()
+                
             except NoResultFound:
+                
                 pass
 
 
 
 def update_manager(
-    call_stack, logging_enabled, engine, config_dict, header_dict, new_header_CID, self
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, header,
 ):
     call_stack = call_stack + ":update_manager"
     # call_stack = "test"
@@ -353,7 +378,8 @@ def update_manager(
     # header_dict = {}
     # header_dict["object_CID"] = "bafkreiccz6lm2hb4kzcmmrnv6ffjrllrjsg7upubw54kryojdbzzs65m6i"
 
-    meta_CID = header_dict["object_CID"]
+    #meta_CID = header_dict["object_CID"]
+    meta_CID = header.object_CID
     #msg = f'meta_CID from header {header_dict["object_CID"]}.'
     #add_log(
     #   process=call_stack,
@@ -409,7 +435,8 @@ def update_manager(
     # print(status_code)
     if status_code == "200":
         statement = (
-            select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            #select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            select(Header_Table).where(Header_Table.header_CID == header.header_CID)
         )
 
         with Session(engine) as session:
@@ -426,7 +453,7 @@ def update_manager(
 
 
 def generic_manager(
-    call_stack, logging_enabled, engine, config_dict, header_dict, new_header_CID, self
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, header,
 ):
     call_stack = call_stack + ":generic_manager"
     msg = "Generic manager entered ."
@@ -436,13 +463,29 @@ def generic_manager(
         msg=msg,
     )
 
-    meta_CID = header_dict["object_CID"]
-    status_code, meta_dict = unpack_object_from_cid(call_stack, meta_CID)
+    # header.object_CID = meta object CID 
+    status_code, meta_dict = unpack_object_from_cid(call_stack, header.object_CID)
     generic_CID = meta_dict["object_CID"]
     try:
-        generic_data_dict = meta_dict["meta_data"]
+        generic_data_dict = meta_dict["meta_data"] # test for supplementary meta_data dictionary #TODO: expand to be version and test that first
     except KeyError:
-        return
+        statement = (
+                    select(Header_Table).where(Header_Table.header_CID == header.object_CID)
+                )
+        DTS = get_DTS()
+        with Session(engine) as session:
+            try:
+                results = session.exec(statement)
+                header_row = results.one()
+                DTS = get_DTS()
+                header_row.processing_status = "meta data failed"
+                header_row.processing_status_DTS = DTS
+                session.add(header_row)
+                session.commit()
+            except NoResultFound: # should never happen since we are processing a header
+                pass
+        status_code = 1
+        return status_code
         
     work_path = Path(generic_data_dict["file_name"])
     file_name = work_path.name
@@ -459,12 +502,16 @@ def generic_manager(
             peer_ID=meta_dict["peer_ID"],
             insert_DTS=DTS,
             meta_data=meta_dict["meta_data"],
-            meta_CID=meta_CID,  # prior meta cid is ignored for now
+            meta_CID=header.object_CID,  # prior meta cid is ignored for now
         )
 
         with Session(engine) as session:
-            session.add(new_meta)
-            session.commit()
+            try:
+                session.add(new_meta)
+                session.commit()
+            except IntegrityError:
+                pass #TODO: expand the logic to handle error conditions such as temporary objects
+                        # check for existing files etc.
 
     msg = f'object_cid from meta_dict {meta_dict["object_CID"]}.'
     add_log(
@@ -472,12 +519,7 @@ def generic_manager(
         peer_type="info",
         msg=msg,
     )
-    # print("MetaCID", status_code, meta_CID)
-
-    # status_code, meta_dict = unpack_object_from_cid(call_stack, meta_CID)
-    # print("MetaDict", status_code, meta_dict)
-
-    # ipfs_sourced_header_CID = "QmYYqUt8DfpHWjjJ9hVGFfnCVd3zrbHwgTom3jmZBVmxA8"
+    
     path_dictionary = get_path_dict()
     ipfs_path = "/ipfs/" + str(generic_CID)
     param = {"arg": ipfs_path}
@@ -492,11 +534,11 @@ def generic_manager(
         outfile = Path(path_dictionary["update_path"]).joinpath(file_name)
     else:
         outfile = Path(path_dictionary["generic_path"]).joinpath(file_name)
-    # print(outfile)
+    
     _response, status_code, _response_dictionary = execute_request(
         url_key="cat",
         param=param,
-        timeout=(3.05, 122),  # avoid timeouts
+        timeout=(3.05, 122),  # avoid timeouts #TODO:may need to be rethought
         call_stack=call_stack,
         http_500_ignore=False,
         stream=True,
@@ -508,16 +550,16 @@ def generic_manager(
         peer_type="info",
         msg=msg,
     )
-    # print(status_code)
+    
     if status_code == 200:
-        msg = f"Using headerCID {new_header_CID} to update header."
+        msg = f"Using headerCID {header.header_CID} to update header."
         add_log(
             process=call_stack,
             peer_type="info",
             msg=msg,
         )
         statement = (
-            select(Header_Table).where(Header_Table.header_CID == new_header_CID)
+            select(Header_Table).where(Header_Table.header_CID == header.header_CID)
         )
         DTS = get_DTS()
         with Session(engine) as session:
@@ -530,9 +572,5 @@ def generic_manager(
                 session.add(header_row)
                 session.commit()
             except NoResultFound:
-                pass
+                pass #shouldn't happen
 
-
-
-if __name__ == "__main__":
-    update_manager()

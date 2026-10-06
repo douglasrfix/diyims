@@ -34,9 +34,8 @@ from diyims.sqlmodels import (
 def cli_file_add(call_stack, src_file_path):
     call_stack = call_stack + ":cli_file_add"
     
-    
-
-    SetControlsReturn = set_controls(call_stack, 'config_dict')
+    config_dict = get_publish_config_dict()
+    SetControlsReturn = set_controls(call_stack, config_dict)
     if SetControlsReturn.queues_enabled:
         path_dict = get_path_dict()
     work_path = Path(src_file_path)
@@ -56,7 +55,7 @@ def cli_file_add(call_stack, src_file_path):
     # print(out_file_path)
 
     url_dict = get_url_dict()
-    config_dict = get_publish_config_dict()
+    
     self = set_self().self
     # print(src_file_path)
     # print(out_file_path)

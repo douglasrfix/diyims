@@ -9,12 +9,12 @@ class SetControlsReturn:
 
     """
 
-    queues_enabled: bool = None
-    logging_enabled: bool = None
-    component_test: bool = None
-    debug_enabled: bool = None
-    single_thread: bool = None
-    metrics_enabled: bool = None
+    queues_enabled: bool = False
+    logging_enabled: bool = False
+    component_test: bool = False
+    debug_enabled: bool = False
+    single_thread: bool = False
+    metrics_enabled: bool = False 
 
 
 @dataclass
@@ -26,10 +26,10 @@ class WantlistCaptureProcessMainArgs:
     """
 
     call_stack: str
-    want_list_config_dict: dict = None
-    provider_peer_table_row: dict = None
-    peer_type: str = None
-    set_controls_return: SetControlsReturn = None
+    want_list_config_dict: dict
+    provider_peer_table_row: dict
+    peer_type: str
+    set_controls_return: SetControlsReturn
 
 
 @dataclass

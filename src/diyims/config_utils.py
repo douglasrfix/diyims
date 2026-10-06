@@ -34,7 +34,7 @@ def config_install():
     get_db_init_config_dict()
     get_queue_config_dict()
 
-    return
+    #return
 
 
 def get_beacon_config_dict():

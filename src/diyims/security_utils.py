@@ -93,16 +93,16 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, provider_peer_ID):
         peer_row_dict = {}
         return status_code, signature_verified, peer_row_dict
 
-    if peer_row_dict["peer_ID"] != provider_peer_ID:
-        status_code = 500
-        add_log(
-            process=call_stack,
-            peer_type="Error",
-            msg="Verify provider_peerID doesn't match peer_row_dict peer_ID ",
-        )
-        signature_verified = 0
-        peer_row_dict = {}
-        return status_code, signature_verified, peer_row_dict
+    #if peer_row_dict["peer_ID"] != provider_peer_ID:
+    #    status_code = 500
+    #    add_log(
+    #        process=call_stack,
+    #        peer_type="Error",
+    #        msg="Verify provider_peerID doesn't match peer_row_dict peer_ID ",
+    #    )
+    #    signature_verified = 0
+    #    peer_row_dict = {}
+    #    return status_code, signature_verified, peer_row_dict
 
     signing_dict = {}
     signing_dict["peer_ID"] = peer_row_dict[

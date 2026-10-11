@@ -1,26 +1,28 @@
-import os
-import json
 import ipaddress
-from queue import Empty
-from diyims.requests_utils import execute_request
+import json
+import os
 from datetime import datetime
-from time import sleep
+from multiprocessing import freeze_support, set_start_method
 from multiprocessing.managers import BaseManager
-from multiprocessing import set_start_method, freeze_support
-from sqlmodel import create_engine, Session, select, or_
+from queue import Empty
+from time import sleep
+
+from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlmodel import Session, create_engine, or_, select
+
+from diyims.config_utils import get_provider_capture_config_dict
 from diyims.general_utils import (
+    get_DTS,
     get_network_name,
     get_shutdown_target,
-    get_DTS,
-    shutdown_query,
     set_controls,
     set_self,
+    shutdown_query,
 )
 from diyims.logger_utils import add_log
-from diyims.config_utils import get_provider_capture_config_dict
 from diyims.path_utils import get_path_dict
+from diyims.requests_utils import execute_request
 from diyims.sqlmodels import Peer_Address, Peer_Table
-from sqlalchemy.exc import NoResultFound, IntegrityError
 
 
 def provider_capture_main(call_stack: str, peer_type: str) -> None:
@@ -103,7 +105,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
     total_promoted = 0
     total_released = 0
 
-    current_DT = datetime.now()
+    current_DT = datetime.now()  # noqa: DTZ005
     while (
         target_DT > current_DT
         and capture_interval < max_intervals
@@ -121,7 +123,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
         if shutdown_query(call_stack):
             break
         start_DTS = get_DTS()
-        status_code, found, added, promoted, duration, released, modified = (
+        status_code, found, added, promoted, duration, released, _modified = (
             capture_providers(
                 call_stack,
                 peer_type,
@@ -160,7 +162,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
         total_promoted += promoted
         total_released += released
 
-        if released > 0:
+        if released > 0:  # noqa: SIM102
             if SetControlsReturn.queues_enabled:
                 out_bound.put_nowait("wake up")
                 if SetControlsReturn.debug_enabled:  # no sense in sending a message when a peer is release since they are single threaded by wantlist
@@ -198,7 +200,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
 
         if shutdown_query(call_stack):
             break
-        current_DT = datetime.now()
+        current_DT = datetime.now()  # noqa: DTZ005
 
     if SetControlsReturn.metrics_enabled:
         add_log(
@@ -212,7 +214,6 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
             peer_type="status",
             msg=f"Provider Capture complete with {status_code}.",
         )
-    return
 
 
 def capture_providers(
@@ -259,7 +260,7 @@ def capture_providers(
                 msg="Entering find providers.",
             )
 
-        response, status_code, response_dict = execute_request(
+        response, status_code, _response_dict = execute_request(
             url_key="find_providers",
             param={
                 "arg": network_name
@@ -305,7 +306,7 @@ def capture_providers(
                     engine,
                 )
             )
-            if status_code != 200:
+            if status_code != 200:  # noqa: SIM102
                 if debug_enabled:
                     add_log(
                         process=call_stack,
@@ -366,11 +367,11 @@ def decode_findprovs_structure(
     promoted = 0
     modified = 0
     released = 0
-    peer_type = "PP"  # NOTE: artifact from earlier testing
+    peer_type = "PP"  # legacy artifact from earlier testing
 
     line_list = []
     for line in response.iter_lines():
-        line_list.append(line)
+        line_list.append(line)  # noqa: PERF402
 
     for line in line_list:
         address_available = False
@@ -379,8 +380,8 @@ def decode_findprovs_structure(
         if line_dict["Type"] == 4:
             found += 1
             responses_list = line_dict["Responses"]
-            for response in responses_list:
-                list_of_peer_dict = str(response).replace(
+            for response_b in responses_list:
+                list_of_peer_dict = str(response_b).replace(
                     "'", '"'
                 )  # needed to use json
                 peer_dict = json.loads(str(list_of_peer_dict))
@@ -439,7 +440,7 @@ def decode_findprovs_structure(
                     if existing_peer:
                         if (
                             current_peer.processing_status == "WLW"
-                            or current_peer.processing_status == "WLWP"
+                            or current_peer.processing_status == "WLWP"#TODO: this isn't ins the selection above
                             or current_peer.processing_status == "WLWX"
                         ):  # TODO: This can be WLWP or WLWX oor WLW?
                             status_code, address_available = capture_provider_addresses(
@@ -557,7 +558,8 @@ def capture_provider_addresses(
     )
 
     param = {"arg": peer_ID}
-    response, status_code, response_dict = execute_request(  # gather peer addresses
+    #looking for addresses for the peer
+    response, status_code, _response_dict = execute_request(  # gather peer addresses
         url_key="id",
         param=param,
         call_stack=call_stack,
@@ -773,7 +775,6 @@ def capture_addresses(
             engine,
         )
 
-    return
 
 
 def create_peer_address(
@@ -828,7 +829,7 @@ def create_peer_address(
         if results is None:
             session.add(address_row)
             session.commit()
-    return
+
 
 
 if __name__ == "__main__":

@@ -292,7 +292,7 @@ def capture_wantlist_peers(
         if peer_table_row.processing_status == "WLR":
             peer_table_row.processing_status = "WLRP"
         elif peer_table_row.processing_status == "WLW":
-            peer_table_row.processing_status = "WLWP"
+            peer_table_row.processing_status = "WLWP" 
         elif peer_table_row.processing_status == "WLWF":
             peer_table_row.processing_status = "WLWFP"
 
@@ -308,6 +308,7 @@ def capture_wantlist_peers(
             call_stack=call_stack,
             want_list_config_dict=want_list_config_dict,
             provider_peer_table_row=peer_table_row_dict,
+            peer_type = peer_type,
             set_controls_return=SetControlsReturn,
         )
 

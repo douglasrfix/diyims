@@ -41,7 +41,7 @@ class Beacon(SQLModel, table=True):
 
 
 class Header_Chain_Status(SQLModel, table=True):
-    insert_DTS: str = Field(primary_key=True)
+    insert_DTS: str | None = None
     peer_ID: str = Field(primary_key=True)
     missing_header_CID: str = Field(primary_key=True)
     message: str | None = None

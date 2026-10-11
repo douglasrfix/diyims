@@ -74,31 +74,48 @@ def header_chain_maint(
             process_object_type_fail(call_stack, set_self_return, set_controls_return, engine, peer_ID, next_header_CID) 
             
             break # not a valid header so exit header maint loop
-        
-        DTS = get_DTS()
-        try:
-            origin_insert_DTS = response_dict["origin_insert_DTS"]
-        except KeyError: # legacy headers may not contain origin insert dts
-            origin_insert_DTS = "" 
-        new_header = Header_Table(  # capture the published header
-            version=response_dict["version"],
-            object_CID=response_dict["object_CID"],
-            object_type=response_dict["object_type"],
-            insert_DTS=DTS,
-            origin_insert_DTS=origin_insert_DTS,
-            peer_ID=response_dict["peer_ID"],
-            processing_status="added",
-            processing_status_DTS= DTS,
-            prior_header_CID=response_dict[
-                "prior_header_CID"
-            ],  # will contain "null" if this is the chain header
-            header_CID=next_header_CID,
-        )
+        statement = (  # check for the previous header in the db
+                    select(Header_Table)
+                    .where(Header_Table.peer_ID == peer_ID)
+                    .where(Header_Table.header_CID == next_header_CID)
+                )
+        with Session(engine) as session:
+            results = session.exec(statement)
+            try:
+                new_header = results.one()
+                header_found = True
+                new_header.processing_status_DTS = "already existed"
+                
+            except NoResultFound:
+                header_found = False 
+                
+        if header_found is False:
+            DTS = get_DTS()
+            try:
+                origin_insert_DTS = response_dict["origin_insert_DTS"]
+            except KeyError: # legacy headers may not contain origin insert dts
+                origin_insert_DTS = response_dict['insert_DTS'] 
+            new_header = Header_Table(  # capture the published header
+                version=response_dict["version"],
+                object_CID=response_dict["object_CID"],
+                object_type=response_dict["object_type"],
+                insert_DTS=DTS,
+                origin_insert_DTS=origin_insert_DTS,
+                peer_ID=response_dict["peer_ID"],
+                processing_status="added",
+                processing_status_DTS= DTS,
+                prior_header_CID=response_dict[
+                    "prior_header_CID"
+                ],  # will contain "null" if this is the chain header
+                header_CID=next_header_CID,
+            )
 
         with Session(engine) as session:
+            
             try:
                 session.add(new_header)
                 session.commit()
+                
             except IntegrityError:
                 msg = f"{new_header_CID} already existed." #TODO: this logic needs to be expanded
                 #if debug_enabled:
@@ -108,6 +125,11 @@ def header_chain_maint(
                     msg=msg,
                 )
                 
+                
+        
+            
+           
+            
         next_header_CID = response_dict["prior_header_CID"]
 
         if next_header_CID == "null":

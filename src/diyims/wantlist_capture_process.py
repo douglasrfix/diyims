@@ -76,7 +76,7 @@ def submitted_wantlist_process_for_peer(
     peer_table_row.local_update_DTS = get_DTS()
     if peer_table_row.processing_status == "WLRP":
         peer_table_row.processing_status = "WLRX"
-    elif peer_table_row.processing_status == "WLWP":
+    elif peer_table_row.processing_status == "WLWP":#TODO: wlwp assigned?
         peer_table_row.processing_status = "WLWX"
     elif peer_table_row.processing_status == "WLWFP":
         peer_table_row.processing_status = "WLWFX"

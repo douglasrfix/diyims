@@ -5,7 +5,8 @@ from multiprocessing.managers import BaseManager
 from queue import Empty
 from time import sleep
 
-from rich import print
+#from rich import print
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, select
 
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
@@ -21,7 +22,7 @@ from diyims.inbound_event_managers import (
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
-from diyims.sqlmodels import Header_Table, Peer_Table
+from diyims.sqlmodels import Header_Chain_Status, Header_Table, Peer_Table
 
 
 def monitor_peer_publishing_main(call_stack: str) -> None:
@@ -59,10 +60,10 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     if set_controls_return.queues_enabled:
             q_server_port = int(config_dict["q_server_port"])
             queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-            queue_server.register("get_peer_maint_queue")
+            queue_server.register("get_publish_queue")
             queue_server.register("get_remote_monitor_queue")
             queue_server.connect()
-            out_bound = queue_server.get_peer_maint_queue()#TODO: Needed?
+            out_bound =  queue_server.get_publish_queue()
             in_bound = queue_server.get_remote_monitor_queue()
     else:
         out_bound = None
@@ -82,7 +83,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
         peer_type="status",
         msg="Remote Peer Monitor startup.",
     )
-    
+    status_code = 200
     while True:
         
         peer_list = create_peer_list(call_stack, set_self_return, set_controls_return, engine)
@@ -107,7 +108,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                     
 
                 #for header in header_list: # header(s) to be processed by owning peer insert date
-                # how do we process the unrecorded new entry????
+                # how do we process the unrecorded new entry???? #TODO: how about same entry as last time?????
                 start_DTS = get_DTS()
                  # add one or more headers
                 header_status_code = header_chain_maint(
@@ -137,15 +138,27 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
 
                     #create header list here #TODO: add check for chain completion before processing entries to minimize out of order potential due to processing failures  
                     statement = (  # look for existing headers that haven,t been processed
-                        select(Header_Table)
+                        select(Header_Table.version,
+                               Header_Table.object_CID,
+                               Header_Table.object_type,
+                               Header_Table.insert_DTS,
+                               Header_Table.origin_insert_DTS,
+                               Header_Table.prior_header_CID,
+                               Header_Table.header_CID,
+                               Header_Table.peer_ID,
+                               Header_Table.processing_status,
+                               Header_Table.processing_status_DTS,
+                               Header_Chain_Status)
                         .where(Header_Table.peer_ID == peer.peer_ID)
+                        #.where(Header_Chain_Status.peer_ID == peer.peer_ID)
                         .where(Header_Table.processing_status == "added")
+                        .where(Header_Table.peer_ID == Header_Chain_Status.peer_ID)
                         .order_by(
                             col(Header_Table.origin_insert_DTS).asc()
                         )
                     )
                     header_list = []
-                    with Session(engine) as session: #gather preexisting headers
+                    with Session(engine) as session: #gather preexisting headers if any
                         results = session.exec(statement)
                         header_rows = results.all()
             
@@ -153,8 +166,8 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                         header_list.append(header)# noqa: PERF402
                     
                     process_inbound_events_for_peer(call_stack, set_self_return,
-                                        set_controls_return, engine, config_dict, header_list, peer.peer_ID)
-                    return #FIXME: remove for testing only
+                                        set_controls_return, engine, config_dict, out_bound,  header_list, peer.peer_ID)
+                    
 
                     
                 # header list for peer completed
@@ -270,7 +283,7 @@ def process_failed_header_maint(call_stack, set_self_return: SetSelfReturn, set_
         )
         
 def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
-                    set_controls_return: SetControlsReturn, engine, config_dict, header_list: list, peer_ID):
+                    set_controls_return: SetControlsReturn, engine, config_dict, out_bound, header_list: list, peer_ID):
     
     for header in header_list:
         if (
@@ -284,6 +297,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 set_controls_return,
                 engine,
                 config_dict,
+                out_bound,
                 header,
                 peer_ID,
                 
@@ -295,13 +309,13 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 peer_type="info",
                 msg=msg,
             )
-            print(header)
             telemetry_manager(
                 call_stack,
                 set_self_return,
                 set_controls_return,
                 engine,
                 config_dict,
+                out_bound,
                 header,
                 #new_header_CID,
                 
@@ -338,6 +352,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 set_controls_return,
                 engine,
                 config_dict,
+                out_bound,
                 header,
                 #new_header_CID,
                 
@@ -351,8 +366,22 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 peer_type="info",
                 msg=msg,
             )
-
-    #return
+            statement = (
+                            select(Header_Table).where(Header_Table.header_CID == header.header_CID)
+                        )
+                                    
+            with Session(engine) as session:
+                try:
+                    results = session.exec(statement)
+                    header_row = results.one()
+                    DTS = get_DTS()
+                    header_row.processing_status = "Ignored"
+                    header_row.processing_status_DTS = DTS
+                    session.add(header_row)
+                    session.commit()
+                except NoResultFound:
+                    pass
+            
     
 
 if __name__ == "__main__":

@@ -91,7 +91,7 @@ def beacon_main(call_stack: str) -> None:
 
     interval = 0
     target_DT = get_shutdown_target(config_dict)
-    current_DT = datetime.now()  # noqa: DTZ005
+    current_DT = datetime.now()
 
     max_intervals = int(config_dict["max_intervals"])
     if SetControlsReturn.debug_enabled:
@@ -156,7 +156,7 @@ def beacon_main(call_stack: str) -> None:
 
         if status_code == 200:
             interval += 1
-            current_DT = datetime.now()  # noqa: DTZ005
+            current_DT = datetime.now()
         else:
             break
 

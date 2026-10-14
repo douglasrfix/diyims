@@ -14,7 +14,8 @@ from typing import Annotated, Optional
 import typer
 
 from diyims import beacon_cli, install_cli
-from diyims.general_utils import clean_up, shutdown_cmd
+from diyims.clean_up import clean_up
+from diyims.general_utils import shutdown_cmd
 from diyims.ipfs_utils import force_purge
 from diyims.proto_publish import cli_file_add
 from diyims.provider_capture import provider_capture_main

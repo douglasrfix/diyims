@@ -1,9 +1,14 @@
+from sqlite3 import SQLITE_NOTFOUND
+
+
 def sync_ipfs_agent_table():
+    from sqlmodel import Session, create_engine, delete
+
     from diyims.path_utils import get_path_dict
-    from sqlmodel import create_engine, Session, delete
     from diyims.sqlmodels import IPFS_Agents
 
     # Tested Versions
+    kubo_0431 = IPFS_Agents(agent_id="kubo/0.43.1")
     kubo_0430 = IPFS_Agents(agent_id="kubo/0.43.0")
     kubo_0420 = IPFS_Agents(agent_id="kubo/0.42.0")
     kubo_0410 = IPFS_Agents(agent_id="kubo/0.41.0")
@@ -23,6 +28,7 @@ def sync_ipfs_agent_table():
         session.commit()
 
     with Session(engine) as session:
+        session.add(kubo_0431)
         session.add(kubo_0430)
         session.add(kubo_0420)
         session.add(kubo_0410)
@@ -31,19 +37,20 @@ def sync_ipfs_agent_table():
         session.add(kubo_0370)
         session.commit()
 
-    return
+    #return
 
 
 def reset_peer_table_status(call_stack):
     # from diyims.config_utils import get_want_list_config_dict
-    from diyims.path_utils import get_path_dict
     # from diyims.py_version_dep import get_sql_str
+    from sqlite3 import SQLITE_NOTFOUND
 
-    # import sqlite3
-    from sqlmodel import create_engine, Session, select, or_
-    from diyims.sqlmodels import Shutdown, Peer_Table, Peer_Address
     from sqlalchemy.exc import NoResultFound
+    from sqlmodel import Session, create_engine, or_, select
+
     from diyims.general_utils import get_DTS
+    from diyims.path_utils import get_path_dict
+    from diyims.sqlmodels import Peer_Address, Peer_Table, Shutdown
 
     # config_dict = get_want_list_config_dict()
     call_stack = call_stack + ":reset_peer_table_status"
@@ -171,6 +178,7 @@ def peer_connect(
             status_code = 200
             return status_code, peer_connected
         except NoResultFound:
+        #except SQLITE_NOTFOUND:
             peer_connected = False
 
     if peer_connected:  # TODO: is this a good idea?

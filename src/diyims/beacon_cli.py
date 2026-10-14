@@ -17,7 +17,7 @@ def beacon_execution():
     """
 
     beacon_main("beacon_execution")
-    return
+    #return
 
 
 @app.command()
@@ -30,4 +30,4 @@ def satisfy_execution():
     """
 
     satisfy_main("satisfy_execution")
-    return
+    #return

@@ -195,29 +195,13 @@ def publish_main(call_stack: str, mode: str) -> None:
                             session.commit()
                         except NoResultFound:
                             pass
-
-            else:
-                statement = (
-                                select(Header_Table).where(Header_Table.header_CID == header_CID)
-                            )
-                DTS = get_DTS()
-                with Session(engine) as session:
-                    try:
-                        results = session.exec(statement)
-                        header_row = results.one()
-                        DTS = get_DTS()
-                        header_row.processing_status = "completed"
-                        header_row.processing_status_DTS = DTS
-                        session.add(header_row)
-                        session.commit()
-                    except NoResultFound:
-                        pass
-                if SetControlsReturn.logging_enabled:
-                    add_log(
-                        process=call_stack,
-                        peer_type="status",
-                        msg=f"Header {header_CID} already published.",
-                    )
+     
+                    if SetControlsReturn.logging_enabled:
+                        add_log(
+                            process=call_stack,
+                            peer_type="status",
+                            msg=f"Header {header_CID} already published.",
+                        )
         if shutdown_query(call_stack):
             break
         wait_for_next_request_seconds = int(config_dict["wait_time"])
@@ -241,6 +225,9 @@ def publish_main(call_stack: str, mode: str) -> None:
         peer_type="status",
         msg=f"Publish complete {status_code}.",  # TODO:
     )
+
+
+
 
 
 if __name__ == "__main__":

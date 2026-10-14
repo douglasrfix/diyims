@@ -7,14 +7,16 @@ The configuration values are then merged with an overrides provided by key word 
 This is followed by setting the values to be used by the application.
 """
 
-from time import sleep
 import json
-import requests
 import os
-from requests.exceptions import HTTPError, ConnectTimeout, ReadTimeout, RequestException
+from time import sleep
+
+import requests
+from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
+
 from diyims.config_utils import get_request_config_dict, get_url_dict
-from diyims.logger_utils import add_log
 from diyims.error_classes import CommunicationsError
+from diyims.logger_utils import add_log
 
 
 def execute_request(url_key: str, **kwargs):
@@ -108,7 +110,7 @@ def execute_request(url_key: str, **kwargs):
             ) as r:
                 if stream and outfile != "":
                     with open(outfile, "wb") as fd:
-                        for chunk in r.iter_content(chunk_size=128):
+                        for chunk in r.iter_content(chunk_size=128):  # noqa: FURB122
                             fd.write(chunk)
 
                 r.raise_for_status()

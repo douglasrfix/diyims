@@ -3,8 +3,9 @@ from typing import Any, Optional
 
 #from typing import Any, Dict, Optional
 from pydantic import ConfigDict
-from sqlalchemy import JSON, Column, String
-from sqlmodel import Enum, Field, SQLModel
+
+#from sqlalchemy import JSON
+from sqlmodel import JSON, Column, Enum, Field, SQLModel, String
 
 
 class Address_Type(str, Enum):
@@ -40,7 +41,7 @@ class Beacon(SQLModel, table=True):
 
 
 class Header_Chain_Status(SQLModel, table=True):
-    insert_DTS: str = Field(primary_key=True)
+    insert_DTS: str | None = None
     peer_ID: str = Field(primary_key=True)
     missing_header_CID: str = Field(primary_key=True)
     message: str | None = None
@@ -68,9 +69,9 @@ class Object_Meta_Data(SQLModel, table=True):
 
 
 class Header_Table(SQLModel, table=True):
-    version: str | None = None
-    object_CID: str
-    object_type: str
+    version: str | None = None 
+    object_CID: str | None = None
+    object_type: str | None = None
     insert_DTS: str
     origin_insert_DTS: str
     prior_header_CID: str | None = None
@@ -118,7 +119,7 @@ class Peer_Address(SQLModel, table=True):
 
 class Peer_Table(SQLModel, table=True):
     peer_ID: str = Field(primary_key=True)
-    IPNS_name: str | None = None
+    IPNS_name: str = "unknown"
     id: str | None = None
     signature: str | None = None
     signature_valid: int | None = 0

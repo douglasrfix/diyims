@@ -28,7 +28,7 @@ from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 
 app = typer.Typer(
-    no_args_is_help=True, help="Base command for the DIY Independent Media Services."
+no_args_is_help=True, help="Base command for the DIY Independent Media Services."
 )
 # app.add_typer(database_cli.app, name="database")
 # app.add_typer(configuration_cli.app, name="config")
@@ -47,7 +47,7 @@ def publish_file(
         ),
     ],
 ):
-    # os.environ["DIYIMS_ROAMING"] = str(roaming)
+    #os.environ["DIYIMS_ROAMING"] = str(roaming)
     cli_file_add("cmd", file_path)
 
 

@@ -4,6 +4,7 @@ anyio
 apiclient
 appendleft
 authlib
+bafkreiccz
 basetemp
 birthtime
 bitswap
@@ -18,8 +19,10 @@ doctests
 dougl
 FAGRN
 fastapi
+ffjrllrjsg
 findprovs
 fstat
+FURB
 getattr
 googleapiclient
 googleauth
@@ -34,8 +37,10 @@ isset
 itsdangerous
 jsonable
 jsonify
+kryojdbzzs
 kubo
 kwargs
+kzcmmrnv
 listpython
 maint
 maockpage
@@ -74,6 +79,7 @@ testpypi
 Trgtp
 typer
 ujson
+upubw
 userinfo
 uvicorn
 venv

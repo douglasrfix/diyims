@@ -1,5 +1,5 @@
 """
-Beacon creates a unique CID that is used to generate a item in a nodes wantlist.
+Beacon creates a unique CID that is used to generate a item in a nodes wantlist.           
 """
 
 # "Beacon creates a temporary wantlist item to allow a remote peer the ability
@@ -65,7 +65,7 @@ def beacon_main(call_stack: str) -> None:
     statement = (
         select(Header_Table)
         .where(Header_Table.peer_ID == SetSelfReturn.self)
-        .where(Header_Table.object_type == "local_peer_entry")
+        #.where(Header_Table.object_type == "local_peer_entry")
         .order_by(col(Header_Table.insert_DTS).asc())
     )
     with Session(engine) as session:
@@ -91,7 +91,7 @@ def beacon_main(call_stack: str) -> None:
 
     interval = 0
     target_DT = get_shutdown_target(config_dict)
-    current_DT = datetime.now()
+    current_DT = datetime.now()  # noqa: DTZ005
 
     max_intervals = int(config_dict["max_intervals"])
     if SetControlsReturn.debug_enabled:
@@ -156,7 +156,7 @@ def beacon_main(call_stack: str) -> None:
 
         if status_code == 200:
             interval += 1
-            current_DT = datetime.now()
+            current_DT = datetime.now()  # noqa: DTZ005
         else:
             break
 
@@ -165,7 +165,7 @@ def beacon_main(call_stack: str) -> None:
         peer_type="status",
         msg=f"Beacon shutdown with {status_code}.",
     )
-    return
+    #return
 
 
 def create_beacon_CID(
@@ -176,10 +176,10 @@ def create_beacon_CID(
     peer_row_CID: str,
     path_dict: dict,
     engine: str,
-) -> tuple[
+    ) -> tuple[
     str,
     str,
-]:
+    ]:
     """
     create_beacon_CID _summary_
 
@@ -213,13 +213,14 @@ def create_beacon_CID(
 
     want_item_file = str(path_dict["want_item_file"])
 
-    with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+    #with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(want_item_file, "w", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
-    f = open(want_item_file, "rb")
+    f = open(want_item_file, "rb")  # noqa: SIM115
     file = {"file": f}
     param = {"only-hash": "true", "pin": "false", "cid-version": 1} # this provides a cid that can be duplicated by satisfy when the time comes
-    response, status_code, response_dict = execute_request(
+    _response, status_code, response_dict = execute_request(
         url_key="add",
         param=param,
         file=file,
@@ -284,7 +285,7 @@ def flash_beacon(
     component_test: bool,
     config_dict: str,
     beacon_CID: str,
-) -> str:
+    ) -> str:
     """
     flash_beacon _summary_
 
@@ -316,7 +317,7 @@ def flash_beacon(
         status_code = 200
 
     else:
-        response, status_code, response_dict = execute_request(  # wait for satisfy
+        _response, status_code, _response_dict = execute_request(  # wait for satisfy
             url_key="get",
             param={
                 "arg": beacon_CID,
@@ -327,7 +328,7 @@ def flash_beacon(
             ),  # control time out to avoid retries should this be calculated???????
             call_stack=call_stack,
         )
-        if status_code != 200:
+        if status_code != 200:  # noqa: SIM102
             if debug_enabled:
                 add_log(
                     process=call_stack,
@@ -346,8 +347,8 @@ def flash_beacon(
 
 
 if __name__ == "__main__":
-    from multiprocessing import set_start_method, freeze_support
     import os
+    from multiprocessing import freeze_support, set_start_method
 
     freeze_support()
     set_start_method("spawn")

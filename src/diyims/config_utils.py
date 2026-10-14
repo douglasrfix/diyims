@@ -1,13 +1,16 @@
 import configparser
 import json
-import requests
-from time import sleep
 from pathlib import Path
-from diyims.ipfs_utils import get_url_dict
+from time import sleep
+
+import requests
+
 from diyims.error_classes import ApplicationNotInstalledError
+from diyims.ipfs_utils import get_url_dict
 from diyims.path_utils import (
     get_install_template_dict,
 )
+
 # NOTE: update defaults and provide a set to system defaults function
 
 
@@ -31,7 +34,7 @@ def config_install():
     get_db_init_config_dict()
     get_queue_config_dict()
 
-    return
+    #return
 
 
 def get_beacon_config_dict():

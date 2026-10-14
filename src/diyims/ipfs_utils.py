@@ -32,14 +32,16 @@ def get_url_dict():
 def test_ipfs_version(call_stack, response_dictionary):
     # import json
     import os
-    # import requests
 
-    from diyims.path_utils import get_path_dict
-    from sqlmodel import create_engine, Session, select
-    from diyims.sqlmodels import IPFS_Agents
     from sqlalchemy.exc import NoResultFound
-    from diyims.error_classes import UnSupportedIPFSVersionError
+    from sqlmodel import Session, create_engine, select
+
     from diyims.database_utils import sync_ipfs_agent_table
+    from diyims.error_classes import UnSupportedIPFSVersionError
+
+    # import requests
+    from diyims.path_utils import get_path_dict
+    from diyims.sqlmodels import IPFS_Agents
 
     sync_ipfs_agent_table()
     # url_dict = get_url_dict()

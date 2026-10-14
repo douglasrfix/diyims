@@ -20,7 +20,7 @@ from diyims.requests_utils import execute_request
 from diyims.security_utils import verify_peer_row_from_cid
 
 
-def wantlist_capture_process_main(Args: WantlistCaptureProcessMainArgs) -> str:
+def wantlist_capture_process_main(Args: WantlistCaptureProcessMainArgs) -> str: # process startup limitation
     if Args.set_controls_return.component_test:
         pass
     else:
@@ -76,7 +76,7 @@ def submitted_wantlist_process_for_peer(
     peer_table_row.local_update_DTS = get_DTS()
     if peer_table_row.processing_status == "WLRP":
         peer_table_row.processing_status = "WLRX"
-    elif peer_table_row.processing_status == "WLWP":
+    elif peer_table_row.processing_status == "WLWP":#TODO: wlwp assigned?
         peer_table_row.processing_status = "WLWX"
     elif peer_table_row.processing_status == "WLWFP":
         peer_table_row.processing_status = "WLWFX"

@@ -1,6 +1,6 @@
 # from rich import print
-from diyims.requests_utils import execute_request
 from diyims.path_utils import get_path_dict
+from diyims.requests_utils import execute_request
 
 
 def test(call_stack):

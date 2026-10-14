@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dateutil.parser import parse
@@ -117,46 +117,57 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
         tuple[bool, bool, bool, bool, bool] -- _description_
     """
 
-    queues_enabled = bool(int(config_dict["queues_enabled"]))
+    #queues_enabled = bool(int(config_dict["queues_enabled"]))
     try:
         queues_enabled = bool(int(os.environ["QUEUES_ENABLED"]))
     except KeyError:
-        pass
+        queues_enabled = bool(int(config_dict["queues_enabled"]))
+        #pass
 
     try:
         component_test = bool(int(os.environ["COMPONENT_TEST"]))
     except KeyError:
-        component_test = False
+        component_test = False # not in config file
 
-    logging_enabled = bool(int(config_dict["logging_enabled"]))
+    #logging_enabled = bool(int(config_dict["logging_enabled"]))
     try:
         logging_enabled = bool(int(os.environ["LOGGING_ENABLED"]))
     except KeyError:
-        pass
+        logging_enabled = bool(int(config_dict["logging_enabled"]))
+        #pass
 
-    debug_enabled = bool(int(config_dict["debug_enabled"]))
+    #debug_enabled = bool(int(config_dict["debug_enabled"]))
     try:
         debug_enabled = bool(int(os.environ["DEBUG_ENABLED"]))
     except KeyError:
-        pass
+        debug_enabled = bool(int(config_dict["debug_enabled"]))
+        #pass
 
-    try:
-        single_thread = bool(int(config_dict["single_thread"]))
-    except KeyError:
-        single_thread = bool(1)
+    #try:
+    #    single_thread = bool(int(config_dict["single_thread"]))
+    #except KeyError:
+    #    #single_thread = bool(1)
+    #single_thread = True
     try:
         single_thread = bool(int(os.environ["SINGLE_THREAD"]))
     except KeyError:
-        pass
+        try:
+            single_thread = bool(int(config_dict["single_thread"]))
+        except KeyError:
+            single_thread = True
 
-    try:
-        metrics_enabled = bool(int(config_dict["metrics_enabled"]))
-    except KeyError:
-        metrics_enabled = bool(1)
+    #try:
+    #    metrics_enabled = bool(int(config_dict["metrics_enabled"]))
+    #except KeyError:
+    #    metrics_enabled = bool(1)
     try:
         metrics_enabled = bool(int(os.environ["METRICS_ENABLED"]))
     except KeyError:
-        pass
+        try:
+            metrics_enabled = bool(int(config_dict["metrics_enabled"]))
+        except KeyError:
+            metrics_enabled = True
+        #pass
 
     set_controls_return = SetControlsReturn()
     set_controls_return.component_test = component_test
@@ -270,14 +281,14 @@ def get_DTS() -> str:
     Returns:
         str: UTC datetime.now() in an iso format
     """
-    DTS = datetime.now(timezone.utc).isoformat()
+    DTS = datetime.now(UTC).isoformat()
     # DTSTemp = DTS.replace('+', '%2B')
 
     return DTS
 
 
-def get_shutdown_target(config_dict: dict) -> str:
-    current_date = datetime.today()
+def get_shutdown_target(config_dict: dict) -> datetime:
+    current_date = datetime.today()  # noqa: DTZ002
     shutdown_time = config_dict["shutdown_time"]
     if shutdown_time == "99:99:99":
         shutdown_time = str(current_date + timedelta(weeks=10))
@@ -288,6 +299,7 @@ def get_shutdown_target(config_dict: dict) -> str:
 
 def shutdown_cmd(call_stack):
     from multiprocessing.managers import BaseManager
+
     from diyims.sqlmodels import Shutdown
 
     call_stack = call_stack + ":shutdown_cmd"
@@ -398,17 +410,17 @@ def reset_shutdown(call_stack: str) -> None:
         except NoResultFound:
             pass
 
-    return
+    #return
 
 
 def clean_up(call_stack, roaming):
-    from diyims.sqlmodels import Log, Clean_Up
+    from diyims.sqlmodels import Clean_Up, Log
 
     call_stack = call_stack + ":clean_up"
     config_dict = get_clean_up_config_dict()
 
     hours_to_delay = config_dict["hours_to_delay"]
-    end_time = datetime.today() - timedelta(hours=int(hours_to_delay))
+    end_time = datetime.today() - timedelta(hours=int(hours_to_delay))  # noqa: DTZ002
 
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
@@ -437,7 +449,7 @@ def clean_up(call_stack, roaming):
                 "arg": beacon_CID,
             }
 
-            response, status_code, response_dict = execute_request(
+            _response, _status_code, _response_dict = execute_request(
                 url_key="pin_remove",
                 param=param,
                 call_stack=call_stack,
@@ -451,9 +463,9 @@ def clean_up(call_stack, roaming):
         results = session.exec(statement).all()
         for log in results:
             session.delete(log)
-        session.commit
+        session.commit  # noqa: B018
 
-    return
+    #return
 
 
 if __name__ == "__main__":

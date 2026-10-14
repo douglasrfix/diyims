@@ -1,23 +1,24 @@
 # import os
+from multiprocessing import Process, freeze_support, set_start_method
 from time import sleep
-from multiprocessing import Process, set_start_method, freeze_support
+
 from diyims.beacon import beacon_main
-from diyims.provider_capture import provider_capture_main
-from diyims.wantlist_capture_submit import wantlist_capture_submit_main
-from diyims.logger_utils import add_log
 from diyims.config_utils import get_scheduler_config_dict
-from diyims.queue_server import queue_main
 from diyims.database_utils import reset_peer_table_status
-from diyims.telemetry import select_local_peer_and_update_metrics
-from diyims.monitor_peer_publishing import monitor_peer_publishing_main
-from diyims.peer_maintenance import peer_maintenance_main
-from diyims.general_utils import clean_up, reset_shutdown, set_controls, verify_peerID
-from diyims.publish import publish_main
 from diyims.error_classes import (
-    UnSupportedIPFSVersionError,
     CommunicationsError,
     IPFSIDDoesNotMatchPeerTableID,
+    UnSupportedIPFSVersionError,
 )
+from diyims.general_utils import clean_up, reset_shutdown, set_controls, verify_peerID
+from diyims.logger_utils import add_log
+from diyims.monitor_peer_publishing import monitor_peer_publishing_main
+from diyims.peer_maintenance import peer_maintenance_main
+from diyims.provider_capture import provider_capture_main
+from diyims.publish import publish_main
+from diyims.queue_server import queue_main
+from diyims.telemetry import select_local_peer_and_update_metrics
+from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 
 def scheduler_main(call_stack, roaming):

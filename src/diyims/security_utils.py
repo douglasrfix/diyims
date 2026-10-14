@@ -1,9 +1,9 @@
 import json
 
-from diyims.logger_utils import add_log
-from diyims.requests_utils import execute_request
-from diyims.path_utils import get_path_dict
 from diyims.ipfs_utils import unpack_object_from_cid
+from diyims.logger_utils import add_log
+from diyims.path_utils import get_path_dict
+from diyims.requests_utils import execute_request
 
 
 def sign_file(
@@ -15,7 +15,7 @@ def sign_file(
 
     with open(sign_dict["file_to_sign"], "rb") as f:
         sign_files = {"file": f}
-        response, status_code, response_dict = execute_request(
+        _response, status_code, response_dict = execute_request(
             url_key="sign",
             file=sign_files,
             param=sign_params,
@@ -53,7 +53,7 @@ def verify_file(
 
     with open(verify_dict["signed_file"], "rb") as f:
         verify_files = {"file": f}
-        response, status_code, response_dict = execute_request(
+        _response, status_code, response_dict = execute_request(
             url_key="verify",
             file=verify_files,
             param=verify_params,
@@ -93,16 +93,16 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, provider_peer_ID):
         peer_row_dict = {}
         return status_code, signature_verified, peer_row_dict
 
-    if peer_row_dict["id"] != provider_peer_ID:
-        status_code = 500
-        add_log(
-            process=call_stack,
-            peer_type="Error",
-            msg="Verify provider_peerID doesn't match peer_row_dict peer_ID ",
-        )
-        signature_verified = 0
-        peer_row_dict = {}
-        return status_code, signature_verified, peer_row_dict
+    #if peer_row_dict["peer_ID"] != provider_peer_ID:
+    #    status_code = 500
+    #    add_log(
+    #        process=call_stack,
+    #        peer_type="Error",
+    #        msg="Verify provider_peerID doesn't match peer_row_dict peer_ID ",
+    #    )
+    #    signature_verified = 0
+    #    peer_row_dict = {}
+    #    return status_code, signature_verified, peer_row_dict
 
     signing_dict = {}
     signing_dict["peer_ID"] = peer_row_dict[

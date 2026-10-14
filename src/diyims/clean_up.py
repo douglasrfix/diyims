@@ -7,6 +7,7 @@ from sqlmodel import Session, create_engine, or_, select
 from diyims.config_utils import get_clean_up_config_dict
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
+from diyims.sqlmodels import Beacon
 
 
 def clean_up(call_stack, roaming):
@@ -60,3 +61,14 @@ def clean_up(call_stack, roaming):
         for log in results:
             session.delete(log)
         session.commit  # noqa: B018
+
+    statement = select(Beacon).where(Beacon.status == "new")
+    with Session(engine) as session:
+        results = session.exec(statement)
+        beacon_list = results.all()
+
+    for beacon in beacon_list:     
+        with Session(engine) as session:
+            session.delete(beacon)
+            session.commit()
+    

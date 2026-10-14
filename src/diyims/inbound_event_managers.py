@@ -213,7 +213,7 @@ def peer_manager(
                 peer_row.origin_update_DTS = remote_peer_row_dict["origin_update_DTS"]
                 peer_row.local_update_DTS = get_DTS()
                 peer_row.processing_status = "NPC"
-                peer_row.processing_status = "PR"
+                peer_row.peer_type = "PR"
                 peer_row.execution_platform = remote_peer_row_dict["execution_platform"]
                 peer_row.python_version = remote_peer_row_dict["python_version"]
                 peer_row.IPFS_agent = remote_peer_row_dict["IPFS_agent"]
@@ -535,7 +535,7 @@ def update_manager(
 
 
 def generic_manager(
-    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, header,
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, outbound, header,
 ):
     call_stack = call_stack + ":generic_manager"
     msg = "Generic manager entered ."
@@ -616,7 +616,7 @@ def generic_manager(
         outfile = Path(path_dictionary["update_path"]).joinpath(file_name)
     else:
         outfile = Path(path_dictionary["generic_path"]).joinpath(file_name)
-    
+            
     _response, status_code, _response_dictionary = execute_request(
         url_key="cat",
         param=param,

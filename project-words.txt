@@ -22,6 +22,7 @@ fastapi
 ffjrllrjsg
 findprovs
 fstat
+FURB
 getattr
 googleapiclient
 googleauth

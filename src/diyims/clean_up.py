@@ -71,4 +71,17 @@ def clean_up(call_stack, roaming):
         with Session(engine) as session:
             session.delete(beacon)
             session.commit()
+
+
     
+    path = get_path_dict()
+    folder_path = path["sign_path"]
+
+    if not folder_path.is_dir():
+        raise NotADirectoryError(f"{folder_path} is not a directory")
+        
+    for item in folder_path.iterdir():
+        
+        item.unlink()
+
+

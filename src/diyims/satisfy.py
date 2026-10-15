@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from multiprocessing.managers import BaseManager
+from pathlib import Path
 from queue import Empty
 from time import sleep
 
@@ -165,8 +166,11 @@ def satisfy_beacon(
             call_stack=call_stack,
             http_500_ignore=False,
         )
-        
-    # unlink file is not required because the file is reused by beacon
+
+    try:
+        Path(want_item_file).unlink()
+    except FileNotFoundError:
+        pass
 
     if status_code != 200:  # noqa: SIM102
         if debug_enabled:

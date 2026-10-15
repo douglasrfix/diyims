@@ -28,7 +28,7 @@ def clean_up(call_stack, roaming):
 
     # statement = select(Clean_Up)
     statement = select(Clean_Up).where(
-        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new")
+        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new") #TODO: deprecate this function
     )
     with Session(engine) as session:
         results = session.exec(statement).all()

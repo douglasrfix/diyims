@@ -210,24 +210,24 @@ def create_beacon_CID(
         peer_row_CID  # this is the first entry in the header table and points to a peer image
     )
     want_item_dict["DTS"] = get_DTS()  # the dts creates a unique cid
-
-    want_item_file = str(path_dict["want_item_file"])
+    want_item_file = str(path_dict["want_item_file"])#This name is used in a parallel process which means two things;
+        #1) the name can't change and 2) there can only be a single instance of both processes active at any time.  
 
     #with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
     with open(want_item_file, "w", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
-    f = open(want_item_file, "rb")  # noqa: SIM115
-    file = {"file": f}
-    param = {"only-hash": "true", "pin": "false", "cid-version": 1} # this provides a cid that can be duplicated by satisfy when the time comes
-    _response, status_code, response_dict = execute_request(
-        url_key="add",
-        param=param,
-        file=file,
-        call_stack=call_stack,
-        http_500_ignore=False,
-    )
-    f.close()
+    with open(want_item_file, "rb") as f:
+        file = {"file": f}
+        param = {"only-hash": "true", "pin": "false", "cid-version": 1} # this provides a cid that can be duplicated by satisfy when the time comes
+        _response, status_code, response_dict = execute_request(
+            url_key="add",
+            param=param,
+            file=file,
+            call_stack=call_stack,
+            http_500_ignore=False,
+        )
+
     ## unlink not required since the file will be reused in satisfy
 
     if status_code == 200:

@@ -174,7 +174,7 @@ def init(call_stack):
         disabled=0,
     )
 
-    peer_row_partial_dict = dict(peer_row_partial)
+    peer_row_partial_dict = dict(peer_row_partial)#TODO: does this need a unique name
     # peer_row_partial_dict = jsonable_encoder(peer_row_partial)
     proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]

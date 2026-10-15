@@ -15,7 +15,7 @@ def sign_file(
 
     with open(sign_dict["file_to_sign"], "rb") as f:
         sign_files = {"file": f}
-        _response, status_code, response_dict = execute_request(
+        _response, status_code, response_dict = execute_request(#TODO: unlink
             url_key="sign",
             file=sign_files,
             param=sign_params,
@@ -53,7 +53,7 @@ def verify_file(
 
     with open(verify_dict["signed_file"], "rb") as f:
         verify_files = {"file": f}
-        _response, status_code, response_dict = execute_request(
+        _response, status_code, response_dict = execute_request( #TODO: unlink
             url_key="verify",
             file=verify_files,
             param=verify_params,

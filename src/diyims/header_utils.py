@@ -289,13 +289,14 @@ def ipfs_header_add( # used by local publishers
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = processing_status
     header_dict["processing_status_DTS"] = DTS
+    
     proto_path = path_dict["header_path"]
     proto_file = path_dict["header_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
     param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": mode}
 
-    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file: #TODO: unlink
         json.dump(header_dict, write_file, indent=4)
 
     with open(proto_file_path, "rb") as f:

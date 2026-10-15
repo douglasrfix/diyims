@@ -1,6 +1,7 @@
 import json
 import os
 from multiprocessing import freeze_support, set_start_method
+from pathlib import Path
 
 from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session, create_engine, select
@@ -96,7 +97,7 @@ def select_local_peer_and_update_metrics(call_stack):
 
         with open(proto_file, "rb") as f:
             add_file = {"file": f}
-            _response, status_code, response_dict = execute_request(#TODO: unlink
+            _response, status_code, response_dict = execute_request(#TODO: unlink Peer file
                 url_key="add",
                 url_dict=url_dict,
                 config_dict=config_dict,
@@ -106,6 +107,10 @@ def select_local_peer_and_update_metrics(call_stack):
                 http_500_ignore=False,
             )
         #f.close()
+        try:
+            Path(proto_file).unlink()
+        except FileNotFoundError:
+            pass
 
         if status_code != 200:
             add_log(
@@ -119,7 +124,7 @@ def select_local_peer_and_update_metrics(call_stack):
         object_CID = response_dict["Hash"]  # new peer row cid
         object_type = "telemetry_entry"
         mode = object_type
-        processing_status = "publish"
+        processing_status = "publish-requested"
         #processing_status_DTS = DTS
 
         status_code, _header_CID = ipfs_header_add(

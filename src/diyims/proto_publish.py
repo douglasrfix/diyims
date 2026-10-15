@@ -81,7 +81,7 @@ def cli_file_add(call_stack, src_file_path):
 
     proto_file = path_dict[
         "peer_file"
-    ]  # TODO: this should be in cache not as a permanent file the should be a path entry for temporary
+    ]  # TODO: this should be in cache not as a permanent file the should be a path entry for temporary #NOTE:
     param = {
         "cid-version": 1,
         "only-hash": "false",
@@ -133,7 +133,7 @@ def cli_file_add(call_stack, src_file_path):
     object_type = meta_dict["object_type"]
 
     mode = object_type
-    processing_status = "publish"
+    processing_status = "publish-requested"
     #processing_status_DTS = DTS
 
     _status_code, _header_CID = ipfs_header_add(

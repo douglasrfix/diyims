@@ -282,7 +282,7 @@ def init(call_stack):
     object_type = "local_peer_entry"
 
     mode = "init"
-    processing_status = "publish"
+    processing_status = "publish-requested"
     #processing_status_DTS = DTS
     # FIXME: add meta data first the header pointing to meta
     header_CID = ipfs_header_add(
@@ -321,7 +321,7 @@ def init(call_stack):
     object_type = "network_name"
 
     mode = "init"
-    processing_status = "publish"
+    processing_status = "publish-requested"
     #processing_status_DTS = DTS
     header_CID = ipfs_header_add(
         call_stack,  # header for network name
@@ -389,7 +389,7 @@ def init(call_stack):
     object_CID = response_dict["Hash"]  # new peer row cid
     object_type = "telemetry_entry"
     mode = object_type
-    processing_status = "publish"
+    processing_status = "publish-requested"
     #processing_status_DTS = DTS
 
     status_code = ipfs_header_add(

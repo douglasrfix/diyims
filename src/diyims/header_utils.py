@@ -103,7 +103,7 @@ def header_chain_maint(
                 insert_DTS=DTS,
                 origin_insert_DTS=origin_insert_DTS,
                 peer_ID=response_dict["peer_ID"],
-                processing_status="added",
+                processing_status="add-requested",
                 processing_status_DTS= DTS,
                 prior_header_CID=response_dict[
                     "prior_header_CID"

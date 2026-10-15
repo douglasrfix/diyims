@@ -744,7 +744,7 @@ def filter_wantlist(
                                 mode = object_type
 
                             # peer_ID = SetSelfReturn.self
-                            processing_status = "publish"
+                            processing_status = "publish-requested"
                             #processing_status_DTS = DTS
 
                             status_code, _header_CID = ipfs_header_add(

@@ -158,14 +158,14 @@ def satisfy_beacon(
             "cid-version": 1,
             "pin-name": "satisfy_beacon",
         }
-        _response, status_code, _response_dict = execute_request(#TODO: unlink
+        _response, status_code, _response_dict = execute_request(
             url_key="add",
             param=param,
             file=file,
             call_stack=call_stack,
             http_500_ignore=False,
         )
-    #f.close()
+        
     # unlink file is not required because the file is reused by beacon
 
     if status_code != 200:  # noqa: SIM102

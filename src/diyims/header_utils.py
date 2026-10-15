@@ -1,5 +1,6 @@
 # from rich import print
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, col, create_engine, select
@@ -124,12 +125,6 @@ def header_chain_maint(
                     peer_type="status",
                     msg=msg,
                 )
-                
-                
-        
-            
-           
-            
         next_header_CID = response_dict["prior_header_CID"]
 
         if next_header_CID == "null":
@@ -229,11 +224,6 @@ def process_object_type_fail(call_stack, set_self_return, set_controls_returns, 
                 peer_type="status",
                 msg=msg,
             )
-    
-
-    
-    
-
 
 def ipfs_header_add( # used by local publishers
     call_stack,
@@ -296,7 +286,7 @@ def ipfs_header_add( # used by local publishers
 
     param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": mode}
 
-    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file: #TODO: unlink
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(header_dict, write_file, indent=4)
 
     with open(proto_file_path, "rb") as f:
@@ -308,6 +298,10 @@ def ipfs_header_add( # used by local publishers
             call_stack=call_stack,
             http_500_ignore=False, # ipfs request failure
         )
+    try:
+        Path(proto_file_path).unlink()
+    except FileNotFoundError:
+        pass
     if status_code == 200:
         header_CID = response_dict["Hash"]
     else:

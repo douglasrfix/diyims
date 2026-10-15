@@ -7,6 +7,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, create_engine, or_, select
 
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
+from diyims.clean_up import clean_up
 from diyims.config_utils import (
     get_clean_up_config_dict,
     get_scheduler_config_dict,
@@ -413,7 +414,7 @@ def reset_shutdown(call_stack: str) -> None:
     #return
 
 
-def clean_up(call_stack, roaming):
+def clean_upO(call_stack, roaming):
     from diyims.sqlmodels import Clean_Up, Log
 
     call_stack = call_stack + ":clean_up"

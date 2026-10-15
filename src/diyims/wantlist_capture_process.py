@@ -711,7 +711,7 @@ def filter_wantlist(
 
                             with open(proto_file_path, "rb") as f:
                                 add_file = {"file": f}
-                                response, status_code, response_dict = execute_request(
+                                response, status_code, response_dict = execute_request( #TODO: unlink
                                     url_key="add",
                                     param=param,
                                     file=add_file,
@@ -744,7 +744,7 @@ def filter_wantlist(
                                 mode = object_type
 
                             # peer_ID = SetSelfReturn.self
-                            processing_status = "publish"
+                            processing_status = "publish-requested"
                             #processing_status_DTS = DTS
 
                             status_code, _header_CID = ipfs_header_add(

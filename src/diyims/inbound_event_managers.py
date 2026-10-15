@@ -343,7 +343,7 @@ def peer_manager(
                 results = session.exec(statement)
                 header_row = results.one()
                 DTS = get_DTS()
-                header_row.processing_status = "completed-processing"
+                header_row.processing_status = "add-completed"
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()
@@ -364,7 +364,7 @@ def peer_manager(
 
        
         # peer_ID = SetSelfReturn.self
-        processing_status = "publish"
+        processing_status = "publish-requested"
         #processing_status_DTS = DTS
 
         status_code, _header_CID = ipfs_header_add(
@@ -440,7 +440,7 @@ def telemetry_manager(
                 results = session.exec(statement)
                 header_row = results.one()
                 DTS = get_DTS()
-                header_row.processing_status = "completed-processing"
+                header_row.processing_status = "add-completed"
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()
@@ -503,7 +503,7 @@ def update_manager(
     param = {"arg": ipfs_path}
     outfile = str(path_dictionary["update_path"]) + "\\" + whl_name
     # print(outfile)
-    _response, status_code, _response_dictionary = execute_request(
+    _response, status_code, _response_dictionary = execute_request( #TODO: unlink
         url_key="cat",
         param=param,
         timeout=(3.05, 122),  # avoid timeouts
@@ -526,7 +526,7 @@ def update_manager(
                 results = session.exec(statement)
                 header_row = results.one()
                 DTS = get_DTS()
-                header_row.processing_status = "completed"
+                header_row.processing_status = "add-completed"
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()
@@ -649,7 +649,7 @@ def generic_manager(
                 results = session.exec(statement)
                 header_row = results.one()
                 DTS = get_DTS()
-                header_row.processing_status = "completed-processing"
+                header_row.processing_status = "add-completed"
                 header_row.processing_status_DTS = DTS
                 session.add(header_row)
                 session.commit()

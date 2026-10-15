@@ -81,13 +81,13 @@ def cli_file_add(call_stack, src_file_path):
 
     proto_file = path_dict[
         "peer_file"
-    ]  # TODO: this should be in cache not as a permanent file the should be a path entry for temporary
+    ]  # TODO: this should be in cache not as a permanent file the should be a path entry for temporary #NOTE:
     param = {
         "cid-version": 1,
         "only-hash": "false",
         "pin": "false",
     }
-    with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file: #TODO: unlink
         json.dump(meta_dict, write_file, indent=4)
 
     with open(proto_file, "rb") as f:
@@ -133,7 +133,7 @@ def cli_file_add(call_stack, src_file_path):
     object_type = meta_dict["object_type"]
 
     mode = object_type
-    processing_status = "publish"
+    processing_status = "publish-requested"
     #processing_status_DTS = DTS
 
     _status_code, _header_CID = ipfs_header_add(
@@ -190,7 +190,7 @@ def file_add(call_stack, file_name):
         # f.close()
 
     if status_code == 200:
-        Path(src_path).unlink()
+        Path(src_path).unlink() #TODO: Needed 
     else:
         #print(status_code)
         add_log(
@@ -316,7 +316,7 @@ def ipfs_header_add_t(
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(header_dict, write_file, indent=4)
 
-    with open(proto_file_path, "rb") as f:
+    with open(proto_file_path, "rb") as f: #TODO: unlink
         add_file = {"file": f}
         _response, status_code, response_dict = execute_request(
             url_key="add",

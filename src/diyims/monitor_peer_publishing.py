@@ -151,7 +151,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                                Header_Chain_Status)
                         .where(Header_Table.peer_ID == peer.peer_ID)
                         #.where(Header_Chain_Status.peer_ID == peer.peer_ID)
-                        .where(Header_Table.processing_status == "added")
+                        .where(Header_Table.processing_status == "add-requested")
                         .where(Header_Table.peer_ID == Header_Chain_Status.peer_ID)
                         .order_by(
                             col(Header_Table.origin_insert_DTS).asc()

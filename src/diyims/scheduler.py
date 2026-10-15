@@ -3,6 +3,7 @@ from multiprocessing import Process, freeze_support, set_start_method
 from time import sleep
 
 from diyims.beacon import beacon_main
+from diyims.clean_up import clean_up
 from diyims.config_utils import get_scheduler_config_dict
 from diyims.database_utils import reset_peer_table_status
 from diyims.error_classes import (
@@ -10,7 +11,7 @@ from diyims.error_classes import (
     IPFSIDDoesNotMatchPeerTableID,
     UnSupportedIPFSVersionError,
 )
-from diyims.general_utils import clean_up, reset_shutdown, set_controls, verify_peerID
+from diyims.general_utils import reset_shutdown, set_controls, verify_peerID
 from diyims.logger_utils import add_log
 from diyims.monitor_peer_publishing import monitor_peer_publishing_main
 from diyims.peer_maintenance import peer_maintenance_main

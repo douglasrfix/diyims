@@ -1,5 +1,6 @@
 # from rich import print
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, col, create_engine, select
@@ -102,7 +103,7 @@ def header_chain_maint(
                 insert_DTS=DTS,
                 origin_insert_DTS=origin_insert_DTS,
                 peer_ID=response_dict["peer_ID"],
-                processing_status="added",
+                processing_status="add-requested",
                 processing_status_DTS= DTS,
                 prior_header_CID=response_dict[
                     "prior_header_CID"
@@ -124,12 +125,6 @@ def header_chain_maint(
                     peer_type="status",
                     msg=msg,
                 )
-                
-                
-        
-            
-           
-            
         next_header_CID = response_dict["prior_header_CID"]
 
         if next_header_CID == "null":
@@ -229,11 +224,6 @@ def process_object_type_fail(call_stack, set_self_return, set_controls_returns, 
                 peer_type="status",
                 msg=msg,
             )
-    
-
-    
-    
-
 
 def ipfs_header_add( # used by local publishers
     call_stack,
@@ -289,6 +279,7 @@ def ipfs_header_add( # used by local publishers
     header_dict["peer_ID"] = peer_ID
     header_dict["processing_status"] = processing_status
     header_dict["processing_status_DTS"] = DTS
+    
     proto_path = path_dict["header_path"]
     proto_file = path_dict["header_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
@@ -307,6 +298,10 @@ def ipfs_header_add( # used by local publishers
             call_stack=call_stack,
             http_500_ignore=False, # ipfs request failure
         )
+    try:
+        Path(proto_file_path).unlink()
+    except FileNotFoundError:
+        pass
     if status_code == 200:
         header_CID = response_dict["Hash"]
     else:

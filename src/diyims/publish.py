@@ -102,7 +102,7 @@ def publish_main(call_stack: str, mode: str) -> None:
             statement = (
                 select(Header_Table)
                 .where(Header_Table.peer_ID == SetSelfReturn.self)
-                .where(Header_Table.processing_status == "publish")
+                .where(Header_Table.processing_status == "publish-requested")
                 .order_by(
                     col(Header_Table.origin_insert_DTS).asc()
                 )  
@@ -189,7 +189,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                             results = session.exec(statement)
                             header_row = results.one()
                             DTS = get_DTS()
-                            header_row.processing_status = "completed"
+                            header_row.processing_status = "publish-completed"
                             header_row.processing_status_DTS = DTS
                             session.add(header_row)
                             session.commit()

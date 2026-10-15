@@ -1,18 +1,20 @@
-from multiprocessing.managers import BaseManager
-from diyims.config_utils import get_beacon_config_dict, get_clean_up_config_dict
-from diyims.logger_utils import add_log
-from datetime import datetime, timedelta
-from time import sleep
-from queue import Empty
 import json
+from datetime import datetime, timedelta
+from multiprocessing.managers import BaseManager
+from pathlib import Path
+from queue import Empty
+from time import sleep
 
 # from rich import print
-from sqlmodel import create_engine, Session, select
-from diyims.sqlmodels import Beacon
-from diyims.requests_utils import execute_request
-from diyims.path_utils import get_path_dict
-from diyims.general_utils import get_DTS, set_controls
+from sqlmodel import Session, create_engine, select
+
+from diyims.config_utils import get_beacon_config_dict, get_clean_up_config_dict
 from diyims.error_classes import CommunicationsError
+from diyims.general_utils import get_DTS, set_controls
+from diyims.logger_utils import add_log
+from diyims.path_utils import get_path_dict
+from diyims.requests_utils import execute_request
+from diyims.sqlmodels import Beacon
 
 
 def satisfy_main(call_stack: str) -> None:
@@ -58,7 +60,7 @@ def satisfy_main(call_stack: str) -> None:
         path_dict,
     )
 
-    if status_code != 200:
+    if status_code != 200:  # noqa: SIM102
         if SetControlsReturn.debug_enabled:
             add_log(
                 process=call_stack,
@@ -72,8 +74,6 @@ def satisfy_main(call_stack: str) -> None:
             peer_type="status",
             msg="Satisfy complete.",
         )
-
-    return
 
 
 def satisfy_beacon(
@@ -150,26 +150,29 @@ def satisfy_beacon(
     else:
         sleep(int(wait_seconds))
 
-    f = open(want_item_file, "rb")
-    file = {"file": f}
+    with open(want_item_file, "rb") as f:
+        file = {"file": f}
 
-    param = {
-        "only-hash": "false",
-        "pin": "true",
-        "cid-version": 1,
-        "pin-name": "satisfy_beacon",
-    }
-    response, status_code, response_dict = execute_request(
-        url_key="add",
-        param=param,
-        file=file,
-        call_stack=call_stack,
-        http_500_ignore=False,
-    )
-    f.close()
-    # unlink file is not required because the file is reused by the json dumps
+        param = {
+            "only-hash": "false",
+            "pin": "true",
+            "cid-version": 1,
+            "pin-name": "satisfy_beacon",
+        }
+        _response, status_code, _response_dict = execute_request(
+            url_key="add",
+            param=param,
+            file=file,
+            call_stack=call_stack,
+            http_500_ignore=False,
+        )
 
-    if status_code != 200:
+    try:
+        Path(want_item_file).unlink()
+    except FileNotFoundError:
+        pass
+
+    if status_code != 200:  # noqa: SIM102
         if debug_enabled:
             add_log(
                 process=call_stack,
@@ -205,7 +208,7 @@ def clean_up(
     statement = select(Beacon).where(Beacon.insert_DTS <= end_time.isoformat())
 
     with Session(engine) as session:
-        results = session.exec(statement).all()
+        results = session.exec(statement).all() #TODO: create a list to tolerate long running processes in side database processes
 
         for beacon in results:
             beacon_CID = beacon.beacon_CID
@@ -213,7 +216,7 @@ def clean_up(
                 "arg": beacon_CID,
             }
             try:
-                response, status_code, response_dict = execute_request(
+                _response, _status_code, _response_dict = execute_request(
                     url_key="pin_remove",
                     param=param,
                     call_stack=call_stack,
@@ -229,5 +232,3 @@ def clean_up(
                 # TODO: 700
             session.delete(beacon)
             session.commit()
-
-    return

@@ -195,7 +195,7 @@ def peer_maintenance_main(call_stack: str) -> None:
                     ) as write_file:
                         json.dump(peer_row_verify_dict, write_file, indent=4)
 
-                    with open(proto_file_path, "rb") as f:
+                    with open(proto_file_path, "rb") as f: #TODO: unlink
                         add_file = {"file": f}
                         _response, status_code, response_dict = execute_request(
                             url_key="add",
@@ -230,7 +230,7 @@ def peer_maintenance_main(call_stack: str) -> None:
                         mode = object_type
 
                     peer_ID = SetSelfReturn.self
-                    processing_status = "publish"
+                    processing_status = "publish-requested"
                     #processing_status_DTS = DTS
 
                     status_code, _header_CID = ipfs_header_add(

@@ -15,7 +15,8 @@ import requests
 from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
 
 from diyims.config_utils import get_request_config_dict, get_url_dict
-from diyims.error_classes import CommunicationsError
+
+#from diyims.error_classes import CommunicationsError
 from diyims.logger_utils import add_log
 
 
@@ -38,7 +39,7 @@ def execute_request(url_key: str, **kwargs):
     try:
         default_dict["timeout"] = kwargs["timeout"]
     except KeyError:
-        default_dict["timeout"] = tuple(
+        default_dict["timeout"] = tuple(  # noqa: C409
             [float(default_dict["connect_timeout"]), int(default_dict["read_timeout"])]
         )
 
@@ -94,7 +95,7 @@ def execute_request(url_key: str, **kwargs):
     dummy = component_test
     dummy = queues_enabled
     dummy = debug_enabled
-    dummy = dummy
+    dummy = dummy  # noqa: PLW0127
     while (
         connect_retry < int(value_dict["connect_retries"])
         and request_retry < int(value_dict["request_retries"])
@@ -188,6 +189,6 @@ def execute_request(url_key: str, **kwargs):
         else:
             response_dict = {}
 
-    if status_code != 200:
-        raise CommunicationsError(status_code)
+    #if status_code != 200:
+    #    raise CommunicationsError(status_code)
     return r, status_code, response_dict

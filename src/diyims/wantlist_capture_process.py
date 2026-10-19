@@ -664,7 +664,7 @@ def filter_wantlist(
                                     provider_peer_ID,
                                 )
                             )
-
+                            
                             peer_table_row.IPNS_name = peer_row_verify_dict["IPNS_name"]
                             peer_table_row.id = peer_row_verify_dict["id"]
                             peer_table_row.signature = peer_row_verify_dict["signature"]

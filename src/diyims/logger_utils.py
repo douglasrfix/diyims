@@ -1,21 +1,22 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from logging.handlers import QueueHandler
-from pathlib import Path
+from logging.handlers import QueueHandler, RotatingFileHandler
 from multiprocessing.managers import BaseManager
-from sqlalchemy.exc import IntegrityError
+from pathlib import Path
 from time import sleep
 
-from diyims.path_utils import get_path_dict
+from sqlalchemy.exc import IntegrityError
+
 from diyims.config_utils import get_logger_config_dict, get_logger_server_config_dict
+from diyims.path_utils import get_path_dict
 
 
 def add_log(process: str, peer_type: str, msg: str):
     import psutil
-    from diyims.general_utils import get_DTS
-    from diyims.sqlmodels import Log
-    from diyims.path_utils import get_path_dict
     from sqlmodel import Session, create_engine
+
+    from diyims.general_utils import get_DTS
+    from diyims.path_utils import get_path_dict
+    from diyims.sqlmodels import Log
 
     # from time import sleep
     # TODO: figure out how to handle dup keys
@@ -119,7 +120,6 @@ def get_logger_server(file, peer_type):
     # logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
-    return
 
 
 def get_logger_task(peer_type, peer_ID):

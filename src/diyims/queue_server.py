@@ -56,7 +56,6 @@ def queue_main(call_stack):
     server = manager.get_server()
     server.serve_forever()
 
-    return
 
 
 if __name__ == "__main__":

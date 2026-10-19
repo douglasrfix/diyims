@@ -170,7 +170,8 @@ def init(call_stack):
         python_version=python_version,
         IPFS_agent=IPFS_agent,
         agent=agent,
-        processing_status="NPC",  # Normal peer processing complete
+        processing_status="NPC",
+        version='1',
         disabled=0,
     )
 

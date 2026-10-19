@@ -8,6 +8,7 @@ def publish_main(call_stack: str, mode: str) -> None:
     from sqlalchemy.exc import NoResultFound
     from sqlmodel import Session, col, create_engine, select
 
+    #from diyims.class_imports import SetSelfReturn
     from diyims.config_utils import get_publish_config_dict
     from diyims.general_utils import get_DTS, set_controls, set_self, shutdown_query
     from diyims.logger_utils import add_log
@@ -28,8 +29,6 @@ def publish_main(call_stack: str, mode: str) -> None:
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
     SetSelfReturn = set_self()
-
-    ipns_path = "/ipns/" + SetSelfReturn.IPNS_name
 
     wait_before_startup = int(config_dict["wait_before_startup"])
     if SetControlsReturn.logging_enabled:
@@ -62,146 +61,109 @@ def publish_main(call_stack: str, mode: str) -> None:
     while True:
         if shutdown_query(call_stack):
             break
-
-        if SetControlsReturn.logging_enabled:
-            add_log(
-                process=call_stack,
-                peer_type="status",
-                msg="Entering resolve.",
-            )
-        start_DTS = get_DTS()
-        #header_CID = most_recent_header.header_CID
-        param = {"arg": ipns_path}
-        _response, status_code, response_dict = execute_request(
-            url_key="resolve",  # resolve last cid published by this peer for comparison to the latest header entry
-            param=param,
-            call_stack=call_stack,
-            http_500_ignore=False,
+        statement = (
+            select(Header_Table)
+            .where(Header_Table.peer_ID == SetSelfReturn.self)
+            .where(Header_Table.processing_status == "publish-requested")
+            .order_by(
+                col(Header_Table.origin_insert_DTS).asc()
+            )  
         )
-        if status_code == 200:
-            if SetControlsReturn.logging_enabled:
-                    stop_DTS = get_DTS()
-                    start = datetime.fromisoformat(start_DTS)
-                    stop = datetime.fromisoformat(stop_DTS)
-                    duration = stop - start
-                    add_log(
-                        process=call_stack,
-                        peer_type="status",
-                        msg=f"Resolve completed in {duration} seconds with {status_code}.",
-                    )
-            resolved_header_CID = response_dict["Path"][6:]  # resolved format
-        else:
+
+        header_list = []
+        with Session(engine) as session:
+            results = session.exec(statement)
+            header_rows = results.all()
+
+            for header in header_rows:
+                header_list.append(header)  # noqa: PERF402
+        for header in header_list:
+            
+            header_CID = header.header_CID
+            
+            if shutdown_query(call_stack):
+                break
+            
+            #if resolved_header_CID != header_CID:  # don't republish the same header if it is the resolved header....what about other headers????
+                # there is evidence of the same header be sent twice. perhaps the resolve test doesn't update fast enough. 
+            ipfs_path = "/ipfs/" + header_CID
             if SetControlsReturn.logging_enabled:
                 add_log(
                     process=call_stack,
                     peer_type="status",
-                    msg="Resolve failed.",
+                    msg="Entering publish.",
                 )
 
-        if status_code == 200:
-            statement = (
-                select(Header_Table)
-                .where(Header_Table.peer_ID == SetSelfReturn.self)
-                .where(Header_Table.processing_status == "publish-requested")
-                .order_by(
-                    col(Header_Table.origin_insert_DTS).asc()
-                )  
+            name_publish_arg = {
+                "arg": ipfs_path,
+                "resolve": "true",
+                "key": "self",
+                "ipns-base": "base36",
+            }
+
+            start_DTS = get_DTS()
+            _response, status_code, _response_dict = execute_request(
+                url_key="name_publish",
+                param=name_publish_arg,
+                call_stack=call_stack,
+                http_500_ignore=False,
             )
-
-            header_list = []
-            with Session(engine) as session:
-                results = session.exec(statement)
-                header_rows = results.all()
-
-                for header in header_rows:
-                    header_list.append(header)  # noqa: PERF402
-            
-            for header in header_list:
-                
-                header_CID = header.header_CID
-                
-                if shutdown_query(call_stack):
-                    break
-                
-                if resolved_header_CID != header_CID:  # don't republish the same header
-                    ipfs_path = "/ipfs/" + header_CID
-                    if SetControlsReturn.logging_enabled:
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg="Entering publish.",
-                        )
-
-                    name_publish_arg = {
-                        "arg": ipfs_path,
-                        "resolve": "true",
-                        "key": "self",
-                        "ipns-base": "base36",
-                    }
-
-                    start_DTS = get_DTS()
-                    _response, status_code, response_dict = execute_request(
-                        url_key="name_publish",
-                        param=name_publish_arg,
-                        call_stack=call_stack,
-                        http_500_ignore=False,
+            if SetControlsReturn.logging_enabled:
+                stop_DTS = get_DTS()
+                start = datetime.fromisoformat(start_DTS)
+                stop = datetime.fromisoformat(stop_DTS)
+                duration = stop - start
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=f"Publish completed in {duration} seconds with {status_code}.",
+                )
+            if status_code != 200:
+                if SetControlsReturn.debug_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type="status",
+                        msg=f"Publish {header_CID} failed with {status_code}.",
                     )
-                    if SetControlsReturn.logging_enabled:
-                        stop_DTS = get_DTS()
-                        start = datetime.fromisoformat(start_DTS)
-                        stop = datetime.fromisoformat(stop_DTS)
-                        duration = stop - start
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg=f"Publish completed in {duration} seconds with {status_code}.",
+                statement = (
+                    select(Header_Table).where(Header_Table.header_CID == header_CID).where(Header_Table.peer_ID == header.peer_ID)
                         )
-                    if status_code != 200:
-                        if SetControlsReturn.debug_enabled:
-                            add_log(
-                                process=call_stack,
-                                peer_type="status",
-                                msg=f"Publish {header_CID} failed with {status_code}.",
-                            )
-                        statement = ( # FIXME: factor into a header completion function
-                            select(Header_Table).where(Header_Table.header_CID == header_CID)
-                                )
+                DTS = get_DTS()
+                with Session(engine) as session:
+                    try:
+                        results = session.exec(statement)
+                        header_row = results.one()
                         DTS = get_DTS()
-                        with Session(engine) as session:
-                            try:
-                                results = session.exec(statement)
-                                header_row = results.one()
-                                DTS = get_DTS()
-                                header_row.processing_status = "publish failed"
-                                header_row.processing_status_DTS = DTS
-                                session.add(header_row)
-                                session.commit()
-                            except NoResultFound:
-                                pass
+                        header_row.processing_status = "publish failed"
+                        header_row.processing_status_DTS = DTS
+                        session.add(header_row)
+                        session.commit()
+                    except NoResultFound:
+                        pass
 
-                else:
-                    statement = (
-                                select(Header_Table).where(Header_Table.header_CID == header_CID)
-                            )
-                    DTS = get_DTS()
-                    with Session(engine) as session:
-                        try:
-                            results = session.exec(statement)
-                            header_row = results.one()
-                            DTS = get_DTS()
-                            header_row.processing_status = "publish-completed"
-                            header_row.processing_status_DTS = DTS
-                            session.add(header_row)
-                            session.commit()
-                        except NoResultFound:
-                            pass
-     
-                    if SetControlsReturn.logging_enabled:
-                        add_log(
-                            process=call_stack,
-                            peer_type="status",
-                            msg=f"Header {header_CID} already published.",
+            else:
+                statement = (
+                            select(Header_Table).where(Header_Table.header_CID == header_CID).where(Header_Table.peer_ID == header.peer_ID)
                         )
+                DTS = get_DTS()
+                with Session(engine) as session:
+                    try:
+                        results = session.exec(statement)
+                        header_row = results.one()
+                        DTS = get_DTS()
+                        header_row.processing_status = "publish-completed"
+                        header_row.processing_status_DTS = DTS
+                        session.add(header_row)
+                        session.commit()
+                    except NoResultFound:
+                        pass
+                if SetControlsReturn.debug_enabled:    
+                    add_log(
+                            process=call_stack,
+                            peer_type="header debug",
+                            msg=f"Header {header_CID} published.",
+                        )
+
         if shutdown_query(call_stack):
             break
         wait_for_next_request_seconds = int(config_dict["wait_time"])

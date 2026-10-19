@@ -213,12 +213,12 @@ def peer_manager(
                 peer_row.origin_update_DTS = remote_peer_row_dict["origin_update_DTS"]
                 peer_row.local_update_DTS = get_DTS()
                 peer_row.processing_status = "NPC"
-                peer_row.peer_type = "PR"
+                peer_row.peer_type = "LR"
                 peer_row.execution_platform = remote_peer_row_dict["execution_platform"]
                 peer_row.python_version = remote_peer_row_dict["python_version"]
                 peer_row.IPFS_agent = remote_peer_row_dict["IPFS_agent"]
                 peer_row.agent = remote_peer_row_dict["agent"]
-                peer_row.version = remote_peer_row_dict["version"]
+                #peer_row.version = '2'
                 peer_row.disabled = remote_peer_row_dict["disabled"]
         
 
@@ -238,6 +238,10 @@ def peer_manager(
                     peer_row.peer_type = (
                         "PR"  # update from PP since it the source is remote since that process is incomplete
                     )
+                    peer_row.signature_valid = 2
+                    #peer_row.version = '3'
+                    
+                    peer_row.IPNS_name = remote_peer_row_dict["IPNS_name"]
                     update_peer_table = True
                     update_header_table = True
                     create_header = True
@@ -257,6 +261,10 @@ def peer_manager(
                     peer_row.peer_type = (
                         "PR"  # update from PP since the source is remote to also remote to this peer since that process is incomplete
                     )
+                    peer_row.signature_valid = 3
+                    #peer_row.version = '4'
+                    peer_row.IPNS_name = remote_peer_row_dict["IPNS_name"]
+                    
                     update_peer_table = True
                     update_header_table = True
                     create_header = True
@@ -295,7 +303,7 @@ def peer_manager(
                 IPNS_name=remote_peer_row_dict["IPNS_name"],
                 id=remote_peer_row_dict["id"],
                 signature=remote_peer_row_dict["signature"],
-                signature_valid=remote_peer_row_dict["signature_valid"],
+                signature_valid= 4,
                 peer_type="RP",
                 origin_update_DTS=remote_peer_row_dict["origin_update_DTS"],
                 local_update_DTS=get_DTS(),
@@ -304,7 +312,7 @@ def peer_manager(
                 IPFS_agent=remote_peer_row_dict["IPFS_agent"],
                 processing_status="NPC",
                 agent=remote_peer_row_dict["agent"],
-                version=remote_peer_row_dict["version"],
+                version= '3',
                 disabled=remote_peer_row_dict["disabled"],
             )
             update_peer_table = True

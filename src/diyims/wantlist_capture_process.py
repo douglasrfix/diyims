@@ -746,6 +746,7 @@ def filter_wantlist(
                             # peer_ID = SetSelfReturn.self
                             processing_status = "publish-requested"
                             #processing_status_DTS = DTS
+                            publish_suppress= False
 
                             status_code, _header_CID = ipfs_header_add(
                                 call_stack,
@@ -757,17 +758,17 @@ def filter_wantlist(
                                 mode,
                                 processing_status,
                                 #processing_status_DTS,
-                                queues_enabled,
+                                publish_suppress,
                             )
 
-                            if queues_enabled:  # noqa: SIM102
+                            #if queues_enabled:
                                 # out_bound.put_nowait("wake up")
-                                if debug_enabled:
-                                    add_log(
-                                        process=call_stack,
-                                        peer_type="status",
-                                        msg="Sent wakeup.",
-                                    )
+                            #    if debug_enabled:
+                            #        add_log(
+                            #            process=call_stack,
+                            #            peer_type="status",
+                            #            msg="Sent wakeup.",
+                            #        )
 
                     else:
                         log_string = f"Unknown dictionary for {provider_peer_row_CID}."

@@ -3,17 +3,16 @@ import shutil
 from pathlib import Path
 
 # from diyims.path_utils import get_path_dict
-from sqlmodel import Session, col, create_engine, select
+from sqlmodel import Session, create_engine
 
 from diyims.config_utils import get_publish_config_dict
-from diyims.general_utils import get_DTS, set_controls, set_self
+from diyims.general_utils import get_DTS, set_self
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
 from diyims.sqlmodels import (
-    Header_Table,
     Object_Meta_Data,
 )
 
@@ -35,9 +34,10 @@ def cli_file_add(call_stack, src_file_path):
     call_stack = call_stack + ":cli_file_add"
     
     config_dict = get_publish_config_dict()
-    SetControlsReturn = set_controls(call_stack, config_dict)
-    if SetControlsReturn.queues_enabled:
-        path_dict = get_path_dict()
+    path_dict = get_path_dict()
+
+    
+        
     work_path = Path(src_file_path)
     file_name = work_path.name
     file_type = work_path.suffix
@@ -95,7 +95,7 @@ def cli_file_add(call_stack, src_file_path):
         _response, _status_code, response_dict = execute_request(
             url_key="add",
             url_dict=url_dict,
-            config_dict=config_dict,
+            config_dict=config_dict, # Correct dictionary
             file=add_file,
             param=param,
             call_stack=call_stack,
@@ -134,6 +134,7 @@ def cli_file_add(call_stack, src_file_path):
 
     mode = object_type
     processing_status = "publish-requested"
+    publish_suppress = False
     #processing_status_DTS = DTS
 
     _status_code, _header_CID = ipfs_header_add(
@@ -142,14 +143,12 @@ def cli_file_add(call_stack, src_file_path):
         object_CID,
         object_type,
         peer_ID,
-        config_dict,
+        config_dict,# ??
         mode,
         processing_status,
         #processing_status_DTS,
-        "1",
+        publish_suppress,
     )
-
-    #return
 
 
 def file_add(call_stack, file_name):
@@ -254,108 +253,6 @@ def pin_meta(call_stack, object_CID):
     #return
 
 
-def ipfs_header_add_t(
-    call_stack,
-    DTS,
-    object_CID,
-    object_type,
-    peer_ID,
-    config_dict,
-    mode,
-    processing_status,
-    queues_enabled,
-):
-    import json
-    from multiprocessing.managers import BaseManager
-
-    from diyims.path_utils import get_path_dict, get_unique_file
-
-    path_dict = get_path_dict()
-    call_stack = call_stack + ":ipfs_header_add"
-    sqlite_file_name = path_dict["db_file"]
-    sqlite_url = f"sqlite:///{sqlite_file_name}"
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-    if queues_enabled:
-        q_server_port = int(config_dict["q_server_port"])
-        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-        queue_server.register(
-            "get_publish_queue"
-        )
-        queue_server.connect()
-        publish_queue = queue_server.get_publish_queue()
-
-    statement = (
-        select(Header_Table)
-        .where(Header_Table.peer_ID == peer_ID)
-        # .where(Header_Table.object_type == "local_peer_entry")
-        .order_by(col(Header_Table.insert_DTS).desc())
-    )
-    header_dict = {}
-    with Session(engine) as session:
-        results = session.exec(statement)
-        header_row = results.first()
-        if header_row is None:
-            header_dict["prior_header_CID"] = "null"
-        else:
-            header_dict["prior_header_CID"] = header_row.header_CID
-
-    header_dict["version"] = "0"
-    header_dict["object_CID"] = object_CID
-    header_dict["object_type"] = object_type
-    header_dict["insert_DTS"] = DTS
-    header_dict["peer_ID"] = peer_ID
-    header_dict["processing_status"] = processing_status
-
-    proto_path = path_dict["header_path"]
-    proto_file = path_dict["header_file"]
-    proto_file_path = get_unique_file(proto_path, proto_file)
-
-    param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": mode}
-
-    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
-        json.dump(header_dict, write_file, indent=4)
-
-    with open(proto_file_path, "rb") as f: #TODO: unlink
-        add_file = {"file": f}
-        _response, status_code, response_dict = execute_request(
-            url_key="add",
-            param=param,
-            file=add_file,
-            call_stack=call_stack,
-            http_500_ignore=False,
-        )
-    # f.close()
-    if status_code == 200:
-        header_CID = response_dict["Hash"]
-    else:
-        add_log(
-            process=call_stack,
-            peer_type="Error",
-            msg="IPFS Header Panic.",
-        )
-        return status_code, header_CID
-
-    new_header = Header_Table(
-        version=header_dict["version"],
-        object_CID=header_dict["object_CID"],
-        object_type=header_dict["object_type"],
-        insert_DTS=get_DTS(),
-        peer_ID=header_dict["peer_ID"],
-        processing_status=header_dict["processing_status"],
-        prior_header_CID=header_dict["prior_header_CID"],
-        header_CID=header_CID,
-    )
-
-    
-            
-    if queues_enabled:
-            publish_queue.put_nowait("wake up")
-    
-    with Session(engine) as session:
-        session.add(new_header)
-        session.commit()
-    return status_code, header_CID
 
 
 if __name__ == "__main__":

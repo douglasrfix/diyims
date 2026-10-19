@@ -10,7 +10,7 @@ from diyims.config_utils import get_metrics_config_dict
 from diyims.general_utils import (
     get_agent,
     get_DTS,
-    set_controls,
+    #set_controls,
     set_self,
     verify_peerID,
 )
@@ -29,7 +29,7 @@ def select_local_peer_and_update_metrics(call_stack):
     config_dict = get_metrics_config_dict()
     url_dict = get_url_dict()
     path_dict = get_path_dict()
-    SetControlsReturn = set_controls(call_stack, config_dict)
+    #SetControlsReturn = set_controls(call_stack, config_dict)
     SetSelfReturn = set_self()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -125,6 +125,7 @@ def select_local_peer_and_update_metrics(call_stack):
         object_type = "telemetry_entry"
         mode = object_type
         processing_status = "publish-requested"
+        publish_suppressed = False
         #processing_status_DTS = DTS
 
         status_code, _header_CID = ipfs_header_add(
@@ -137,7 +138,7 @@ def select_local_peer_and_update_metrics(call_stack):
             mode,
             processing_status,
             #processing_status_DTS,
-            SetControlsReturn.queues_enabled,
+            publish_suppressed,
         )
 
         if status_code != 200:  # TODO: remove recent pin or defer pin to here

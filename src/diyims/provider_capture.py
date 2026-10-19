@@ -105,7 +105,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
     total_promoted = 0
     total_released = 0
 
-    current_DT = datetime.now()  # noqa: DTZ005
+    current_DT = datetime.now()
     while (
         target_DT > current_DT
         and capture_interval < max_intervals
@@ -200,7 +200,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
 
         if shutdown_query(call_stack):
             break
-        current_DT = datetime.now()  # noqa: DTZ005
+        current_DT = datetime.now()
 
     if SetControlsReturn.metrics_enabled:
         add_log(
@@ -479,7 +479,7 @@ def decode_findprovs_structure(
                                 peer_type=peer_type,
                                 original_peer_type=peer_type,
                                 processing_status="WLR",  # new provider with valid address provides the base for early host recognition
-                                version="1",  # WLR
+                                version="1",  # WLR #TODO: #12 correct overlapping use of version in peer table.
                                 disabled=0,
                             )
                             added += 1

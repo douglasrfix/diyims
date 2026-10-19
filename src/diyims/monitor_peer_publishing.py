@@ -7,7 +7,7 @@ from time import sleep
 
 #from rich import print
 from sqlalchemy.exc import NoResultFound
-from sqlmodel import Session, col, create_engine, select
+from sqlmodel import Session, col, create_engine, or_, select
 
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.config_utils import get_peer_monitor_config_dict
@@ -87,8 +87,12 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
     while True:
         
         peer_list = create_peer_list(call_stack, set_self_return, set_controls_return, engine)
-        
-
+        if SetControlsReturn.debug_enabled:
+            add_log(
+                    process=call_stack,
+                    peer_type="peer monitor debug",
+                    msg=f"Peer list length {len(peer_list)}.",
+                )
         for peer in peer_list:
             if shutdown_query(call_stack):
                 break
@@ -104,9 +108,13 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                 # from resolve above that determines wether the peer is active and what the most current published cid is
                 resolved_header_CID = response_dict["Path"][6:]
                 # header cid in a published object which is always a header in this system
+                if SetControlsReturn.debug_enabled:
+                    add_log(
+                            process=call_stack,
+                            peer_type="peer monitor debug",
+                            msg=f"Resolved header_CID {resolved_header_CID} for peer {peer.peer_ID}.",
+                        )
                 
-                    
-
                 #for header in header_list: # header(s) to be processed by owning peer insert date
                 # how do we process the unrecorded new entry???? #TODO: how about same entry as last time?????
                 start_DTS = get_DTS()
@@ -150,7 +158,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
                                Header_Table.processing_status_DTS,
                                Header_Chain_Status)
                         .where(Header_Table.peer_ID == peer.peer_ID)
-                        #.where(Header_Chain_Status.peer_ID == peer.peer_ID)
+                        .where(Header_Chain_Status.missing_header_CID == 'na')
                         .where(Header_Table.processing_status == "add-requested")
                         .where(Header_Table.peer_ID == Header_Chain_Status.peer_ID)
                         .order_by(
@@ -164,6 +172,12 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
             
                     for header in header_rows:
                         header_list.append(header)# noqa: PERF402
+                    if SetControlsReturn.debug_enabled:
+                        add_log(
+                                process=call_stack,
+                                peer_type="peer monitor debug",
+                                msg=f"header_list length {len(header_list)} for peer {peer.peer_ID}.",
+                            )
                     
                     process_inbound_events_for_peer(call_stack, set_self_return,
                                         set_controls_return, engine, config_dict, out_bound,  header_list, peer.peer_ID)
@@ -201,7 +215,8 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
 def create_peer_list(call_stack, set_self_return, set_controls_return, engine) -> list:
     statement_1 = (
         select(Peer_Table)
-        .where(Peer_Table.signature_valid == 1)
+        .where(or_(Peer_Table.signature_valid == 1, Peer_Table.signature_valid == 2,
+                   Peer_Table.signature_valid == 3, Peer_Table.signature_valid == 4))
         .where(Peer_Table.peer_ID != set_self_return.self) #ignore the local peer
         .where(Peer_Table.processing_status == "NPC") #only peers that are ready for normal processing
         )
@@ -286,6 +301,12 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                     set_controls_return: SetControlsReturn, engine, config_dict, out_bound, header_list: list, peer_ID):
     
     for header in header_list:
+        if SetControlsReturn.debug_enabled:
+            add_log(
+                    process=call_stack,
+                    peer_type="peer monitor debug",
+                    msg=f"processing header_CID {header.header_CID}.",
+                )
         if (
             header.object_type == "local_peer_entry"
             or header.object_type == "provider_peer_entry"
@@ -304,6 +325,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
             )
         elif header.object_type == "telemetry_entry":
             msg = "Telemetry entry submitted ."
+            
             add_log(
                 process=call_stack,
                 peer_type="info",

@@ -76,11 +76,8 @@ class Header_Table(SQLModel, table=True):
     origin_insert_DTS: str
     prior_header_CID: str | None = None
     header_CID: str = Field(primary_key=True)
-    peer_ID: str = Field(
-        sa_column=Column(
-            String,
-            comment="peer_ID appears in this table as human readable source of entry",
-        )
+    peer_ID: str = Field(primary_key=True
+        
     )
     processing_status: str
     processing_status_DTS: str | None = None
@@ -132,7 +129,7 @@ class Peer_Table(SQLModel, table=True):
     IPFS_agent: str | None = None
     processing_status: str
     agent: str | None = None
-    version: str | None = "0"
+    version: str | None
     disabled: int | None = 0
 
 

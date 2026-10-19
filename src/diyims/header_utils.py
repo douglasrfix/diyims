@@ -39,8 +39,8 @@ def header_chain_maint(
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-    new_header_CID = header_CID
-    next_header_CID = new_header_CID
+    #new_header_CID = header_CID
+    next_header_CID = header_CID
 
     while True:
         start_DTS = get_DTS()
@@ -59,14 +59,14 @@ def header_chain_maint(
         start = datetime.fromisoformat(start_DTS)
         stop = datetime.fromisoformat(stop_DTS)
         duration = stop - start
-        msg = f"In {duration} CAT {new_header_CID}."
+        msg = f"In {duration} CAT {next_header_CID}."
         if set_controls_return.logging_enabled:
             add_log(
                 process=call_stack,
                 peer_type="status",
                 msg=msg,
             )
-       
+    
         try:
             response_dict["object_type"] # a weak test for existence of a valid object based json structure
             
@@ -85,7 +85,6 @@ def header_chain_maint(
             try:
                 new_header = results.one()
                 header_found = True
-                new_header.processing_status_DTS = "already existed"
                 
             except NoResultFound:
                 header_found = False 
@@ -111,52 +110,60 @@ def header_chain_maint(
                 header_CID=next_header_CID,
             )
 
-        with Session(engine) as session:
-            
-            try:
-                session.add(new_header)
-                session.commit()
-                
-            except IntegrityError:
-                msg = f"{new_header_CID} already existed." #TODO: this logic needs to be expanded
-                #if debug_enabled:
-                add_log(
-                    process=call_stack,
-                    peer_type="status",
-                    msg=msg,
-                )
-        next_header_CID = response_dict["prior_header_CID"]
-
-        if next_header_CID == "null":
-            new_header_chain_status = Header_Chain_Status(
-                insert_DTS=get_DTS(),
-                peer_ID=peer_ID,
-                missing_header_CID="na",
-                message="Root header found",
-            )
-
             with Session(engine) as session:
+                
                 try:
-                    session.add(new_header_chain_status)
+                    session.add(new_header)
                     session.commit()
+
+                    add_log(
+                            process=call_stack,
+                            peer_type="peer monitor debug",
+                            msg=f"Processed header_CID {next_header_CID}.",
+                        )
+                    
                 except IntegrityError:
-                    pass
+                    msg = f"{next_header_CID} already exists in header table"
+                    #if debug_enabled:
+                    add_log(
+                        process=call_stack,
+                        peer_type="peer monitor debug",
+                        msg=msg,
+                    )
+                    break
+            
+            next_header_CID = response_dict["prior_header_CID"]
+
+            if next_header_CID == "null":
+                new_header_chain_status = Header_Chain_Status(
+                    insert_DTS=get_DTS(),
+                    peer_ID=peer_ID,
+                    missing_header_CID="na",
+                    message="Root header found",
+                )
+
+                with Session(engine) as session:
+                    try:
+                        session.add(new_header_chain_status)
+                        session.commit()
+                    except IntegrityError:
+                        pass
+                add_log(
+                        process=call_stack,
+                        peer_type="peer monitor debug",
+                        msg=f"Ended maint loop with header_CID {next_header_CID}.",
+                    )
+                break
+        else:
+            if set_controls_return.debug_enabled:
+                add_log(
+                        process=call_stack,
+                        peer_type="peer monitor debug",
+                        msg=f"Ended maint loop with header_CID {next_header_CID}.",
+                    )
+                
             break  # header chain complete exit maint loop
-
-        statement = (  # check for the previous header in the db
-            select(Header_Table)
-            .where(Header_Table.peer_ID == peer_ID)
-            .where(Header_Table.header_CID == next_header_CID)
-        )
-
-        with Session(engine) as session:
-            results = session.exec(statement)
-            try:
-                results.one()
-                break # need to exit since the prior header is in the db #TODO: check all cases of header in db 
-            except NoResultFound:
-                pass  # got to top of loop and cat prior header
-
+ 
     return status_code
 
 def ipfs_cat_cid(call_stack, set_self_return, set_controls_return, header_CID):
@@ -174,11 +181,19 @@ def ipfs_cat_cid(call_stack, set_self_return, set_controls_return, header_CID):
 
 def process_header_cid_cat_fail(call_stack, set_self_return, set_controls_return, engine, peer_ID, header_CID):
 
+    if set_controls_return.debug_enabled:
+        msg = f"CAT failure: {header_CID} from Peer: {peer_ID} ."
+        add_log(
+                process=call_stack,
+                peer_type="Error",
+                msg=msg,
+            )
+
     new_header_chain_status = Header_Chain_Status(
                     insert_DTS=get_DTS(),
                     peer_ID=peer_ID,
                     missing_header_CID=header_CID,
-                    message="missing header",
+                    message="CAT fail",
                 )
     
     with Session(engine) as session:
@@ -190,14 +205,15 @@ def process_header_cid_cat_fail(call_stack, set_self_return, set_controls_return
             pass  # ignore duplicate message error
     
 
-def process_object_type_fail(call_stack, set_self_return, set_controls_returns, engine, peer_ID, header_CID):
+def process_object_type_fail(call_stack, set_self_return, set_controls_return, engine, peer_ID, header_CID):
 
-    msg = f"Invalid header format: {header_CID} from Peer: {peer_ID} ."
-    add_log(
-        process=call_stack,
-        peer_type="Error",
-        msg=msg,
-    )
+    if set_controls_return.debug_enabled:
+        msg = f"Invalid header format: {header_CID} from Peer: {peer_ID} ."
+        add_log(
+            process=call_stack,
+            peer_type="Error",
+            msg=msg,
+        )
 
     DTS = get_DTS()
     origin_insert_DTS = "" # unknown
@@ -218,12 +234,12 @@ def process_object_type_fail(call_stack, set_self_return, set_controls_returns, 
             session.commit()
         except IntegrityError:
             msg = f"{header_CID} already existed." #TODO: examine reasons
-            #if debug_enabled:
-            add_log(
-                process=call_stack,
-                peer_type="status",
-                msg=msg,
-            )
+            if set_controls_return.debug_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=msg,
+                )
 
 def ipfs_header_add( # used by local publishers
     call_stack,

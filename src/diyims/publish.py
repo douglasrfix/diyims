@@ -44,7 +44,7 @@ def publish_main(call_stack: str, mode: str) -> None:
         msg="Publish startup.",
     )
 
-    if SetControlsReturn.queues_enabled and mode != "init":
+    if SetControlsReturn.queues_enabled and mode != "init": #TODO: research mode
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
         queue_server.register("get_publish_queue")

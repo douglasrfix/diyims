@@ -374,7 +374,7 @@ def peer_manager(
         # peer_ID = SetSelfReturn.self
         processing_status = "publish-requested"
         #processing_status_DTS = DTS
-
+        publish_suppress = False
         status_code, _header_CID = ipfs_header_add(
             call_stack,
             DTS,
@@ -385,12 +385,9 @@ def peer_manager(
             object_type,
             processing_status,
             #processing_status_DTS,
-            set_controls_return.queues_enabled,
+            publish_suppress,
         )
-
-    
-    if set_controls_return.queues_enabled:
-        out_bound.put_nowait("wake up")# send to publish 
+        
     return
 
 

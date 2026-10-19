@@ -5,7 +5,8 @@ from pathlib import Path
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, col, create_engine, select
 
-from diyims.general_utils import get_DTS
+from diyims.config_utils import get_publish_config_dict
+from diyims.general_utils import get_DTS, set_controls
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
@@ -241,18 +242,18 @@ def process_object_type_fail(call_stack, set_self_return, set_controls_return, e
                     msg=msg,
                 )
 
-def ipfs_header_add( # used by local publishers
-    call_stack,
-    DTS,
-    object_CID,
-    object_type,
-    peer_ID,
-    config_dict,
-    mode,
-    processing_status,
+def ipfs_header_add(
+    call_stack: str,
+    DTS: str,
+    object_CID: str,
+    object_type: str,
+    peer_ID: str,
+    config_dict: dict,
+    mode: str,
+    processing_status: str,
     #processing_status_DTS,
-    queues_enabled,
-):
+    publish_suppress: bool,
+        ):
     import json
     from multiprocessing.managers import BaseManager
 
@@ -264,7 +265,9 @@ def ipfs_header_add( # used by local publishers
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-    if queues_enabled:
+    config_dict = get_publish_config_dict()
+    set_controls_return = set_controls(call_stack, config_dict)
+    if set_controls_return.queues_enabled and publish_suppress is False:
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
         queue_server.register(
@@ -345,7 +348,7 @@ def ipfs_header_add( # used by local publishers
         session.add(new_header)
         session.commit()
 
-    if queues_enabled:
+    if set_controls_return.queues_enabled and publish_suppress is False:
         publish_queue.put_nowait("wake up")
 
     return status_code, header_CID

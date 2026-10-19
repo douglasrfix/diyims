@@ -33,7 +33,7 @@ def satisfy_main(call_stack: str) -> None:
     call_stack = call_stack + ":satisfy_main"
     config_dict = get_beacon_config_dict()
     path_dict = get_path_dict()
-    SetControlsReturn = set_controls(call_stack, config_dict)
+    SetControlsReturn = set_controls(call_stack, config_dict) # TODO #14 Refuse to run if queues are not available
 
     if SetControlsReturn.queues_enabled:
         q_server_port = int(config_dict["q_server_port"])

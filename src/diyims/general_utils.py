@@ -83,7 +83,6 @@ def exec_fastapi(roaming: str) -> None:
     os.environ["DIYIMS_ROAMING"] = str(roaming)
     uvicorn.run("diyims.fastapi_app:myapp", host="127.0.0.1", port=8001)
 
-    #diyimsreturn
 
 
 def get_network_name() -> str:
@@ -307,6 +306,8 @@ def shutdown_cmd(call_stack):
     config_dict = get_shutdown_config_dict()
     queue_dict = get_scheduler_config_dict()
 
+    set_controls_response = set_controls(call_stack, queue_dict)
+
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -324,43 +325,44 @@ def shutdown_cmd(call_stack):
                 session.commit()
         except NoResultFound:
             pass
+    if set_controls_response.queues_enabled:
+        q_server_port = int(config_dict["q_server_port"])
 
-    q_server_port = int(config_dict["q_server_port"])
+        queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
+        queue_server.register("get_satisfy_queue")
+        queue_server.register("get_provider_queue")
+        queue_server.register("get_wantlist_submit_queue")
+        queue_server.register("get_wantlist_process_queue")
+        queue_server.register("get_remote_monitor_queue")
+        queue_server.register("get_publish_queue")
+        queue_server.register("get_peer_maint_queue")
 
-    queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
-    queue_server.register("get_satisfy_queue")
-    queue_server.register("get_provider_queue")
-    queue_server.register("get_wantlist_submit_queue")
-    queue_server.register("get_wantlist_process_queue")
-    queue_server.register("get_remote_monitor_queue")
-    queue_server.register("get_publish_queue")
-    queue_server.register("get_peer_maint_queue")
+        try:
+            queue_server.connect()
+        except ConnectionRefusedError:
+            return
 
-    try:
-        queue_server.connect()
-    except ConnectionRefusedError:
-        return
-
-    satisfy_queue = queue_server.get_satisfy_queue()
-    provider_queue = queue_server.get_provider_queue()
-    wantlist_process_queue = queue_server.get_wantlist_process_queue()
-    wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
-    remote_monitor_queue = queue_server.get_remote_monitor_queue()
-    publish_queue = queue_server.get_publish_queue()
-    peer_maint_queue = queue_server.get_peer_maint_queue()
-    if bool(queue_dict["beacon_enable"]):
-        satisfy_queue.put_nowait("0")
-    if bool(queue_dict["provider_enable"]):
-        provider_queue.put_nowait("1")
-    if bool(queue_dict["wantlist_enable"]):
-        wantlist_process_queue.put_nowait("2")
-        wantlist_submit_queue.put_nowait("2")
-    if bool(queue_dict["remote_monitor_enable"]):
-        remote_monitor_queue.put_nowait("3")
-    if bool(queue_dict["publish_enable"]):
-        publish_queue.put_nowait("4")
-    if bool(queue_dict["peer_maint_enable"]):
-        peer_maint_queue.put_nowait("5")
+        satisfy_queue = queue_server.get_satisfy_queue()
+        provider_queue = queue_server.get_provider_queue()
+        wantlist_process_queue = queue_server.get_wantlist_process_queue()
+        wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
+        remote_monitor_queue = queue_server.get_remote_monitor_queue()
+        publish_queue = queue_server.get_publish_queue()
+        peer_maint_queue = queue_server.get_peer_maint_queue()
+        
+        if bool(queue_dict["beacon_enable"]):
+            satisfy_queue.put_nowait("0")
+        if bool(queue_dict["provider_enable"]):
+            provider_queue.put_nowait("1")
+        if bool(queue_dict["wantlist_enable"]):
+            wantlist_process_queue.put_nowait("2")
+            wantlist_submit_queue.put_nowait("2")
+        if bool(queue_dict["remote_monitor_enable"]):
+            remote_monitor_queue.put_nowait("3")
+        if bool(queue_dict["publish_enable"]):
+            publish_queue.put_nowait("4")
+        if bool(queue_dict["peer_maint_enable"]):
+            peer_maint_queue.put_nowait("5")
 
     return
 

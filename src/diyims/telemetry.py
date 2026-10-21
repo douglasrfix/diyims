@@ -148,7 +148,7 @@ def select_local_peer_and_update_metrics(call_stack):
                 msg="Update Telemetry Panic.",
             )
             return status_code
-        #TODO: enable queues to publish
+        
     return status_code
 
 

@@ -33,11 +33,11 @@ def scheduler_main(call_stack, roaming):
 
     try:
         verify_peerID(call_stack)
-    except UnSupportedIPFSVersionError:
+    except UnSupportedIPFSVersionError:  # noqa: TRY203
         raise
-    except CommunicationsError:
+    except CommunicationsError:  # noqa: TRY203
         raise
-    except IPFSIDDoesNotMatchPeerTableID:
+    except IPFSIDDoesNotMatchPeerTableID:  # noqa: TRY203
         raise
 
     wait_seconds = int(config_dict["wait_before_startup"])
@@ -53,15 +53,15 @@ def scheduler_main(call_stack, roaming):
         peer_type="status",
         msg="Scheduler startup.",
     )
-
-    queue_server_main_process = Process(target=queue_main, args=(call_stack,))
-    sleep(int(config_dict["submit_delay"]))
-    queue_server_main_process.start()
-    add_log(
-        process=call_stack,
-        peer_type="status",
-        msg="Queue Server startup.",
-    )
+    if SetControlsReturn.queues_enabled:
+        queue_server_main_process = Process(target=queue_main, args=(call_stack,))
+        sleep(int(config_dict["submit_delay"]))
+        queue_server_main_process.start()
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Queue Server startup.",
+        )
 
     if config_dict["reset_enable"] == "True":
         reset_peer_table_status_process = Process(
@@ -121,18 +121,20 @@ def scheduler_main(call_stack, roaming):
             msg="Metrics update complete.",
         )
 
-    if config_dict["beacon_enable"] == "True":
-        beacon_main_process = Process(
-            target=beacon_main,
-            args=(call_stack,),
-        )
-        sleep(int(config_dict["submit_delay"]))
-        beacon_main_process.start()
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Beacon startup.",
-        )
+    if config_dict["beacon_enable"] == "True":  # noqa: SIM102
+        if SetControlsReturn.queues_enabled:
+        
+            beacon_main_process = Process(
+                target=beacon_main,
+                args=(call_stack,),
+            )
+            sleep(int(config_dict["submit_delay"]))
+            beacon_main_process.start()
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Beacon startup.",
+            )
 
     if config_dict["provider_enable"] == "True":
         capture_provider_process = Process(
@@ -208,13 +210,14 @@ def scheduler_main(call_stack, roaming):
             msg="Remote Monitor startup.",
         )
 
-    if config_dict["beacon_enable"] == "True":
-        beacon_main_process.join()
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Beacon completed.",
-        )
+    if config_dict["beacon_enable"] == "True":  # noqa: SIM102
+        if SetControlsReturn.queues_enabled:
+            beacon_main_process.join()
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Beacon completed.",
+            )
     if config_dict["provider_enable"] == "True":
         capture_provider_process.join()
         add_log(
@@ -250,14 +253,15 @@ def scheduler_main(call_stack, roaming):
             peer_type="status",
             msg="Remote Monitor completed.",
         )
-    queue_server_main_process.terminate()
+    if SetControlsReturn.queues_enabled:    
+        queue_server_main_process.terminate()
 
-    # logger.info("Scheduler shutdown.")
-    add_log(
-        process=call_stack,
-        peer_type="status",
-        msg="Queue Server terminated.",
-    )
+        # logger.info("Scheduler shutdown.")
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg="Queue Server terminated.",
+        )
 
     reset_shutdown(call_stack)
 
@@ -267,7 +271,6 @@ def scheduler_main(call_stack, roaming):
         msg="Scheduler completed.",
     )
 
-    return
 
 
 if __name__ == "__main__":

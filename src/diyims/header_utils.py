@@ -116,12 +116,12 @@ def header_chain_maint(
                 try:
                     session.add(new_header)
                     session.commit()
-
-                    add_log(
-                            process=call_stack,
-                            peer_type="peer monitor debug",
-                            msg=f"Processed header_CID {next_header_CID}.",
-                        )
+                    if set_controls_return.logging_enabled:
+                        add_log(
+                                process=call_stack,
+                                peer_type="peer monitor debug",
+                                msg=f"Processed header_CID {next_header_CID}.",
+                            )
                     
                 except IntegrityError:
                     msg = f"{next_header_CID} already exists in header table"
@@ -149,11 +149,12 @@ def header_chain_maint(
                         session.commit()
                     except IntegrityError:
                         pass
-                add_log(
-                        process=call_stack,
-                        peer_type="peer monitor debug",
-                        msg=f"Ended maint loop with header_CID {next_header_CID}.",
-                    )
+                if set_controls_return.logging_enabled:
+                    add_log(
+                            process=call_stack,
+                            peer_type="peer monitor debug",
+                            msg=f"Ended maint loop with header_CID {next_header_CID}.",
+                        )
                 break
         else:
             if set_controls_return.debug_enabled:

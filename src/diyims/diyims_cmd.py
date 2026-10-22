@@ -25,7 +25,7 @@ from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 # from diyims.test import test
 
-# FIXME: add bump ipfs version command
+# TODO: add bump ipfs version command ?
 
 
 app = typer.Typer(

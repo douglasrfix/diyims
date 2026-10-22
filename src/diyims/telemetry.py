@@ -17,7 +17,7 @@ from diyims.general_utils import (
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
 from diyims.logger_utils import add_log
-from diyims.path_utils import get_path_dict
+from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.platform_utils import get_python_version, test_os_platform
 from diyims.requests_utils import execute_request
 from diyims.sqlmodels import Peer_Table, Peer_Telemetry
@@ -84,20 +84,23 @@ def select_local_peer_and_update_metrics(call_stack):
         with Session(engine) as session:
             session.add(telemetry)
             session.commit()
-
+        proto_path = path_dict["peer_path"]
         proto_file = path_dict["peer_file"]
+        proto_file_path = get_unique_file(proto_path, proto_file)
+        #proto_file = path_dict["peer_file"]
         param = {
             "cid-version": 1,
             "only-hash": "false",
             "pin": "true",
             "pin-name": "update_telemetry",
         }
-        with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file:
+        
+        with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
             json.dump(telemetry_dict, write_file, indent=4)
 
-        with open(proto_file, "rb") as f:
+        with open(proto_file_path, "rb") as f:
             add_file = {"file": f}
-            _response, status_code, response_dict = execute_request(#TODO: unlink Peer file
+            _response, status_code, response_dict = execute_request(
                 url_key="add",
                 url_dict=url_dict,
                 config_dict=config_dict,
@@ -106,9 +109,8 @@ def select_local_peer_and_update_metrics(call_stack):
                 call_stack=call_stack,
                 http_500_ignore=False,
             )
-        #f.close()
         try:
-            Path(proto_file).unlink()
+            Path(proto_file_path).unlink()
         except FileNotFoundError:
             pass
 
@@ -125,7 +127,7 @@ def select_local_peer_and_update_metrics(call_stack):
         object_type = "telemetry_entry"
         mode = object_type
         processing_status = "publish-requested"
-        publish_suppressed = False
+        publish_wakeup_suppressed = False
         #processing_status_DTS = DTS
 
         status_code, _header_CID = ipfs_header_add(
@@ -138,7 +140,7 @@ def select_local_peer_and_update_metrics(call_stack):
             mode,
             processing_status,
             #processing_status_DTS,
-            publish_suppressed,
+            publish_wakeup_suppressed,
         )
 
         if status_code != 200:  # TODO: remove recent pin or defer pin to here

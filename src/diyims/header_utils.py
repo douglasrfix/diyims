@@ -253,7 +253,7 @@ def ipfs_header_add(
     mode: str,
     processing_status: str,
     #processing_status_DTS,
-    publish_suppress: bool,
+    publish_wakeup_suppressed: bool,
         ):
     import json
     from multiprocessing.managers import BaseManager
@@ -268,7 +268,7 @@ def ipfs_header_add(
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
     config_dict = get_publish_config_dict()
     set_controls_return = set_controls(call_stack, config_dict)
-    if set_controls_return.queues_enabled and publish_suppress is False:
+    if set_controls_return.queues_enabled and publish_wakeup_suppressed is False:
         q_server_port = int(config_dict["q_server_port"])
         queue_server = BaseManager(address=("127.0.0.1", q_server_port), authkey=b"abc")
         queue_server.register(
@@ -305,7 +305,6 @@ def ipfs_header_add(
     proto_file_path = get_unique_file(proto_path, proto_file)
 
     param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": mode}
-
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(header_dict, write_file, indent=4)
 
@@ -349,7 +348,7 @@ def ipfs_header_add(
         session.add(new_header)
         session.commit()
 
-    if set_controls_return.queues_enabled and publish_suppress is False:
+    if set_controls_return.queues_enabled and publish_wakeup_suppressed is False:
         publish_queue.put_nowait("wake up")
 
     return status_code, header_CID

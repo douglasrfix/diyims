@@ -12,10 +12,10 @@ def sign_file(
 ):
     call_stack = call_stack + ":sign_file"
     sign_params = {}
-
+    # This file is unlinked externally
     with open(sign_dict["file_to_sign"], "rb") as f:
         sign_files = {"file": f}
-        _response, status_code, response_dict = execute_request(#TODO: unlink
+        _response, status_code, response_dict = execute_request(
             url_key="sign",
             file=sign_files,
             param=sign_params,
@@ -50,17 +50,16 @@ def verify_file(
 ):
     call_stack = call_stack + ":verify_file"
     verify_params = {"key": verify_dict["id"], "signature": verify_dict["signature"]}
-
+    # This file is unlinked externally
     with open(verify_dict["signed_file"], "rb") as f:
         verify_files = {"file": f}
-        _response, status_code, response_dict = execute_request( #TODO: unlink
+        _response, status_code, response_dict = execute_request(
             url_key="verify",
             file=verify_files,
             param=verify_params,
             call_stack=call_stack,
             http_500_ignore=False,
         )
-    # f.close()
 
     if status_code == 200:
         signature_valid = response_dict["SignatureValid"]
@@ -93,16 +92,6 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, provider_peer_ID):
         peer_row_dict = {}
         return status_code, signature_verified, peer_row_dict
 
-    #if peer_row_dict["peer_ID"] != provider_peer_ID:
-    #    status_code = 500
-    #    add_log(
-    #        process=call_stack,
-    #        peer_type="Error",
-    #        msg="Verify provider_peerID doesn't match peer_row_dict peer_ID ",
-    #    )
-    #    signature_verified = 0
-    #    peer_row_dict = {}
-    #    return status_code, signature_verified, peer_row_dict
 
     signing_dict = {}
     signing_dict["peer_ID"] = peer_row_dict[
@@ -110,6 +99,7 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, provider_peer_ID):
     ]  # This extracts the peer_ID contained in the peer table image
 
     file_to_verify = path_dict["sign_file"]
+    # This file is unlinked externally
     with open(file_to_verify, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(signing_dict, write_file, indent=4)
 
@@ -132,5 +122,5 @@ def verify_peer_row_from_cid(call_stack, peer_row_CID, provider_peer_ID):
         )
         signature_verified = 0
         peer_row_dict = {}
-    # TODO: unlink file created
+        
     return status_code, signature_verified, peer_row_dict

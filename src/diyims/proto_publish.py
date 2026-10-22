@@ -1,5 +1,6 @@
 import json
-import shutil
+
+#import shutil
 from pathlib import Path
 
 # from diyims.path_utils import get_path_dict
@@ -10,24 +11,11 @@ from diyims.general_utils import get_DTS, set_self
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
 from diyims.logger_utils import add_log
-from diyims.path_utils import get_path_dict
+from diyims.path_utils import get_path_dict, get_unique_file
 from diyims.requests_utils import execute_request
 from diyims.sqlmodels import (
     Object_Meta_Data,
 )
-
-# from diyims.header_utils import ipfs_header_add
-# from diyims.sqlmodels import Peer_Table, Peer_Telemetry
-
-# add whl no pin
-# insert Meta type = update
-# pin whl
-# add meta with pin
-# insert header type = update
-# add header
-
-
-# for monitor add capture whe update
 
 
 def cli_file_add(call_stack, src_file_path):
@@ -39,31 +27,31 @@ def cli_file_add(call_stack, src_file_path):
     
         
     work_path = Path(src_file_path)
-    file_name = work_path.name
+    file_name = work_path.name # includes stem and suffix
     file_type = work_path.suffix
-    # print(file_type)
+
 
     if file_type == ".whl":
-        src_file_path = (
+        src_path = (
             Path.cwd().joinpath("dist").joinpath(file_name)
-        )  # path supports ease of data entry for copy
-        # src_file_path = Path("dist", file_name) # path supports ease of data entry for copy
-        # print(src_file_path)
+        )
+    else:
+        src_path = (
+                    Path.cwd().joinpath(file_name) #TODO: this is error prone
+                )
 
-    out_file_path = Path(path_dict["generic_path"]).joinpath(file_name)
-    # print(src_file_path)
-    # print(out_file_path)
+
+        
+    #out_file_path = Path(path_dict["generic_path"]).joinpath(file_name)  
 
     url_dict = get_url_dict()
     
     self = set_self().self
-    # print(src_file_path)
-    # print(out_file_path)
-    shutil.copyfile(src_file_path, out_file_path)
-    # shutil.copytree(src_file_path, out_file_path, dirs_exist_ok=True)
-    # self = SetSelfReturn.self
-    file_CID = file_add(call_stack, file_name)
-    # print(whl_CID)
+    
+    #shutil.copyfile(src_file_path, out_file_path)
+        
+    file_CID = file_add(call_stack, src_path)
+    
 
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -79,34 +67,37 @@ def cli_file_add(call_stack, src_file_path):
     meta_dict["peer_ID"] = self
     meta_dict["meta_data"] = {"file_name": file_name}
 
-    proto_file = path_dict[
-        "peer_file"
-    ]  # TODO: this should be in cache not as a permanent file the should be a path entry for temporary #NOTE:
+    proto_path = path_dict["peer_path"]
+    proto_file = path_dict["peer_file"]
+    proto_file_path = get_unique_file(proto_path, proto_file)
+
+    #This is meta data which need not be retained
     param = {
         "cid-version": 1,
         "only-hash": "false",
         "pin": "false",
     }
-    with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file: #TODO: unlink
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(meta_dict, write_file, indent=4)
 
-    with open(proto_file, "rb") as f:
+    with open(proto_file_path, "rb") as f:
         add_file = {"file": f}
         _response, _status_code, response_dict = execute_request(
             url_key="add",
             url_dict=url_dict,
-            config_dict=config_dict, # Correct dictionary
+            config_dict=config_dict, # Correct dictionary ?
             file=add_file,
             param=param,
             call_stack=call_stack,
             http_500_ignore=False,
         )
-    # f.close()
+    try:
+        Path(proto_file_path).unlink()
+    except FileNotFoundError:
+        pass
+        
     meta_CID = response_dict["Hash"]  # new peer row cid
-    # print(meta_CID)
-    # should unlink the file after we a done
-    # how should we set the Key for meta date
-    # add meta objet
+   
 
     # meta_dict = jsonable_encoder(telemetry) # TODO: necessary?
     if file_type != ".whl":
@@ -134,7 +125,7 @@ def cli_file_add(call_stack, src_file_path):
 
     mode = object_type
     processing_status = "publish-requested"
-    publish_suppress = False
+    publish_wakeup_suppressed = False
     #processing_status_DTS = DTS
 
     _status_code, _header_CID = ipfs_header_add(
@@ -147,20 +138,15 @@ def cli_file_add(call_stack, src_file_path):
         mode,
         processing_status,
         #processing_status_DTS,
-        publish_suppress,
+        publish_wakeup_suppressed,
     )
 
 
-def file_add(call_stack, file_name):
+def file_add(call_stack, file_name): #TODO: #19 name is misleading
     call_stack = call_stack + ":file_add"  # step 2
-    # print(dist_path)
-    # DTS = get_DTS()
+    
     path_dict = get_path_dict()
-    #
-    # dist_path = str(path_dict["dist_path"]) + "\\diyims-0.0.0a178-py3-none-any.whl"
-    # if file_type == ".whl":
-    #    src_path = Path(path_dict["dist_path"]).joinpath(file_name)
-    # else:
+    
     src_path = Path(path_dict["generic_path"]).joinpath(file_name)
     url_dict = get_url_dict()
     config_dict = get_publish_config_dict()
@@ -170,9 +156,8 @@ def file_add(call_stack, file_name):
         "only-hash": "false",
         "pin": "false",
     }
-    # with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file:
-    # json.dump(telemetry_dict, write_file, indent=4)
-
+    
+    # This file is not unlinked
     with open(src_path, "rb") as f:
         # print("file opened")
         add_file = {"file": f}
@@ -186,10 +171,10 @@ def file_add(call_stack, file_name):
             http_500_ignore=False,
         )
         #print("add processed")
-        # f.close()
 
     if status_code == 200:
-        Path(src_path).unlink() #TODO: Needed 
+        # This is a original source file and is not unlinked
+        pass 
     else:
         #print(status_code)
         add_log(
@@ -200,14 +185,9 @@ def file_add(call_stack, file_name):
 
         return status_code
 
-    # peer_ID = peer.peer_ID
+    
     object_CID = response_dict["Hash"]  # new peer row cid
-    # print(object_CID)
-    # object_type = "telemetry_entry"
-    # mode = object_type
-    # processing_status = DTS
-    # TODO: unlink file before exit
-
+    
     return object_CID
 
 
@@ -228,8 +208,7 @@ def pin_file(call_stack, object_CID):
         param=pin_add_params,
         call_stack=call_stack,
     )
-    # print("Pin", status_code)
-    #return
+    
 
 
 def pin_meta(call_stack, object_CID):
@@ -249,8 +228,7 @@ def pin_meta(call_stack, object_CID):
         param=pin_add_params,
         call_stack=call_stack,
     )
-    # print("Pin", status_code)
-    #return
+    
 
 
 

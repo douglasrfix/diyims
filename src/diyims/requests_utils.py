@@ -110,6 +110,7 @@ def execute_request(url_key: str, **kwargs):
                 timeout=value_dict["timeout"],
             ) as r:
                 if stream and outfile != "":
+                    #This file is retained
                     with open(outfile, "wb") as fd:
                         for chunk in r.iter_content(chunk_size=128):  # noqa: FURB122
                             fd.write(chunk)

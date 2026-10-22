@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from multiprocessing import freeze_support, set_start_method
 from multiprocessing.managers import BaseManager
+from pathlib import Path
 from queue import Empty
 from time import sleep
 
@@ -703,7 +704,6 @@ def filter_wantlist(
                                 "only-hash": "false",
                                 "pin-name": "verify_peer_and_update",
                             }
-
                             with open(
                                 proto_file_path, "w", encoding="utf-8", newline="\n"
                             ) as write_file:
@@ -711,15 +711,18 @@ def filter_wantlist(
 
                             with open(proto_file_path, "rb") as f:
                                 add_file = {"file": f}
-                                response, status_code, response_dict = execute_request( #TODO: unlink
+                                response, status_code, response_dict = execute_request(
                                     url_key="add",
                                     param=param,
                                     file=add_file,
                                     call_stack=call_stack,
                                     http_500_ignore=False,
                                     )
-                            #f.close()
-
+                            try:
+                                Path(proto_file_path).unlink()
+                            except FileNotFoundError:
+                                pass
+                            
                             if status_code == 200:  # this is a local ipfs problem
                                 object_CID = response_dict["Hash"]  # new peer_row_cid
                             else:
@@ -746,7 +749,7 @@ def filter_wantlist(
                             # peer_ID = SetSelfReturn.self
                             processing_status = "publish-requested"
                             #processing_status_DTS = DTS
-                            publish_suppress= False
+                            publish_wakeup_suppressed= False
 
                             status_code, _header_CID = ipfs_header_add(
                                 call_stack,
@@ -758,7 +761,7 @@ def filter_wantlist(
                                 mode,
                                 processing_status,
                                 #processing_status_DTS,
-                                publish_suppress,
+                                publish_wakeup_suppressed,
                             )
 
                             #if queues_enabled:

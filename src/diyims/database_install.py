@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 from rich import print
 from sqlalchemy.exc import NoResultFound
@@ -12,7 +13,7 @@ from diyims.error_classes import (
     PreExistingInstallationError,
     UnSupportedIPFSVersionError,
 )
-from diyims.general_utils import SetControlsReturn, get_agent, get_DTS, verify_peerID
+from diyims.general_utils import get_agent, get_DTS, verify_peerID
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
 from diyims.path_utils import get_path_dict, get_unique_file
@@ -140,6 +141,11 @@ def init(call_stack):
     verify_dict["signature"] = signature
 
     status_code, signature_valid = verify_file(call_stack, verify_dict)
+
+    try:
+        Path(proto_file_path).unlink()
+    except FileNotFoundError:
+        pass
     # a signature valid means that the file was signed by the key pair using this public key.
     # In fact any file with the same contents will result in a positive result
     #
@@ -175,19 +181,21 @@ def init(call_stack):
         disabled=0,
     )
 
-    peer_row_partial_dict = dict(peer_row_partial)#TODO: does this need a unique name
+    peer_row_partial_dict = dict(peer_row_partial)
     # peer_row_partial_dict = jsonable_encoder(peer_row_partial)
     proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
-    peer_file = proto_file_path
+    #peer_file = proto_file_path
 
     add_params = {"cid-version": 1, "only-hash": "false", "pin": "false"}
-    with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
+    
+    # This file will be reused in this process
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_row_partial_dict, write_file, indent=4)
 
-    with open(peer_file, "rb") as f:
+    with open(proto_file_path, "rb") as f:
         add_files = {"file": f}
         _response, status_code, response_dict = (
             execute_request(  # to have something to publish to capture IPNS_name
@@ -200,8 +208,7 @@ def init(call_stack):
                 call_stack=call_stack,
             )
         )
-    # f.close()
-    # TODO: 700 later
+    
     object_CID = response_dict["Hash"]
 
     ipfs_path = "/ipfs/" + object_CID
@@ -254,10 +261,11 @@ def init(call_stack):
         "pin": "true",
         "pin-name": "init",
     }
-    with open(peer_file, "w", encoding="utf-8", newline="\n") as write_file:
+    # First reuse
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(peer_row_dict, write_file, indent=4)
 
-    with open(peer_file, "rb") as f:
+    with open(proto_file_path, "rb") as f:
         add_files = {"file": f}
         _response, status_code, response_dict = (
             execute_request(  # this is the true peer table row but not yet published
@@ -270,8 +278,11 @@ def init(call_stack):
                 call_stack=call_stack,
             )
         )
-    # f.close()
-    # TODO: 700 later
+        try:
+            Path(proto_file_path).unlink()
+        except FileNotFoundError:
+            pass
+   
     with Session(engine) as session:
         session.add(peer_row)
         session.commit()
@@ -285,7 +296,7 @@ def init(call_stack):
     mode = "init"
     processing_status = "publish-requested"
     #processing_status_DTS = DTS
-    # FIXME: add meta data first the header pointing to meta
+    # TODO: add meta data first the header pointing to meta
     header_CID = ipfs_header_add(
         call_stack,
         DTS,
@@ -299,7 +310,7 @@ def init(call_stack):
         # queries,
         processing_status,
         #processing_status_DTS,
-        SetControlsReturn.queues_enabled,
+        "0", # publish wakeup suppressed
         # Rconn,
         # Rqueries,
     )
@@ -337,7 +348,7 @@ def init(call_stack):
         # queries,
         processing_status,
         #processing_status_DTS,
-        SetControlsReturn.queues_enabled,
+        "0", # publish wakeup suppressed
         # Rconn,
         # Rqueries,
     )
@@ -364,17 +375,21 @@ def init(call_stack):
         session.commit()
         session.refresh(telemetry_row)
 
+    #proto_file = path_dict["peer_file"]
+    proto_path = path_dict["peer_path"]
     proto_file = path_dict["peer_file"]
+    proto_file_path = get_unique_file(proto_path, proto_file)
+
     param = {
         "cid-version": 1,
         "only-hash": "false",
         "pin": "true",
         "pin-name": "update_telemetry",
     }
-    with open(proto_file, "w", encoding="utf-8", newline="\n") as write_file:
+    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(telemetry_dict, write_file, indent=4)
 
-    with open(proto_file, "rb") as f:
+    with open(proto_file_path, "rb") as f:
         add_file = {"file": f}
         _response, status_code, response_dict = execute_request(
             url_key="add",
@@ -385,7 +400,10 @@ def init(call_stack):
             call_stack=call_stack,
             http_500_ignore=False,
         )
-    # f.close()
+        try:
+            Path(proto_file_path).unlink()
+        except FileNotFoundError:
+            pass
 
     object_CID = response_dict["Hash"]  # new peer row cid
     object_type = "telemetry_entry"
@@ -403,7 +421,7 @@ def init(call_stack):
         mode,
         processing_status,
         #processing_status_DTS,
-        SetControlsReturn.queues_enabled,
+        "0", # publish wakeup suppressed
     )
 
     #    conn,

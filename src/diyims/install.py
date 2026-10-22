@@ -4,17 +4,15 @@ from pathlib import Path
 
 from rich import print
 
-
+from diyims.config_utils import config_install
 from diyims.error_classes import (
     InvalidDriveLetterError,
     PreExistingInstallationError,
     UnSupportedPlatformError,
     UnTestedPlatformError,
 )
-
 from diyims.path_utils import get_install_template_dict
 from diyims.platform_utils import test_os_platform
-from diyims.config_utils import config_install
 
 # TODO: #12 test ipfs agent at install time
 
@@ -23,11 +21,11 @@ def install_main(call_stack, drive_letter, force_install):
     try:
         os_platform = test_os_platform()
 
-    except UnSupportedPlatformError:
+    except UnSupportedPlatformError:  # noqa: TRY203
         raise
     call_stack = call_stack + ":install_main"
     override_drive = "False"
-    if drive_letter != "Default" and os_platform.startswith("win32"):
+    if drive_letter != "Default" and os_platform.startswith("win32"):  # noqa: SIM102
         if Path(drive_letter + "/").exists() is not True:
             try:
                 override_drive = os.environ["OVERRIDE_DRIVE"]
@@ -41,10 +39,10 @@ def install_main(call_stack, drive_letter, force_install):
         and force_install is False
     ):
         raise UnTestedPlatformError(os_platform)
-    # FIXME: create stand alone version that can be run at update time
+    # TODO: create stand alone version that can be run at update time
     install_template_dict = get_install_template_dict()
 
-    if drive_letter != "Default":
+    if drive_letter != "Default":  # noqa: SIM102
         if drive_letter != Path(install_template_dict["db_path"]).drive:
             install_template_dict["db_path"] = Path(drive_letter + "/").joinpath(
                 "diyims", "Data"
@@ -105,7 +103,6 @@ def install_main(call_stack, drive_letter, force_install):
     parser["Paths"]["sign_path"] = str(sign_path)
     parser["Files"]["sign_file"] = str(sign_file)
     parser["Paths"]["update_path"] = str(update_path)
-
     with open(config_file, "w") as configfile:
         parser.write(configfile)
 

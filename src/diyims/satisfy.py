@@ -123,7 +123,7 @@ def satisfy_beacon(
         session.commit()
 
     want_item_file = str(path_dict["want_item_file"])
-
+    # This file originated in the beacon process and its name is fixed by configuration
     with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
@@ -168,7 +168,7 @@ def satisfy_beacon(
         )
 
     try:
-        Path(want_item_file).unlink()
+        Path(want_item_file).unlink() # unlinking the file makes debugging easier
     except FileNotFoundError:
         pass
 
@@ -227,7 +227,7 @@ def clean_up(
                 add_log(
                     process=call_stack,
                     peer_type="info",
-                    msg=f"pin remove failed with {e} for {beacon_CID}", #FIXME: pins are gone or never happened
+                    msg=f"pin remove failed with {e} for {beacon_CID}", # pins are gone or never happened
                 )
                 # TODO: 700
             session.delete(beacon)

@@ -374,7 +374,7 @@ def peer_manager(
         # peer_ID = SetSelfReturn.self
         processing_status = "publish-requested"
         #processing_status_DTS = DTS
-        publish_suppress = False
+        publish_wakeup_suppressed = False
         status_code, _header_CID = ipfs_header_add(
             call_stack,
             DTS,
@@ -385,7 +385,7 @@ def peer_manager(
             object_type,
             processing_status,
             #processing_status_DTS,
-            publish_suppress,
+            publish_wakeup_suppressed,
         )
         
     return
@@ -600,23 +600,24 @@ def generic_manager(
                 pass #TODO: expand the logic to handle error conditions such as temporary objects
                         # check for existing files etc. replace older Files?
 
-    msg = f'object_cid from meta_dict {meta_dict["object_CID"]}.'
-    add_log(
-        process=call_stack,
-        peer_type="info",
-        msg=msg,
-    )
+    if set_controls_return.logging_enabled:
+        msg = f'object_cid from meta_dict {meta_dict["object_CID"]}.'
+        add_log(
+            process=call_stack,
+            peer_type="info",
+            msg=msg,
+        )
     
     path_dictionary = get_path_dict()
     ipfs_path = "/ipfs/" + str(generic_CID)
     param = {"arg": ipfs_path}
-
-    msg = f"ipfs path {ipfs_path} for CAT."
-    add_log(
-        process=call_stack,
-        peer_type="info",
-        msg=msg,
-    )
+    if set_controls_return.logging_enabled:
+        msg = f"ipfs path {ipfs_path} for CAT."
+        add_log(
+            process=call_stack,
+            peer_type="info",
+            msg=msg,
+        )
     if file_type == ".whl":
         outfile = Path(path_dictionary["update_path"]).joinpath(file_name)
     else:
@@ -631,20 +632,22 @@ def generic_manager(
         stream=True,
         outfile=outfile,
     )
-    msg = f"CAT for {generic_CID} completed with stats code {status_code}."
-    add_log(
-        process=call_stack,
-        peer_type="info",
-        msg=msg,
-    )
-    
-    if status_code == 200:
-        msg = f"Using headerCID {header.header_CID} to update header."
+    if set_controls_return.logging_enabled:
+        msg = f"CAT for {generic_CID} completed with stats code {status_code}."
         add_log(
             process=call_stack,
             peer_type="info",
             msg=msg,
         )
+    
+    if status_code == 200:
+        if set_controls_return.logging_enabled:
+            msg = f"Using headerCID {header.header_CID} to update header."
+            add_log(
+                process=call_stack,
+                peer_type="info",
+                msg=msg,
+            )
         statement = (
             select(Header_Table).where(Header_Table.header_CID == header.header_CID)
         )

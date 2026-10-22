@@ -232,7 +232,7 @@ def peer_maintenance_main(call_stack: str) -> None:
                     peer_ID = SetSelfReturn.self
                     processing_status = "publish-requested"
                     #processing_status_DTS = DTS
-                    publish_suppress= False
+                    publish_wakeup_suppressed= False
 
                     status_code, _header_CID = ipfs_header_add(
                         call_stack,
@@ -244,7 +244,7 @@ def peer_maintenance_main(call_stack: str) -> None:
                         mode,
                         processing_status,
                         #processing_status_DTS,
-                        publish_suppress,
+                        publish_wakeup_suppressed,
                     )
 
                     if status_code != 200:

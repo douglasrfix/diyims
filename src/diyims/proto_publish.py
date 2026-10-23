@@ -106,7 +106,7 @@ def cli_file_add(call_stack, src_file_path):
             object_CID=meta_dict["object_CID"],
             object_type=meta_dict["object_type"],
             peer_ID=meta_dict["peer_ID"],
-            insert_DTS=meta_dict["insert_DTS"],
+            insert_DTS=DTS,
             meta_data=meta_dict["meta_data"],
             meta_CID=meta_CID,  # prior meta cid is ignored for now
         )

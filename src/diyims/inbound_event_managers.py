@@ -422,9 +422,10 @@ def telemetry_manager(
             telemetry_row.DIYIMS_agent = object_dict["DIYIMS_agent"]
             
         else:
+            DTS = get_DTS()
             telemetry_row = Peer_Telemetry(
                 peer_ID=object_dict["peer_ID"],
-                insert_DTS=object_dict["insert_DTS"],
+                insert_DTS=DTS,
                 update_DTS=object_dict["update_DTS"],
                 execution_platform=object_dict["execution_platform"],
                 python_version=object_dict["python_version"],

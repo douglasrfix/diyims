@@ -486,6 +486,9 @@ def get_provider_capture_config_dict():
         provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
             "debug_enabled"
         ]
+        provider_capture_config_dict["connect_enabled"] = parser["Provider_Capture"][
+                    "connect_enabled"
+                ]
 
     except KeyError:
         parser["Provider_Capture"] = {}
@@ -500,6 +503,7 @@ def get_provider_capture_config_dict():
         parser["Provider_Capture"]["queues_enabled"] = "1"
         parser["Provider_Capture"]["logging_enabled"] = "0"
         parser["Provider_Capture"]["debug_enabled"] = "0"
+        parser["Provider_Capture"]["connect_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -539,6 +543,9 @@ def get_provider_capture_config_dict():
         provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
             "debug_enabled"
         ]
+        provider_capture_config_dict["connect_enabled"] = parser["Provider_Capture"][
+                    "connect_enabled"
+                ]
 
     return provider_capture_config_dict
 
@@ -694,6 +701,7 @@ def get_want_list_config_dict():
             "logging_enabled"
         ]
         want_list_config_dict["debug_enabled"] = parser["Want_List"]["debug_enabled"]
+        want_list_config_dict["connect_enabled"] = parser["Want_List"]["connect_enabled"]
 
     except KeyError:
         parser["Want_List"] = {}
@@ -720,6 +728,7 @@ def get_want_list_config_dict():
         parser["Want_List"]["queues_enabled"] = "1"
         parser["Want_List"]["logging_enabled"] = "0"
         parser["Want_List"]["debug_enabled"] = "0"
+        parser["Want_List"]["connect_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -778,6 +787,7 @@ def get_want_list_config_dict():
             "logging_enabled"
         ]
         want_list_config_dict["debug_enabled"] = parser["Want_List"]["debug_enabled"]
+        want_list_config_dict["connect_enabled"] = parser["Want_List"]["connect_enabled"]
 
     return want_list_config_dict
 
@@ -1139,6 +1149,9 @@ def get_peer_monitor_config_dict():
         peer_monitor_config_dict["debug_enabled"] = parser["Peer_Monitor"][
             "debug_enabled"
         ]
+        peer_monitor_config_dict["connect_enabled"] = parser["Peer_Monitor"][
+                    "connect_enabled"
+                ]
 
     except KeyError:
         parser["Peer_Monitor"] = {}
@@ -1155,6 +1168,7 @@ def get_peer_monitor_config_dict():
         parser["Peer_Monitor"]["queues_enabled"] = "1"
         parser["Peer_Monitor"]["logging_enabled"] = "0"
         parser["Peer_Monitor"]["debug_enabled"] = "0"
+        parser["Peer_Monitor"]["connect_enabled"] = "1"
 
         with open(config_file, "w") as configfile:
             parser.write(configfile)
@@ -1195,5 +1209,8 @@ def get_peer_monitor_config_dict():
         peer_monitor_config_dict["debug_enabled"] = parser["Peer_Monitor"][
             "debug_enabled"
         ]
+        peer_monitor_config_dict["connect_enabled"] = parser["Peer_Monitor"][
+                    "connect_enabled"
+                ]
 
     return peer_monitor_config_dict

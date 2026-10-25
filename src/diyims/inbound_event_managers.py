@@ -112,66 +112,67 @@ def peer_manager(
                 peer_found = False
         # If this condition is true, then the remote system has "discovered" the local system and created a valid peer table entry
         # and published a provider peer entry
-        if remote_peer_row_dict["peer_ID"] == set_self_return.self: 
-            provider_peer_ID = header.peer_ID
-            # This checks for an active in use flag which can now be cleaned up since the discovery process is complete 
-            statement = (
-                select(Peer_Address)
-                .where(Peer_Address.peer_ID == provider_peer_ID)
-                .where(Peer_Address.in_use == "1")
-            )
-
-            with Session(engine) as session:
-                try:
-                    results = session.exec(statement).one()
-                    address = results
-                    peer_connected = True
-                except NoResultFound:
-                    peer_connected = False
-
-            if peer_connected:
-                provider_address = address.multiaddress
-
-                param = {
-                    "arg": provider_peer_ID,
-                }
-                _response, status_code, _response_dict = execute_request(
-                    url_key="peering_remove",
-                    param=param,
-                    call_stack=call_stack,
+        if remote_peer_row_dict["peer_ID"] == set_self_return.self:  # noqa: SIM102
+            if set_controls_return.connect_enabled: 
+                provider_peer_ID = header.peer_ID
+                # This checks for an active in use flag which can now be cleaned up since the discovery process is complete 
+                statement = (
+                    select(Peer_Address)
+                    .where(Peer_Address.peer_ID == provider_peer_ID)
+                    .where(Peer_Address.in_use == "1")
                 )
-
-                if status_code == 200:
-                    peering_removed = True
-
-                param = {
-                    "arg": provider_address,
-                }
-
-                _response, status_code, _response_dict = execute_request(
-                    url_key="dis_connect",
-                    param=param,
-                    call_stack=call_stack,
-                )
-
-                if status_code == 200:
-                    disconnected = True
 
                 with Session(engine) as session:
-                    address.in_use = False
-                    if peering_removed:
-                        address.peering_remove_DTS = get_DTS()
-                    if disconnected:
-                        address.dis_connect_DTS = get_DTS()
-                    session.add(address)
-                    session.commit()
-                    session.refresh(address)
+                    try:
+                        results = session.exec(statement).one()
+                        address = results
+                        peer_connected = True
+                    except NoResultFound:
+                        peer_connected = False
 
-            # add_log(
-            #    process=call_stack,
-            #    peer_type="Status",
-            #    msg=f"Disconnect point for peer {provider_peer_ID}",
-            # )
+                if peer_connected:
+                    provider_address = address.multiaddress
+
+                    param = {
+                        "arg": provider_peer_ID,
+                    }
+                    _response, status_code, _response_dict = execute_request(
+                        url_key="peering_remove",
+                        param=param,
+                        call_stack=call_stack,
+                    )
+
+                    if status_code == 200:
+                        peering_removed = True
+
+                    param = {
+                        "arg": provider_address,
+                    }
+
+                    _response, status_code, _response_dict = execute_request(
+                        url_key="dis_connect",
+                        param=param,
+                        call_stack=call_stack,
+                    )
+
+                    if status_code == 200:
+                        disconnected = True
+
+                    with Session(engine) as session:
+                        address.in_use = False
+                        if peering_removed:
+                            address.peering_remove_DTS = get_DTS()
+                        if disconnected:
+                            address.dis_connect_DTS = get_DTS()
+                        session.add(address)
+                        session.commit()
+                        session.refresh(address)
+
+                # add_log(
+                #    process=call_stack,
+                #    peer_type="Status",
+                #    msg=f"Disconnect point for peer {provider_peer_ID}",
+                # )
 
     else:
         # do this after address handling
@@ -390,7 +391,7 @@ def peer_manager(
         
     return
 
-
+#TODO: #27 Enable subscriptions
 def telemetry_manager(
     call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, out_bound, header,
 ):
@@ -414,7 +415,7 @@ def telemetry_manager(
         if found:
             
             telemetry_row.peer_ID = object_dict["peer_ID"]
-            telemetry_row.insert_DTS = object_dict["insert_DTS"]
+            #telemetry_row.insert_DTS = object_dict["insert_DTS"]
             telemetry_row.update_DTS = object_dict["update_DTS"]
             telemetry_row.execution_platform = object_dict["execution_platform"]
             telemetry_row.python_version = object_dict["python_version"]
@@ -425,7 +426,7 @@ def telemetry_manager(
             DTS = get_DTS()
             telemetry_row = Peer_Telemetry(
                 peer_ID=object_dict["peer_ID"],
-                insert_DTS=DTS,
+                insert_DTS= get_DTS(),
                 update_DTS=object_dict["update_DTS"],
                 execution_platform=object_dict["execution_platform"],
                 python_version=object_dict["python_version"],

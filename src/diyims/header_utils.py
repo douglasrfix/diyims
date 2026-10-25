@@ -335,7 +335,7 @@ def ipfs_header_add(
         version=header_dict["version"],
         object_CID=header_dict["object_CID"],
         object_type=header_dict["object_type"],
-        insert_DTS=header_dict["insert_DTS"],
+        insert_DTS=DTS,
         origin_insert_DTS=header_dict["origin_insert_DTS"],
         peer_ID=header_dict["peer_ID"],
         processing_status=header_dict["processing_status"],

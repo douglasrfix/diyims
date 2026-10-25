@@ -75,12 +75,12 @@ def submitted_wantlist_process_for_peer(
         peer_table_row = results.one()
 
     peer_table_row.local_update_DTS = get_DTS()
-    if peer_table_row.processing_status == "WLRP":
-        peer_table_row.processing_status = "WLRX"
-    elif peer_table_row.processing_status == "WLWP":#TODO: wlwp assigned?
-        peer_table_row.processing_status = "WLWX"
-    elif peer_table_row.processing_status == "WLWFP":
-        peer_table_row.processing_status = "WLWFX"
+    if peer_table_row.processing_status == "WLRP": #keep
+        peer_table_row.processing_status = "WLRX" #keep
+    elif peer_table_row.processing_status == "WLWP":# keep
+        peer_table_row.processing_status = "WLWX" #keep
+    #elif peer_table_row.processing_status == "WLWFP":
+    #    peer_table_row.processing_status = "WLWFX"
 
     with Session(engine) as session:
         session.add(peer_table_row)
@@ -145,9 +145,9 @@ def submitted_wantlist_process_for_peer(
 
         peer_table_row_dict = jsonable_encoder(peer_table_row)
         if (
-            peer_table_row_dict["processing_status"] == "WLRX"
-            or peer_table_row_dict["processing_status"] == "WLWX"
-            or peer_table_row_dict["processing_status"] == "WLWFX"
+            peer_table_row_dict["processing_status"] == "WLRX" # keep
+            or peer_table_row_dict["processing_status"] == "WLWX" #keep
+            #or peer_table_row_dict["processing_status"] == "WLWFX"
         ):
             status_code, found, added, updated = capture_peer_want_list_by_id(
                 call_stack,
@@ -167,12 +167,12 @@ def submitted_wantlist_process_for_peer(
                         msg=f"Capture want list by ID failed with {status_code}.",
                     )
                 if status_code == 401 or status_code != 401:  # TODO:
-                    if peer_table_row.processing_status == "WLWX":
-                        peer_table_row.processing_status = "WLW"
-                    elif peer_table_row.processing_status == "WLWFX":
-                        peer_table_row.processing_status = "WLWF"
-                    elif peer_table_row.processing_status == "WLRX":
-                        peer_table_row.processing_status = "WLR"
+                    if peer_table_row.processing_status == "WLWX":# keep
+                        peer_table_row.processing_status = "WLW" #keep
+                    #elif peer_table_row.processing_status == "WLWFX":
+                    #    peer_table_row.processing_status = "WLWF"
+                    elif peer_table_row.processing_status == "WLRX":# keep
+                        peer_table_row.processing_status = "WLR" # keep
 
                         with Session(engine) as session:
                             session.add(peer_table_row)
@@ -200,12 +200,12 @@ def submitted_wantlist_process_for_peer(
                     results = session.exec(statement)
                     peer_table_row = results.one()
 
-                if peer_table_row.processing_status == "WLWX":
-                    peer_table_row.processing_status = "WLW"
-                elif peer_table_row.processing_status == "WLWFX":
-                    peer_table_row.processing_status = "WLWF"
-                elif peer_table_row.processing_status == "WLRX":
-                    peer_table_row.processing_status = "WLR"
+                if peer_table_row.processing_status == "WLWX": #keep
+                    peer_table_row.processing_status = "WLW" # keep
+                #elif peer_table_row.processing_status == "WLWFX":
+                #    peer_table_row.processing_status = "WLWF"
+                elif peer_table_row.processing_status == "WLRX": # keep
+                    peer_table_row.processing_status = "WLR" # keep
 
                 # peer_table_row.processing_status = "WLZ"
                 peer_table_row.local_update_DTS = get_DTS()
@@ -299,10 +299,10 @@ def submitted_wantlist_process_for_peer(
             results = session.exec(statement)
             peer_table_row = results.one()
 
-        if peer_table_row.processing_status == "WLRX":
-            peer_table_row.processing_status = "WLR"
-        elif peer_table_row.processing_status == "WLWX":
-            peer_table_row.processing_status = "WLW"
+        if peer_table_row.processing_status == "WLRX": #Keep
+            peer_table_row.processing_status = "WLR" # keep
+        elif peer_table_row.processing_status == "WLWX": #keep
+            peer_table_row.processing_status = "WLW" #keep
         peer_table_row.local_update_DTS = get_DTS()
         with Session(engine) as session:
             session.add(peer_table_row)
@@ -562,9 +562,9 @@ def filter_wantlist(
             peer_row_entry = results.one()
 
         if (
-            peer_row_entry.processing_status == "WLRX"
-            or peer_row_entry.processing_status == "WLWX"
-            or peer_row_entry.processing_status == "WLWFX"
+            peer_row_entry.processing_status == "WLRX" #keep
+            or peer_row_entry.processing_status == "WLWX" #keep
+            #or peer_row_entry.processing_status == "WLWFX"
         ):  # check that we are still WLX status
             want_list_object_CID = line_list[item_number].object_CID
             # This is the json file containing the peer row cid

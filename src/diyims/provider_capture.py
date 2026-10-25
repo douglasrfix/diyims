@@ -418,13 +418,15 @@ def decode_findprovs_structure(
                         .where(Peer_Table.peer_ID == peer_ID)
                         .where(
                             or_(
-                                Peer_Table.processing_status == "WLR",
-                                Peer_Table.processing_status == "WLRX",
-                                Peer_Table.processing_status == "WLW",
-                                Peer_Table.processing_status == "WLWX",
-                                Peer_Table.processing_status == "WLWF",
+                                Peer_Table.processing_status == "WLR", # existing peer with addresses   #TODO:Should #25 we keep looking for addresses ? 
+                                Peer_Table.processing_status == "WLRX", #keep
+                                Peer_Table.processing_status == "WLW", # Keep
+                                Peer_Table.processing_status == "WLWX", # Keep
+                                Peer_Table.processing_status == "WLWP", # This would include submitted not started  
+                                Peer_Table.processing_status == "WLRP", 
                             )
-                        )
+                        )#TODO: #26 processing_status transition timing
+                        #TODO: #29 Is a connection necessary if a wantlist is available?
                     )
                     with Session(engine) as session:
                         results = session.exec(statement)
@@ -439,10 +441,10 @@ def decode_findprovs_structure(
 
                     if existing_peer:
                         if (
-                            current_peer.processing_status == "WLW"
-                            or current_peer.processing_status == "WLWP"#TODO: this isn't ins the selection above
+                            current_peer.processing_status == "WLW" # Keep
+                            or current_peer.processing_status == "WLWP"# These are all of the conditions that don't have addresses
                             or current_peer.processing_status == "WLWX"
-                        ):  # TODO: This can be WLWP or WLWX oor WLW?
+                        ):
                             status_code, address_available = capture_provider_addresses(
                                 call_stack,
                                 address_list,
@@ -490,7 +492,7 @@ def decode_findprovs_structure(
                                 peer_ID=peer_ID,
                                 local_update_DTS=get_DTS(),
                                 peer_type=peer_type,
-                                original_peer_type=peer_type,
+                                original_peer_type=peer_type, #TODO: #28 Rationalize peer_type
                                 processing_status="WLW",  # new provider without valid address, may be a firewall issue
                                 version="4",  # undefined
                                 disabled=0,
@@ -543,73 +545,77 @@ def capture_provider_addresses(
     Returns:
         tuple[str, bool, int] -- _description_
     """
+    from diyims.general_utils import set_controls
 
     call_stack = call_stack + ":capture_provider_addresses"
     address_available = False
     address_source = "PP"
-
+    config_dict = get_provider_capture_config_dict()
+    set_controls_return = set_controls(call_stack, config_dict)
+    status_code = 200
     start_DTS = get_DTS()
-    capture_addresses(  # provider is source FP
-        call_stack,
-        address_list,
-        peer_ID,
-        address_source,
-        engine,
-    )
-
-    param = {"arg": peer_ID}
-    #looking for addresses for the peer
-    response, status_code, _response_dict = execute_request(  # gather peer addresses
-        url_key="id",
-        param=param,
-        call_stack=call_stack,
-        http_500_ignore=False,
-        connect_retries=1,
-    )
-    if status_code == 200:
-        address_source = "ID"
-        peer_dict = json.loads(response.text)
-        address_list = peer_dict["Addresses"]
-        capture_addresses(
-            call_stack,  # id is source ID
+    if set_controls_return.connect_enabled:
+        capture_addresses(  # provider is source FP
+            call_stack,
             address_list,
             peer_ID,
             address_source,
             engine,
         )
 
-    else:
-        msg = f"IPFS id request failed with {status_code}. Peer {peer_ID} is most likely unreachable."
+        param = {"arg": peer_ID}
+        #looking for addresses for the peer
+        response, status_code, _response_dict = execute_request(  # gather peer addresses
+            url_key="id",
+            param=param,
+            call_stack=call_stack,
+            http_500_ignore=False,
+            connect_retries=1,
+        )
+        if status_code == 200:
+            address_source = "ID"
+            peer_dict = json.loads(response.text)
+            address_list = peer_dict["Addresses"]
+            capture_addresses(
+                call_stack,  # id is source ID
+                address_list,
+                peer_ID,
+                address_source,
+                engine,
+            )
+
+        else:
+            msg = f"IPFS id request failed with {status_code}. Peer {peer_ID} is most likely unreachable."
+            if debug_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type="status",
+                    msg=msg,
+                )
+
+        statement = select(Peer_Address).where(
+            Peer_Address.peer_ID == peer_ID,
+            Peer_Address.available == 1,
+        )
+        with Session(engine) as session:
+            results = session.exec(statement)
+            if results.first() is None:
+                address_available = False
+            else:
+                address_available = True
+
+        stop_DTS = get_DTS()
+        start = datetime.fromisoformat(start_DTS)
+        stop = datetime.fromisoformat(stop_DTS)
+        duration = stop - start
+
+        msg = f"Capture provider addresses in {duration} seconds for {peer_ID}."
         if debug_enabled:
             add_log(
                 process=call_stack,
                 peer_type="status",
                 msg=msg,
             )
-
-    statement = select(Peer_Address).where(
-        Peer_Address.peer_ID == peer_ID,
-        Peer_Address.available == 1,
-    )
-    with Session(engine) as session:
-        results = session.exec(statement)
-        if results.first() is None:
-            address_available = False
-        else:
-            address_available = True
-
-    stop_DTS = get_DTS()
-    start = datetime.fromisoformat(start_DTS)
-    stop = datetime.fromisoformat(stop_DTS)
-    duration = stop - start
-
-    msg = f"Capture provider addresses in {duration} seconds for {peer_ID}."
-    if debug_enabled:
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg=msg,
-        )
 
     return status_code, address_available
 
@@ -839,8 +845,9 @@ if __name__ == "__main__":
     os.environ["DIYIMS_ROAMING"] = "Roaming"
     os.environ["COMPONENT_TEST"] = "0"
     os.environ["QUEUES_ENABLED"] = "0"
-    os.environ["METRICS_ENABLED"] = "1"
-    os.environ["LOGGING_ENABLED"] = "1"
-    os.environ["DEBUG_ENABLED"] = "1"
+    os.environ["METRICS_ENABLED"] = "0"
+    os.environ["LOGGING_ENABLED"] = "0"
+    os.environ["DEBUG_ENABLED"] = "0"
+    os.environ["CONNECT_ENABLED"] = "0"
 
     provider_capture_main("__main__", "PP")

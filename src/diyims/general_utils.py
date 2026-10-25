@@ -142,7 +142,16 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
     except KeyError:
         debug_enabled = bool(int(config_dict["debug_enabled"]))
         #pass
-
+        
+    try:
+        connect_enabled = bool(int(os.environ["CONNECT_ENABLED"]))
+    except KeyError:
+        try:
+            connect_enabled = bool(int(config_dict["connect_enabled"]))
+        except KeyError:
+            connect_enabled = True
+        #pass
+    
     #try:
     #    single_thread = bool(int(config_dict["single_thread"]))
     #except KeyError:
@@ -176,6 +185,7 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
     set_controls_return.queues_enabled = queues_enabled
     set_controls_return.single_thread = single_thread
     set_controls_return.metrics_enabled = metrics_enabled
+    set_controls_return.connect_enabled = connect_enabled
 
     if component_test:
         add_log(
@@ -247,6 +257,18 @@ def set_controls(call_stack: str, config_dict: dict) -> SetControlsReturn:
                 process=call_stack,
                 peer_type="status",
                 msg="Metrics disabled",
+            )
+        if connect_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Connect enabled",
+            )
+        else:
+            add_log(
+                process=call_stack,
+                peer_type="status",
+                msg="Connect disabled",
             )
 
     return set_controls_return

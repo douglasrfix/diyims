@@ -213,8 +213,6 @@ def wantlist_capture_submit_main(
             peer_type="status",
             msg=f"Want List complete with {status_code}.",
         )
-    return
-
 
 def capture_wantlist_peers(
     call_stack: str,
@@ -236,8 +234,8 @@ def capture_wantlist_peers(
         select(Peer_Table)
         .where(
             or_(
-                Peer_Table.processing_status == "WLR",
-                Peer_Table.processing_status == "WLW",
+                Peer_Table.processing_status == "WLR", # Keep
+                Peer_Table.processing_status == "WLW", # Keep
             )
         )
         .where(Peer_Table.peer_type != "LP")
@@ -249,7 +247,7 @@ def capture_wantlist_peers(
         # create list
     peer_list = []
     for row in peer_table_rows:
-        peer_list.append(row)
+        peer_list.append(row)  # noqa: PERF402
 
     status_code = 200
     for peer_row in peer_list:
@@ -257,12 +255,13 @@ def capture_wantlist_peers(
             break
 
         peer_ID = peer_row.peer_ID
-        if peer_row.processing_status == "WLR":  # Implies a likely connection
-            status_code, peer_connected = peer_connect(
-                call_stack,
-                peer_ID,
-                SetControlsReturn,
-            )  # stats code is ignored. #TODO: Process anyway
+        if peer_row.processing_status == "WLR":  # Implies a likely connection w/address not active
+            if SetControlsReturn.connect_enabled:
+                status_code, peer_connected = peer_connect(
+                    call_stack,
+                    peer_ID,
+                    SetControlsReturn,
+                )  # stats code is ignored. #TODO: Process anyway
         else:
             peer_connected = False
         status_code = 200
@@ -289,12 +288,12 @@ def capture_wantlist_peers(
 
         provider_peer_ID = peer_table_row.peer_ID
         peer_table_row.local_update_DTS = get_DTS()
-        if peer_table_row.processing_status == "WLR":
-            peer_table_row.processing_status = "WLRP"
-        elif peer_table_row.processing_status == "WLW":
-            peer_table_row.processing_status = "WLWP" 
-        elif peer_table_row.processing_status == "WLWF":
-            peer_table_row.processing_status = "WLWFP"
+        if peer_table_row.processing_status == "WLR": #keep as submitted
+            peer_table_row.processing_status = "WLRP"#keep
+        elif peer_table_row.processing_status == "WLW":# keep
+            peer_table_row.processing_status = "WLWP" # keep
+        #elif peer_table_row.processing_status == "WLWF":
+        #    peer_table_row.processing_status = "WLWFP"
 
         with Session(engine) as session:
             session.add(peer_table_row)
@@ -347,7 +346,7 @@ def capture_wantlist_peers(
                     param = {
                         "arg": provider_peer_ID,
                     }
-                    response, status_code, response_dict = execute_request(
+                    _response, status_code, _response_dict = execute_request(
                         url_key="peering_remove",
                         param=param,
                         call_stack=call_stack,
@@ -369,7 +368,7 @@ def capture_wantlist_peers(
                         "arg": provider_address,
                     }
 
-                    response, status_code, response_dict = execute_request(
+                    _response, status_code, _response_dict = execute_request(
                         url_key="dis_connect",
                         param=param,
                         call_stack=call_stack,
@@ -461,7 +460,7 @@ def peer_connect(
         for peer_address in results:
             param = {"arg": peer_address.multiaddress}
 
-            response, status_code, response_dict = execute_request(
+            _response, status_code, _response_dict = execute_request(
                 url_key="connect",
                 param=param,
                 call_stack=call_stack,
@@ -482,7 +481,7 @@ def peer_connect(
                     session.add(address)
                     session.commit()
 
-                response, status_code, response_dict = execute_request(
+                _response, status_code, _response_dict = execute_request(
                     url_key="peering_add",
                     param=param,
                     call_stack=call_stack,
@@ -533,8 +532,9 @@ if __name__ == "__main__":
     os.environ["DIYIMS_ROAMING"] = "Roaming"
     os.environ["COMPONENT_TEST"] = "0"
     os.environ["QUEUES_ENABLED"] = "0"
-    os.environ["METRICS_ENABLED"] = "1"
-    os.environ["LOGGING_ENABLED"] = "1"
-    os.environ["DEBUG_ENABLED"] = "1"
+    os.environ["METRICS_ENABLED"] = "0"
+    os.environ["LOGGING_ENABLED"] = "0"
+    os.environ["DEBUG_ENABLED"] = "0"
+    os.environ["CONNECT_ENABLED"] = "0"
 
     wantlist_capture_submit_main("__main__", "PP")

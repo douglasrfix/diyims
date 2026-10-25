@@ -14,7 +14,8 @@ class SetControlsReturn:
     component_test: bool = False
     debug_enabled: bool = False
     single_thread: bool = False
-    metrics_enabled: bool = False 
+    metrics_enabled: bool = False
+    connect_enabled: bool = False
 
 
 @dataclass

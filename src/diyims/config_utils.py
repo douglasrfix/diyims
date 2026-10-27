@@ -15,29 +15,29 @@ from diyims.path_utils import (
 
 
 def config_install():
-    get_scheduler_config_dict()
+    aget_scheduler_config_dict()
 
-    get_beacon_config_dict()
-    get_provider_capture_config_dict()
-    get_want_list_config_dict()
-    get_peer_table_maint_config_dict()
-    get_publish_config_dict()
-    get_peer_monitor_config_dict()
-    get_clean_up_config_dict()
-    get_metrics_config_dict()
+    aget_beacon_config_dict()
+    get_config_dict()
+    aget_want_list_config_dict()
+    aget_peer_table_maint_config_dict()
+    aget_publish_config_dict()
+    aget_peer_monitor_config_dict()
+    aget_clean_up_config_dict()
+    aget_metrics_config_dict()
 
-    get_logger_config_dict()
-    get_logger_server_config_dict()
-    get_ipfs_config_dict()
-    get_request_config_dict()
+    aget_logger_config_dict()
+    aget_logger_server_config_dict()
+    aget_ipfs_config_dict()
+    aget_request_config_dict()
 
-    get_db_init_config_dict()
-    get_queue_config_dict()
+    aget_db_init_config_dict()
+    aget_queue_config_dict()
 
     #return
 
 
-def get_beacon_config_dict():
+def aget_beacon_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -119,7 +119,7 @@ def get_beacon_config_dict():
     return beacon_config_dict
 
 
-def get_scheduler_config_dict():
+def aget_scheduler_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -222,7 +222,7 @@ def get_scheduler_config_dict():
     return scheduler_config_dict
 
 
-def get_clean_up_config_dict():
+def aget_clean_up_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -268,7 +268,7 @@ def get_clean_up_config_dict():
     return clean_up_config_dict
 
 
-def get_shutdown_config_dict():
+def aget_shutdown_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -310,7 +310,7 @@ def get_shutdown_config_dict():
     return config_dict
 
 
-def get_ipfs_config_dict():
+def aget_ipfs_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -373,7 +373,7 @@ def get_ipfs_config_dict():
     return ipfs_config_dict
 
 
-def get_request_config_dict():
+def aget_request_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -438,119 +438,40 @@ def get_request_config_dict():
     return request_config_dict
 
 
-def get_provider_capture_config_dict():
-    install_dict = get_install_template_dict()
+def get_config_dict(section: str):
+    from sqlmodel import Session, create_engine
 
-    config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
-    parser = configparser.ConfigParser()
+    from diyims.path_utils import get_path_dict
+    from diyims.sqlmodels import Config
+    
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+        
+    with Session(engine) as session:
+        result_dict = session.exec(Config.__table__.select()).mappings().all()
 
-    try:
-        with open(config_file, "r") as configfile:
-            parser.read_file(configfile)
+    override_dict = {}
+    common_dict = {}
+    
+    for db_dict in result_dict:
+    
+            if (db_dict['section'] == 'Common'):
+                
+                common_dict[db_dict['key']] = db_dict['value']
+    
+            elif (db_dict['section'] == section):
+    
+                override_dict[db_dict['key']] = db_dict['value']
+            
+    final_dict = {**common_dict, **override_dict}
+    
+    return final_dict
+    
 
-    except FileNotFoundError:
-        raise ApplicationNotInstalledError(" ")
-
-    try:
-        provider_capture_config_dict = {}
-        provider_capture_config_dict["capture_interval_delay"] = parser[
-            "Provider_Capture"
-        ]["capture_interval_delay"]
-        provider_capture_config_dict["sql_timeout"] = parser["Provider_Capture"][
-            "sql_timeout"
-        ]
-        provider_capture_config_dict["wait_before_startup"] = parser[
-            "Provider_Capture"
-        ]["wait_before_startup"]
-        provider_capture_config_dict["max_intervals"] = parser["Provider_Capture"][
-            "max_intervals"
-        ]
-        provider_capture_config_dict["shutdown_time"] = parser["Provider_Capture"][
-            "shutdown_time"
-        ]
-        provider_capture_config_dict["q_server_port"] = parser["Provider_Capture"][
-            "q_server_port"
-        ]
-        provider_capture_config_dict["connect_retries"] = parser["Provider_Capture"][
-            "connect_retries"
-        ]
-        provider_capture_config_dict["connect_retry_delay"] = parser[
-            "Provider_Capture"
-        ]["connect_retry_delay"]
-        provider_capture_config_dict["queues_enabled"] = parser["Provider_Capture"][
-            "queues_enabled"
-        ]
-        provider_capture_config_dict["logging_enabled"] = parser["Provider_Capture"][
-            "logging_enabled"
-        ]
-        provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
-            "debug_enabled"
-        ]
-        provider_capture_config_dict["connect_enabled"] = parser["Provider_Capture"][
-                    "connect_enabled"
-                ]
-
-    except KeyError:
-        parser["Provider_Capture"] = {}
-        parser["Provider_Capture"]["capture_interval_delay"] = "600"
-        parser["Provider_Capture"]["sql_timeout"] = "60"
-        parser["Provider_Capture"]["wait_before_startup"] = "0"
-        parser["Provider_Capture"]["max_intervals"] = "9999"
-        parser["Provider_Capture"]["shutdown_time"] = "99:99:99"
-        parser["Provider_Capture"]["q_server_port"] = "50000"
-        parser["Provider_Capture"]["connect_retries"] = "30"
-        parser["Provider_Capture"]["connect_retry_delay"] = "10"
-        parser["Provider_Capture"]["queues_enabled"] = "1"
-        parser["Provider_Capture"]["logging_enabled"] = "0"
-        parser["Provider_Capture"]["debug_enabled"] = "0"
-        parser["Provider_Capture"]["connect_enabled"] = "1"
-
-        with open(config_file, "w") as configfile:
-            parser.write(configfile)
-
-        provider_capture_config_dict = {}
-
-        provider_capture_config_dict["capture_interval_delay"] = parser[
-            "Provider_Capture"
-        ]["capture_interval_delay"]
-        provider_capture_config_dict["sql_timeout"] = parser["Provider_Capture"][
-            "sql_timeout"
-        ]
-        provider_capture_config_dict["wait_before_startup"] = parser[
-            "Provider_Capture"
-        ]["wait_before_startup"]
-        provider_capture_config_dict["max_intervals"] = parser["Provider_Capture"][
-            "max_intervals"
-        ]
-        provider_capture_config_dict["shutdown_time"] = parser["Provider_Capture"][
-            "shutdown_time"
-        ]
-        provider_capture_config_dict["q_server_port"] = parser["Provider_Capture"][
-            "q_server_port"
-        ]
-        provider_capture_config_dict["connect_retries"] = parser["Provider_Capture"][
-            "connect_retries"
-        ]
-        provider_capture_config_dict["connect_retry_delay"] = parser[
-            "Provider_Capture"
-        ]["connect_retry_delay"]
-        provider_capture_config_dict["queues_enabled"] = parser["Provider_Capture"][
-            "queues_enabled"
-        ]
-        provider_capture_config_dict["logging_enabled"] = parser["Provider_Capture"][
-            "logging_enabled"
-        ]
-        provider_capture_config_dict["debug_enabled"] = parser["Provider_Capture"][
-            "debug_enabled"
-        ]
-        provider_capture_config_dict["connect_enabled"] = parser["Provider_Capture"][
-                    "connect_enabled"
-                ]
-
-    return provider_capture_config_dict
-
-
-def get_logger_config_dict():
+def aget_logger_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -586,7 +507,7 @@ def get_logger_config_dict():
     return logger_config_dict
 
 
-def get_logger_server_config_dict():
+def aget_logger_server_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -633,7 +554,7 @@ def get_logger_server_config_dict():
     return logger_server_config_dict
 
 
-def get_want_list_config_dict():
+def aget_want_list_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -792,7 +713,7 @@ def get_want_list_config_dict():
     return want_list_config_dict
 
 
-def get_queue_config_dict():
+def aget_queue_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -836,7 +757,7 @@ def get_queue_config_dict():
     return queue_config_dict
 
 
-def get_db_init_config_dict():
+def aget_db_init_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -883,7 +804,7 @@ def get_db_init_config_dict():
     return db_init_config_dict
 
 
-def get_publish_config_dict():
+def aget_publish_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -946,7 +867,7 @@ def get_publish_config_dict():
     return publish_config_dict
 
 
-def get_metrics_config_dict():
+def aget_metrics_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -1008,7 +929,7 @@ def get_metrics_config_dict():
     return metrics_config_dict
 
 
-def get_peer_table_maint_config_dict():
+def aget_peer_table_maint_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")
@@ -1098,7 +1019,7 @@ def get_peer_table_maint_config_dict():
     return peer_table_maint_config_dict
 
 
-def get_peer_monitor_config_dict():
+def aget_peer_monitor_config_dict():
     install_dict = get_install_template_dict()
 
     config_file = Path().joinpath(install_dict["config_path"], "diyims.ini")

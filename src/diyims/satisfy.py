@@ -8,7 +8,7 @@ from time import sleep
 # from rich import print
 from sqlmodel import Session, create_engine, select
 
-from diyims.config_utils import get_beacon_config_dict, get_clean_up_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.error_classes import CommunicationsError
 from diyims.general_utils import get_DTS, set_controls
 from diyims.logger_utils import add_log
@@ -31,7 +31,7 @@ def satisfy_main(call_stack: str) -> None:
     """
 
     call_stack = call_stack + ":satisfy_main"
-    config_dict = get_beacon_config_dict()
+    config_dict = get_config_dict('Beacon')
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
 
@@ -193,7 +193,7 @@ def clean_up(
     call_stack: str,
 ):
     call_stack = call_stack + ":clean_up"
-    config_dict = get_clean_up_config_dict()  # TODO: share???
+    config_dict = get_config_dict('Clean_Up')  # TODO: share???
 
     hours_to_delay = config_dict["hours_to_delay"]
     insert_DTS = get_DTS()

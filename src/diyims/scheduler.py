@@ -4,7 +4,7 @@ from time import sleep
 
 from diyims.beacon import beacon_main
 from diyims.clean_up import clean_up
-from diyims.config_utils import get_scheduler_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.database_utils import reset_peer_table_status
 from diyims.error_classes import (
     CommunicationsError,
@@ -28,7 +28,7 @@ def scheduler_main(call_stack, roaming):
         set_start_method("spawn")
 
     call_stack = call_stack + ":scheduler_main"
-    config_dict = get_scheduler_config_dict()
+    config_dict = get_config_dict('Scheduler')
     SetControlsReturn = set_controls(call_stack, config_dict)
 
     try:
@@ -63,7 +63,7 @@ def scheduler_main(call_stack, roaming):
             msg="Queue Server startup.",
         )
 
-    if config_dict["reset_enable"] == "True":
+    if config_dict["reset_enable"] == "1":
         reset_peer_table_status_process = Process(
             target=reset_peer_table_status, args=(call_stack,)
         )
@@ -102,7 +102,7 @@ def scheduler_main(call_stack, roaming):
             msg="Clean up complete.",
         )
 
-    if config_dict["metrics_enable"] == "True":
+    if config_dict["metrics_enable"] == "1":
         select_local_peer_and_update_metrics_process = Process(
             target=select_local_peer_and_update_metrics,
             args=(call_stack,),
@@ -121,7 +121,7 @@ def scheduler_main(call_stack, roaming):
             msg="Metrics update complete.",
         )
 
-    if config_dict["beacon_enable"] == "True":  # noqa: SIM102
+    if config_dict["beacon_enable"] == "1":  # noqa: SIM102
         if SetControlsReturn.queues_enabled:
         
             beacon_main_process = Process(
@@ -136,7 +136,7 @@ def scheduler_main(call_stack, roaming):
                 msg="Beacon startup.",
             )
 
-    if config_dict["provider_enable"] == "True":
+    if config_dict["provider_enable"] == "1":
         capture_provider_process = Process(
             target=provider_capture_main,
             args=(
@@ -152,7 +152,7 @@ def scheduler_main(call_stack, roaming):
             msg="Provider Capture startup.",
         )
 
-    if config_dict["wantlist_enable"] == "True":
+    if config_dict["wantlist_enable"] == "1":
         capture_provider_want_lists_process = Process(
             target=wantlist_capture_submit_main,
             args=(
@@ -168,7 +168,7 @@ def scheduler_main(call_stack, roaming):
             msg="Want List Capture startup.",
         )
 
-    if config_dict["peer_maint_enable"] == "True":
+    if config_dict["peer_maint_enable"] == "1":
         peer_table_maintenance_process = Process(
             target=peer_maintenance_main,
             args=(call_stack,),
@@ -181,7 +181,7 @@ def scheduler_main(call_stack, roaming):
             msg="Peer Maintenance startup.",
         )
 
-    if config_dict["publish_enable"] == "True":
+    if config_dict["publish_enable"] == "1":
         publish_main_process = Process(
             target=publish_main,
             args=(
@@ -197,7 +197,7 @@ def scheduler_main(call_stack, roaming):
             msg="Publish startup.",
         )
 
-    if config_dict["remote_monitor_enable"] == "True":
+    if config_dict["remote_monitor_enable"] == "1":
         monitor_peer_publishing_main_process = Process(
             target=monitor_peer_publishing_main,
             args=(call_stack,),
@@ -210,7 +210,7 @@ def scheduler_main(call_stack, roaming):
             msg="Remote Monitor startup.",
         )
 
-    if config_dict["beacon_enable"] == "True":  # noqa: SIM102
+    if config_dict["beacon_enable"] == "1":  # noqa: SIM102
         if SetControlsReturn.queues_enabled:
             beacon_main_process.join()
             add_log(
@@ -218,35 +218,35 @@ def scheduler_main(call_stack, roaming):
                 peer_type="status",
                 msg="Beacon completed.",
             )
-    if config_dict["provider_enable"] == "True":
+    if config_dict["provider_enable"] == "1":
         capture_provider_process.join()
         add_log(
             process=call_stack,
             peer_type="status",
             msg="Provider Capture completed.",
         )
-    if config_dict["wantlist_enable"] == "True":
+    if config_dict["wantlist_enable"] == "1":
         capture_provider_want_lists_process.join()
         add_log(
             process=call_stack,
             peer_type="status",
             msg="Want List Capture completed.",
         )
-    if config_dict["peer_maint_enable"] == "True":
+    if config_dict["peer_maint_enable"] == "1":
         peer_table_maintenance_process.join()
         add_log(
             process=call_stack,
             peer_type="status",
             msg="Peer Maintenance completed.",
         )
-    if config_dict["publish_enable"] == "True":
+    if config_dict["publish_enable"] == "1":
         publish_main_process.join()
         add_log(
             process=call_stack,
             peer_type="status",
             msg="Publish completed.",
         )
-    if config_dict["remote_monitor_enable"] == "True":
+    if config_dict["remote_monitor_enable"] == "1":
         monitor_peer_publishing_main_process.join()
         add_log(
             process=call_stack,

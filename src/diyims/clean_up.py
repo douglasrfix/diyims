@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlmodel import Session, create_engine, or_, select
 
-from diyims.config_utils import get_clean_up_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
 from diyims.sqlmodels import Beacon
@@ -14,7 +14,7 @@ def clean_up(call_stack, roaming):
     from diyims.sqlmodels import Clean_Up, Log
 
     call_stack = call_stack + ":clean_up"
-    config_dict = get_clean_up_config_dict()
+    config_dict = get_config_dict('Clean_Up')
 
     hours_to_delay = config_dict["hours_to_delay"]
     end_time = datetime.today() - timedelta(hours=int(hours_to_delay))  # noqa: DTZ002

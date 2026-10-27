@@ -10,7 +10,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, or_, select
 
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
-from diyims.config_utils import get_peer_monitor_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import get_DTS, set_controls, set_self, shutdown_query
 from diyims.header_utils import header_chain_maint
 from diyims.inbound_event_managers import (
@@ -47,7 +47,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
         except RuntimeError:
             pass
     call_stack = call_stack + ":monitor_peer_publishing"
-    config_dict = get_peer_monitor_config_dict()
+    config_dict = get_config_dict('Peer_Monitor')
     set_controls_return = set_controls(call_stack, config_dict)
     set_self_return = set_self()
 

@@ -8,7 +8,7 @@ from time import sleep
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, create_engine, or_, select
 
-from diyims.config_utils import get_peer_table_maint_config_dict
+from diyims.config_utils import get_config_dict
 
 # from diyims.database_utils import (
 # set_up_sql_operations,
@@ -43,7 +43,7 @@ def peer_maintenance_main(call_stack: str) -> None:
 
     call_stack = call_stack + ":peer_table_maintenance_main"
     path_dict = get_path_dict()
-    config_dict = get_peer_table_maint_config_dict()
+    config_dict = get_config_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
     SetSelfReturn = set_self()
     sqlite_file_name = path_dict["db_file"]

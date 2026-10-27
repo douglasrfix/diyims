@@ -10,7 +10,7 @@ from time import sleep
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, create_engine, or_, select
 
-from diyims.config_utils import get_provider_capture_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import (
     get_DTS,
     get_network_name,
@@ -47,7 +47,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
             pass
 
     call_stack = call_stack + ":provider_capture_main"
-    config_dict = get_provider_capture_config_dict()
+    config_dict = get_config_dict('Provider_Capture')
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
 
@@ -550,7 +550,7 @@ def capture_provider_addresses(
     call_stack = call_stack + ":capture_provider_addresses"
     address_available = False
     address_source = "PP"
-    config_dict = get_provider_capture_config_dict()
+    config_dict = get_config_dict('Provider_Capture')
     set_controls_return = set_controls(call_stack, config_dict)
     status_code = 200
     start_DTS = get_DTS()

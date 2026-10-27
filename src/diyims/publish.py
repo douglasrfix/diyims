@@ -9,7 +9,7 @@ def publish_main(call_stack: str, mode: str) -> None:
     from sqlmodel import Session, col, create_engine, select
 
     #from diyims.class_imports import SetSelfReturn
-    from diyims.config_utils import get_publish_config_dict
+    from diyims.config_utils import get_config_dict
     from diyims.general_utils import get_DTS, set_controls, set_self, shutdown_query
     from diyims.logger_utils import add_log
     from diyims.path_utils import get_path_dict
@@ -24,7 +24,7 @@ def publish_main(call_stack: str, mode: str) -> None:
             pass
 
     call_stack = call_stack + ":publish_main"
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
 
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)

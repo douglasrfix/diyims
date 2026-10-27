@@ -6,7 +6,7 @@ from pathlib import Path
 # from diyims.path_utils import get_path_dict
 from sqlmodel import Session, create_engine
 
-from diyims.config_utils import get_publish_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import get_DTS, set_self
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import get_url_dict
@@ -21,7 +21,7 @@ from diyims.sqlmodels import (
 def cli_file_add(call_stack, src_file_path):
     call_stack = call_stack + ":cli_file_add"
     
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
     path_dict = get_path_dict()
 
     
@@ -149,7 +149,7 @@ def file_add(call_stack, file_name): #TODO: #19 name is misleading
     
     src_path = Path(path_dict["generic_path"]).joinpath(file_name)
     url_dict = get_url_dict()
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
 
     param = {
         "cid-version": 1,
@@ -194,7 +194,7 @@ def file_add(call_stack, file_name): #TODO: #19 name is misleading
 def pin_file(call_stack, object_CID):
     # print(object_CID)
     call_stack = call_stack + ":pin_file"
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
     url_dict = get_url_dict()
 
     pin_add_params = {"arg": object_CID, "pin-name": "whl_add"}
@@ -214,7 +214,7 @@ def pin_file(call_stack, object_CID):
 def pin_meta(call_stack, object_CID):
     # print(object_CID)
     call_stack = call_stack + ":pin_meta"
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
     url_dict = get_url_dict()
 
     pin_add_params = {"arg": object_CID, "pin-name": "meta_add"}

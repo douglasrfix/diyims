@@ -1,9 +1,9 @@
+import os
 from typing import Optional
 
 import typer
 from rich import print
 from typing_extensions import Annotated
-import os
 
 from diyims.database_install import create, init
 from diyims.error_classes import (

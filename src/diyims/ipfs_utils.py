@@ -79,12 +79,14 @@ def test_ipfs_version(call_stack, response_dictionary):
 
 def force_purge(call_stack):
     import json
+
     import requests
-    from diyims.config_utils import get_ipfs_config_dict
+
+    from diyims.config_utils import get_config_dict
     from diyims.requests_utils import execute_request
 
     call_stack = call_stack + ":force_purge"
-    ipfs_config_dict = get_ipfs_config_dict()
+    config_dict = get_config_dict('IPFS')
     url_dict = get_url_dict()
 
     with requests.post(url_dict["pin_list"], stream=False) as r:  # NOTE: fix
@@ -97,7 +99,7 @@ def force_purge(call_stack):
                 execute_request(
                     url_key="pin_remove",
                     url_dict=url_dict,
-                    config_dict=ipfs_config_dict,
+                    config_dict=config_dict,
                     param=param,
                     call_stack=call_stack,
                 )
@@ -111,27 +113,28 @@ def force_purge(call_stack):
 
 def wait_on_ipfs(call_stack):
     from time import sleep
-    from diyims.requests_utils import execute_request
-    from diyims.config_utils import get_ipfs_config_dict
+
+    from diyims.config_utils import get_config_dict
     from diyims.error_classes import CommunicationsError, UnSupportedIPFSVersionError
+    from diyims.requests_utils import execute_request
 
     call_stack = call_stack + "wait_on_ipfs"
 
-    ipfs_config_dict = get_ipfs_config_dict()
+    config_dict = get_config_dict('IPFS')
     i = 0
     error_found = True
     while error_found:
         try:
-            response, status_code, response_dict = execute_request(url_key="id")
+            _response, _status_code, response_dict = execute_request(url_key="id")
             error_found = False
         except CommunicationsError as e:
             i += 1
-            sleep(int(ipfs_config_dict["connect_retry_delay"]))
-            if i > (int(ipfs_config_dict["connect_retries"])):
+            sleep(int(config_dict["connect_retry_delay"]))
+            if i > (int(config_dict["connect_retries"])):
                 raise CommunicationsError(e)
     try:
         test_ipfs_version(call_stack, response_dict)
-    except UnSupportedIPFSVersionError:
+    except UnSupportedIPFSVersionError:  # noqa: TRY203
         raise
     return response_dict
 
@@ -140,15 +143,15 @@ def unpack_object_from_cid(
     call_stack,
     object_CID,
 ):
-    from diyims.requests_utils import execute_request
     from diyims.logger_utils import add_log
+    from diyims.requests_utils import execute_request
 
     call_stack = call_stack + "unpack_object_from_cid"
     param = {
         "arg": object_CID,
     }
 
-    response, status_code, response_dict = execute_request(
+    _response, status_code, response_dict = execute_request(
         url_key="cat",
         param=param,
         timeout=(3.05, 122),  # control time out to avoid retries
@@ -166,7 +169,7 @@ def unpack_object_from_cid(
 
 if __name__ == "__main__":
     import os
-    from multiprocessing import set_start_method, freeze_support
+    from multiprocessing import freeze_support, set_start_method
 
     freeze_support()
     set_start_method("spawn")

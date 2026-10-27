@@ -11,7 +11,7 @@ def test(call_stack):
     param = {"arg": ipfs_path}
     outfile = str(path_dictionary["update_path"]) + "\\testfile.whl"
     # print(outfile)
-    response, status_code, response_dictionary = execute_request(
+    _response, _status_code, _response_dictionary = execute_request(
         url_key="cat",
         param=param,
         timeout=(3.05, 122),  # avoid timeouts
@@ -22,9 +22,7 @@ def test(call_stack):
     )
     # TODO: Support publishing as well as retrieval into standard library
 
-    # print(status_code)
-
-    return
+    # print
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session, create_engine, select
 
-from diyims.config_utils import get_metrics_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import (
     get_agent,
     get_DTS,
@@ -26,7 +26,7 @@ from diyims.sqlmodels import Peer_Table, Peer_Telemetry
 def select_local_peer_and_update_metrics(call_stack):
     # TODO: add message
     call_stack = call_stack + ":select_local_peer_and_update_metrics"
-    config_dict = get_metrics_config_dict()
+    config_dict = get_config_dict('Metrics')
     url_dict = get_url_dict()
     path_dict = get_path_dict()
     #SetControlsReturn = set_controls(call_stack, config_dict)
@@ -82,7 +82,7 @@ def select_local_peer_and_update_metrics(call_stack):
         telemetry_dict = jsonable_encoder(telemetry)  # TODO: necessary?
 
         with Session(engine) as session:
-            session.add(telemetry)
+            session.add(telemetry)  
             session.commit()
         proto_path = path_dict["peer_path"]
         proto_file = path_dict["peer_file"]

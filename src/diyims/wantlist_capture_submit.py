@@ -10,7 +10,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, or_, select
 
 from diyims.class_imports import SetControlsReturn, WantlistCaptureProcessMainArgs
-from diyims.config_utils import get_want_list_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import (
     get_DTS,
     get_shutdown_target,
@@ -35,7 +35,7 @@ def wantlist_capture_submit_main(
             pass
 
     call_stack = call_stack + ":wantlist_main"
-    config_dict = get_want_list_config_dict()
+    config_dict = get_config_dict('Want_List')
 
     SetControlsReturn = set_controls(call_stack, config_dict)
     wait_before_startup = int(config_dict["wait_before_startup"])

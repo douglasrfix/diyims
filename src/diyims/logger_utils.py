@@ -6,7 +6,7 @@ from time import sleep
 
 from sqlalchemy.exc import IntegrityError
 
-from diyims.config_utils import get_logger_config_dict, get_logger_server_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.path_utils import get_path_dict
 
 
@@ -44,7 +44,7 @@ def add_log(process: str, peer_type: str, msg: str):
 
 def get_logger(file, peer_type):
     # TODO: #14 handle keywords and bring file management as a default in logger
-    logger_config_dict = get_logger_config_dict()
+    logger_config_dict = get_config_dict('Logger')
     path_dict = get_path_dict()
     file_str = peer_type + file
     logger = logging.getLogger(file_str)
@@ -86,7 +86,7 @@ def get_logger(file, peer_type):
 
 
 def get_logger_server(file, peer_type):
-    logger_config_dict = get_logger_server_config_dict()
+    logger_config_dict = get_config_dict('Logger_Server')
     path_dict = get_path_dict()
 
     logger = logging.getLogger("logger_server")
@@ -137,7 +137,7 @@ def get_logger_task(peer_type, peer_ID):
         queue_server.connect()
         server_queue = queue_server.get_swarm_server_queue()
 
-    logger_config_dict = get_logger_server_config_dict()
+    logger_config_dict = get_config_dict('Logger_Server')
 
     task_logger = logging.getLogger(peer_ID)
     task_logger.setLevel(logger_config_dict["default_level"])
@@ -152,7 +152,7 @@ def get_logger_task(peer_type, peer_ID):
 
 
 def logger_server_main(peer_type):
-    want_list_config_dict = get_logger_server_config_dict()
+    want_list_config_dict = get_config_dict('Logger_Server')
     logger = get_logger(
         want_list_config_dict["log_file"],
         peer_type,

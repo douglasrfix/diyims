@@ -35,7 +35,7 @@ def test(section: str):
     {"section": "Common", "key": "connect_enabled", "value": "0"},
     {"section": "Common", "key": "component_test", "value": "0"},
     {"section": "Provider_Capture", "key": "capture_interval_delay", "value": "600"},
-    #{"section": "Common", "key": "stream", "value": "False"},
+    {"section": "Request", "key": "stream", "value": "False"},
     {"section": "Common", "key": "read_timeout", "value": "120"},
     {"section": "Request", "key": "request_retries", "value": "2"},
     {"section": "Request", "key": "request_retry_delay", "value": "10"},
@@ -118,4 +118,4 @@ if __name__ == "__main__":
     #freeze_support()
     #set_start_method("spawn")
 
-    print(test('Publish'))
+    print(test('Request'))

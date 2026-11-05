@@ -69,6 +69,8 @@ def get_path_dict():
     path_dict["update_path"] = Path(parser["Paths"]["update_path"])
     path_dict["dist_path"] = Path(parser["Paths"]["dist_path"])
     path_dict["generic_path"] = Path(parser["Paths"]["generic_path"])
+    path_dict["temp_path"] = Path(parser["Paths"]["temp_path"])
+    path_dict["temp_file"] = Path(parser["Files"]["temp_file"])
     return path_dict
 
 

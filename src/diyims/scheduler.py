@@ -63,6 +63,9 @@ def scheduler_main(call_stack, roaming):
             msg="Queue Server startup.",
         )
 
+    
+
+    
     if config_dict["reset_enable"] == "1":
         reset_peer_table_status_process = Process(
             target=reset_peer_table_status, args=(call_stack,)

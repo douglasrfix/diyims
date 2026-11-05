@@ -5,7 +5,7 @@ from multiprocessing.managers import BaseManager
 from queue import Empty
 from time import sleep
 
-#from rich import print
+#from rich import
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, or_, select
 
@@ -15,9 +15,9 @@ from diyims.general_utils import get_DTS, set_controls, set_self, shutdown_query
 from diyims.header_utils import header_chain_maint
 from diyims.inbound_event_managers import (
     generic_manager,
+    meta_manager,
     peer_manager,
     telemetry_manager,
-    #update_manager,
 )
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
@@ -361,7 +361,27 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
             )
             #if status_code == 1:
             #    break
-        elif header.object_type == "generic_meta":
+        elif header.object_type == "meta":
+            msg = "Meta entry submitted ."
+            add_log(
+                process=call_stack,
+                peer_type="info",
+                msg=msg,
+            )
+            _status_code = meta_manager(
+                call_stack,
+                set_self_return,
+                set_controls_return,
+                engine,
+                config_dict,
+                out_bound,
+                header,
+                #new_header_CID,
+                
+            )
+            #if status_code == 1:
+            #    break
+        elif header.object_type == "_generic_meta":
             msg = "Generic entry submitted ."
             add_log(
                 process=call_stack,
@@ -379,8 +399,8 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 #new_header_CID,
                 
             )
-            #if status_code == 1:
-            #    break
+                    #if status_code == 1:
+                    
         else:
             msg = f"{header.object_type} entry Ignored ."
             add_log(

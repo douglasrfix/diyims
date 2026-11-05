@@ -1,5 +1,5 @@
 #from fastapi.encoders import jsonable_encoder
-from rich import print
+#from rich import print
 
 #from sqlmodel import Session, col, create_engine, insert, select
 from sqlalchemy import create_engine, delete, insert
@@ -9,15 +9,13 @@ from diyims.path_utils import get_path_dict
 from diyims.sqlmodels import Config
 
 
-def test(section: str):
+def test():
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
     
-    override_dict = {}
-    common_dict = {}
     data = {}
     
     data['config_file'] = [
@@ -93,24 +91,8 @@ def test(section: str):
     
     with Session(engine) as session:
         session.execute(insert(Config), data["config_file"])
-        session.commit()   
-
-     
-    with Session(engine) as session:
-        result_dict = session.execute(Config.__table__.select()).mappings().all()       
-
-    for db_dict in result_dict:
-
-        if (db_dict['section'] == 'Common'):
-            
-            common_dict[db_dict['key']] = db_dict['value']
-
-        elif (db_dict['section'] == section):
-
-            override_dict[db_dict['key']] = db_dict['value']
+        session.commit()
     
-    final_dict = {**common_dict, **override_dict}
-    return final_dict
     
 
 
@@ -118,4 +100,4 @@ if __name__ == "__main__":
     #freeze_support()
     #set_start_method("spawn")
 
-    print(test('Request'))
+    test()

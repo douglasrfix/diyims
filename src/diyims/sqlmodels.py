@@ -48,24 +48,19 @@ class Header_Chain_Status(SQLModel, table=True):
 
 
 class Object_Meta_Data(SQLModel, table=True):
-    __table_args__ = {
-        "comment": "This table stores data that would normally be accessed to determine if the primary object is to be retrieved"
-    }
+   
     model_config = ConfigDict(arbitrary_types_allowed=True)
     version: int
-    object_CID: str
-    object_type: str | None = None
-    peer_ID: str = Field(
-        sa_column=Column(
-            String,
-            comment="peer_ID appears in this table as human readable source of entry",
-        )
-    )
+    reference_object_CID: str
+    reference_object_type: str | None = None
+    peer_ID: str
     insert_DTS: str
-    prior_meta_CID: str | None = None
-    meta_CID: str = Field(primary_key=True)
-    meta_data: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))  # noqa: UP045
-    tags: Optional[list] = Field(default=None, sa_column=Column(JSON))  # noqa: UP045
+    object_CID: str = Field(primary_key=True)
+    object_type: str
+    prior_object_CID: str | None = None
+    reference_meta_data: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))  # noqa: UP045
+    reference_tags: Optional[list] = Field(default=None, sa_column=Column(JSON))  # noqa: UP045
+    
 
 
 class Header_Table(SQLModel, table=True):

@@ -17,10 +17,11 @@ from diyims import beacon_cli, install_cli
 from diyims.clean_up import clean_up
 from diyims.general_utils import shutdown_cmd
 from diyims.ipfs_utils import force_purge
-from diyims.proto_publish import cli_file_add
+from diyims.proto_publish import cli_file_add, publish_config_table
 from diyims.provider_capture import provider_capture_main
 from diyims.queue_server import queue_main
 from diyims.scheduler import scheduler_main
+from diyims.temp import test
 from diyims.wantlist_capture_submit import wantlist_capture_submit_main
 
 # from diyims.test import test
@@ -51,6 +52,17 @@ def publish_file(
     #os.environ["DIYIMS_ROAMING"] = str(roaming)
     cli_file_add("cmd", file_path)
 
+@app.command()
+def install_config_file(
+    
+):
+    test()
+
+@app.command()
+def publish_config_file(
+    
+):
+    publish_config_table("cmd")
 
 @app.command()
 def danger(

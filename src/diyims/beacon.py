@@ -1,5 +1,5 @@
 """
-Beacon creates a unique CID that is used to generate a item in a nodes wantlist.           
+Beacon creates a unique CID that is used to generate an item in a nodes wantlist.           
 """
 
 # "Beacon creates a temporary wantlist item to allow a remote peer the ability
@@ -321,6 +321,7 @@ def flash_beacon(
             url_key="get",
             param={
                 "arg": beacon_CID,
+#                "timeout": "600s"
             },
             timeout=(
                 3.05,

@@ -541,6 +541,136 @@ def update_manager(
                 pass
 
 
+def meta_manager(
+    call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, outbound, header,
+):
+    call_stack = call_stack + ":meta_manager"
+    msg = "Meta manager entered."
+    add_log(
+        process=call_stack,
+        peer_type="info",
+        msg=msg,
+    )
+
+    # header.object_CID = meta object CID 
+    status_code, meta_dict = unpack_object_from_cid(call_stack, header.object_CID)
+    reference_object_CID = meta_dict["reference_object_CID"]
+    try:
+        reference_meta_data = meta_dict["reference_meta_data"] # test for supplementary meta_data dictionary
+    except KeyError:
+        statement = (
+                    select(Header_Table).where(Header_Table.header_CID == header.object_CID)
+                )
+        DTS = get_DTS()
+        with Session(engine) as session:
+            try:
+                results = session.exec(statement)
+                header_row = results.one()
+                DTS = get_DTS()
+                header_row.processing_status = "meta data failed"
+                header_row.processing_status_DTS = DTS
+                session.add(header_row)
+                session.commit()
+            except NoResultFound: # should never happen since we are processing a header
+                pass
+            
+        return status_code
+        
+    work_path = Path(reference_meta_data["file_name"])
+    file_name = work_path.name
+    file_type = work_path.suffix
+    DTS = get_DTS()
+
+
+    new_meta = Object_Meta_Data(
+        version=meta_dict["version"],
+        reference_object_CID=meta_dict["reference_object_CID"],
+        reference_object_type=meta_dict["reference_object_type"],
+        peer_ID=meta_dict["peer_ID"],
+        insert_DTS=DTS,
+        object_CID=header.object_CID,
+        object_type=meta_dict["object_type"],
+        # ignore prior for now
+        reference_meta_data=meta_dict["reference_meta_data"],
+        reference_tags=meta_dict["reference_tags"],
+        
+    )
+
+    with Session(engine) as session:
+        try:
+            session.add(new_meta)
+            session.commit()
+        except IntegrityError:
+            pass #TODO: expand the logic to handle error conditions such as temporary objects
+                    # check for existing files etc. replace older Files?
+
+    if set_controls_return.logging_enabled:
+        msg = f'object_cid from meta_dict {meta_dict["object_CID"]}.'
+        add_log(
+            process=call_stack,
+            peer_type="info",
+            msg=msg,
+        )
+    
+    path_dictionary = get_path_dict()
+    ipfs_path = "/ipfs/" + str(reference_object_CID)
+    param = {"arg": ipfs_path}
+    if set_controls_return.logging_enabled:
+        msg = f"ipfs path {ipfs_path} for CAT."
+        add_log(
+            process=call_stack,
+            peer_type="info",
+            msg=msg,
+        )
+    if file_type == ".whl":  # noqa: SIM114
+        outfile = Path(path_dictionary["update_path"]).joinpath(file_name)
+    elif file_name == "config.tbl":
+        outfile = Path(path_dictionary["update_path"]).joinpath(file_name)
+    else:
+        outfile = Path(path_dictionary["generic_path"]).joinpath(file_name)
+
+    _response, status_code, _response_dictionary = execute_request(
+        url_key="cat",
+        param=param,
+        timeout=(3.05, 122),  # avoid timeouts #TODO:may need to be rethought
+        call_stack=call_stack,
+        http_500_ignore=False,
+        stream=True,
+        outfile=outfile,
+    )
+    if set_controls_return.logging_enabled:
+        msg = f"CAT for {reference_object_CID} completed with stats code {status_code}."
+        add_log(
+            process=call_stack,
+            peer_type="info",
+            msg=msg,
+        )
+    
+    if status_code == 200:
+        if set_controls_return.logging_enabled:
+            msg = f"Using headerCID {header.header_CID} to update header."
+            add_log(
+                process=call_stack,
+                peer_type="info",
+                msg=msg,
+            )
+        statement = (
+            select(Header_Table).where(Header_Table.header_CID == header.header_CID)
+        )
+        DTS = get_DTS()
+        with Session(engine) as session:
+            try:
+                results = session.exec(statement)
+                header_row = results.one()
+                DTS = get_DTS()
+                header_row.processing_status = "add-completed"
+                header_row.processing_status_DTS = DTS
+                session.add(header_row)
+                session.commit()
+            except NoResultFound:
+                pass #shouldn't happen
+
+
 def generic_manager(
     call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, outbound, header,
 ):

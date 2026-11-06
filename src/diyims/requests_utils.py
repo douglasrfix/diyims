@@ -14,13 +14,13 @@ from time import sleep
 import requests
 from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
 
-from diyims.config_utils import get_request_config_dict, get_url_dict
+from diyims.config_utils import get_config_dict, get_url_dict
 
 #from diyims.error_classes import CommunicationsError
 from diyims.logger_utils import add_log
 
 
-def execute_request(url_key: str, **kwargs):
+def execute_request(url_key: str, **kwargs): 
     """
     execute_request _summary_
 
@@ -33,7 +33,7 @@ def execute_request(url_key: str, **kwargs):
         _type_ -- _description_
     """
     # get configuration values
-    default_dict = get_request_config_dict()
+    default_dict = get_config_dict('Request')
 
     # supplement configuration values
     try:

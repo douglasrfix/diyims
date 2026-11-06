@@ -11,7 +11,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session, col, create_engine, select
 
 from diyims.class_imports import SetControlsReturn, WantlistCaptureProcessMainArgs
-from diyims.config_utils import get_want_list_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import get_DTS, set_self, shutdown_query
 from diyims.header_utils import ipfs_header_add
 from diyims.ipfs_utils import unpack_object_from_cid
@@ -842,7 +842,7 @@ if __name__ == "T":
     os.environ["QUEUES_ENABLED"] = "0"
     os.environ["LOGGING_ENABLED"] = "1"
 
-    config_dict = get_want_list_config_dict()
+    config_dict = get_config_dict('Want_list')
     peer_table_dict = {}
     peer_table_dict["peer_ID"] = "12D3KooWRwJtRqZQcvThkq2dU5ZbrS5zj6grE8rf4swG7NeFC3dH"
     peer_table_dict["peer_type"] = "PP"

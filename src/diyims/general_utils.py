@@ -9,9 +9,10 @@ from sqlmodel import Session, create_engine, or_, select
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.clean_up import clean_up
 from diyims.config_utils import (
-    get_clean_up_config_dict,
-    get_scheduler_config_dict,
-    get_shutdown_config_dict,
+    #get_clean_up_config_dict,
+    get_config_dict,
+    #get_scheduler_config_dict,
+    #get_shutdown_config_dict,
 )
 from diyims.error_classes import (
     CommunicationsError,
@@ -325,10 +326,10 @@ def shutdown_cmd(call_stack):
     from diyims.sqlmodels import Shutdown
 
     call_stack = call_stack + ":shutdown_cmd"
-    config_dict = get_shutdown_config_dict()
-    queue_dict = get_scheduler_config_dict()
+    config_dict = get_config_dict('Scheduler')
+    #queue_dict = get_scheduler_config_dict()
 
-    set_controls_response = set_controls(call_stack, queue_dict)
+    set_controls_response = set_controls(call_stack, config_dict)
 
     path_dict = get_path_dict()
     sqlite_file_name = path_dict["db_file"]
@@ -372,18 +373,18 @@ def shutdown_cmd(call_stack):
         publish_queue = queue_server.get_publish_queue()
         peer_maint_queue = queue_server.get_peer_maint_queue()
         
-        if bool(queue_dict["beacon_enable"]):
+        if bool(config_dict["beacon_enable"]):
             satisfy_queue.put_nowait("0")
-        if bool(queue_dict["provider_enable"]):
+        if bool(config_dict["provider_enable"]):
             provider_queue.put_nowait("1")
-        if bool(queue_dict["wantlist_enable"]):
+        if bool(config_dict["wantlist_enable"]):
             wantlist_process_queue.put_nowait("2")
             wantlist_submit_queue.put_nowait("2")
-        if bool(queue_dict["remote_monitor_enable"]):
+        if bool(config_dict["remote_monitor_enable"]):
             remote_monitor_queue.put_nowait("3")
-        if bool(queue_dict["publish_enable"]):
+        if bool(config_dict["publish_enable"]):
             publish_queue.put_nowait("4")
-        if bool(queue_dict["peer_maint_enable"]):
+        if bool(config_dict["peer_maint_enable"]):#FIXME: bool
             peer_maint_queue.put_nowait("5")
 
     return
@@ -442,7 +443,7 @@ def clean_upO(call_stack, roaming):
     from diyims.sqlmodels import Clean_Up, Log
 
     call_stack = call_stack + ":clean_up"
-    config_dict = get_clean_up_config_dict()
+    config_dict = get_config_dict('Clean_Up')
 
     hours_to_delay = config_dict["hours_to_delay"]
     end_time = datetime.today() - timedelta(hours=int(hours_to_delay))  # noqa: DTZ002

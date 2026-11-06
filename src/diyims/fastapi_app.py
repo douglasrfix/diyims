@@ -1,43 +1,45 @@
-from fastapi import FastAPI, Request
-from starlette.config import Config
-
-# from starlette.requests import Request
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import HTMLResponse, RedirectResponse
-from authlib.integrations.starlette_client import OAuth, OAuthError
-from sqlalchemy.exc import NoResultFound
 from datetime import datetime, timezone
-
-
-# from datetime import datetime
-# from fastapi import FastAPI, Request, status
-from rich import print
-# from typing import Annotated
-
-# from sqlmodel import Field, Session, SQLModel, create_engine, select
-from sqlmodel import Session, create_engine, select, col, delete
-from diyims.path_utils import get_path_dict
-
-# from fastapi.responses import HTMLResponse, RedirectResponse
-# from starlette.status import HTTP_307_TEMPORARY_REDIRECT
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from diyims.sqlmodels import (
-    Header_Chain_Status,
-    Header_Table,
-    Peer_Address,
-    Peer_Table,
-    Want_List_Table,
-    Log,
-    Directory,
-    YT_Subscription,
-    Repository,
-)
 from importlib.resources import files
 
 # import os
 # from rich import print
 from pathlib import Path
+
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from fastapi import FastAPI, Request
+
+# from fastapi.responses import HTMLResponse, RedirectResponse
+# from starlette.status import HTTP_307_TEMPORARY_REDIRECT
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+# from datetime import datetime
+# from fastapi import FastAPI, Request, status
+from rich import print
+from sqlalchemy.exc import NoResultFound
+
+# from typing import Annotated
+# from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Session, col, create_engine, delete, select
+from starlette.config import Config
+
+# from starlette.requests import Request
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import HTMLResponse, RedirectResponse
+
+from diyims.path_utils import get_path_dict
+from diyims.sqlmodels import (
+    Directory,
+    Header_Chain_Status,
+    Header_Table,
+    Log,
+    Peer_Address,
+    Peer_Table,
+    Repository,
+    Want_List_Table,
+    YT_Subscription,
+)
+
 # from sqlmodel import Session, delete, create_engine, SQLModel
 # from diyims.sqlmodels import Directory
 # from diyims.path_utils import get_path_dict
@@ -631,7 +633,6 @@ async def login(request: Request):
         try:
             session.exec(statement).one()
             # return RedirectResponse(url='/') # return to home page
-            pass
         except NoResultFound:
             pass
 
@@ -662,7 +663,7 @@ async def auth(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
         print(token)
-        authorization_time = datetime.now(timezone.utc).timestamp()
+        authorization_time = datetime.now(timezone.utc).timestamp()  # noqa: UP017
         refresh_time = int(authorization_time) + int(token["expires_in"])
 
         with Session(engine) as session:

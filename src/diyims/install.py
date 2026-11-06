@@ -62,6 +62,7 @@ def install_main(call_stack, drive_letter, force_install):
     want_item_path = install_template_dict["want_item_path"]
     sign_path = install_template_dict["sign_path"]
     update_path = install_template_dict["update_path"]
+    temp_path = install_template_dict["temp_path"]
 
     config_file = Path(config_path).joinpath("diyims.ini")
     if config_file.exists():
@@ -79,12 +80,14 @@ def install_main(call_stack, drive_letter, force_install):
     peer_path.mkdir(mode=0o777, parents=True, exist_ok=True)
     sign_path.mkdir(mode=0o777, parents=True, exist_ok=True)
     update_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    temp_path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
     db_file = Path(db_path).joinpath("diyims.db")
     header_file = Path(header_path).joinpath("header.json")
     peer_file = Path(peer_path).joinpath("peer_table.json")
     want_item_file = Path(want_item_path).joinpath("want_item.json")
     sign_file = Path(peer_path).joinpath("sign.json")
+    temp_file = Path(peer_path).joinpath("temp_file.json")
 
     parser = configparser.ConfigParser()
     parser["Paths"] = {}
@@ -103,6 +106,8 @@ def install_main(call_stack, drive_letter, force_install):
     parser["Paths"]["sign_path"] = str(sign_path)
     parser["Files"]["sign_file"] = str(sign_file)
     parser["Paths"]["update_path"] = str(update_path)
+    parser["Paths"]["temp_path"] = str(temp_path)
+    parser["Files"]["temp_file"] = str(temp_file)
     with open(config_file, "w") as configfile:
         parser.write(configfile)
 

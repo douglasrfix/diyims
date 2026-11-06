@@ -7,7 +7,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, SQLModel, create_engine, select, text
 
 # from diyims.logger_utils import get_logger
-from diyims.config_utils import get_db_init_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.error_classes import (
     ApplicationNotInstalledError,
     PreExistingInstallationError,
@@ -64,7 +64,7 @@ def init(call_stack):
     db_url = f"sqlite:///{connect_path}"
     engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
 
-    config_dict = get_db_init_config_dict()
+    config_dict = get_config_dict('DB_Init')
     # logger = get_logger(
     #    config_dict["log_file"],
     #    "none",
@@ -95,7 +95,7 @@ def init(call_stack):
     if network_found:
         raise (PreExistingInstallationError(" "))
 
-    IPFS_agent = wait_dict["AgentVersion"]
+    IPFS_agent = wait_dict["AgentVersion"] 
     os_platform = test_os_platform()
     agent = get_agent()
 
@@ -435,7 +435,7 @@ def init(call_stack):
 def import_car(call_stack: str):
     call_stack = call_stack + ":import_car"
     url_dict = get_url_dict()
-    db_init_config_dict = get_db_init_config_dict()
+    db_init_config_dict = get_config_dict('DB_Init')
     # logger = get_logger(
     #    db_init_config_dict["log_file"],
     #    "none",

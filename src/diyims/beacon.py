@@ -1,5 +1,5 @@
 """
-Beacon creates a unique CID that is used to generate a item in a nodes wantlist.           
+Beacon creates a unique CID that is used to generate an item in a nodes wantlist.           
 """
 
 # "Beacon creates a temporary wantlist item to allow a remote peer the ability
@@ -14,7 +14,7 @@ from time import sleep
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, select
 
-from diyims.config_utils import get_beacon_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import (
     get_DTS,
     get_shutdown_target,
@@ -50,7 +50,7 @@ def beacon_main(call_stack: str) -> None:
             pass
 
     call_stack = call_stack + ":beacon_main"
-    config_dict = get_beacon_config_dict()
+    config_dict = get_config_dict('Beacon')
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
     SetSelfReturn = set_self()
@@ -321,6 +321,7 @@ def flash_beacon(
             url_key="get",
             param={
                 "arg": beacon_CID,
+#                "timeout": "600s"
             },
             timeout=(
                 3.05,

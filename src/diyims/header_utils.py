@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, col, create_engine, select
 
-from diyims.config_utils import get_publish_config_dict
+from diyims.config_utils import get_config_dict
 from diyims.general_utils import get_DTS, set_controls
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
@@ -243,7 +243,7 @@ def process_object_type_fail(call_stack, set_self_return, set_controls_return, e
                     msg=msg,
                 )
 
-def ipfs_header_add(
+def ipfs_header_add(#TODO: #31 add a parm for the config_dictionary in use
     call_stack: str,
     DTS: str,
     object_CID: str,
@@ -266,7 +266,7 @@ def ipfs_header_add(
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Common')
     set_controls_return = set_controls(call_stack, config_dict)
     if set_controls_return.queues_enabled and publish_wakeup_suppressed is False:
         q_server_port = int(config_dict["q_server_port"])

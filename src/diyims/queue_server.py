@@ -4,14 +4,14 @@ from queue import Queue
 from time import sleep
 
 # from diyims.logger_utils import get_logger
-from diyims.config_utils import get_queue_config_dict
+from diyims.config_utils import get_config_dict
 
 
 def queue_main(call_stack):
     # p = psutil.Process()
     # p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)  # TODO: put in config
     call_stack = call_stack + ":queue_main"
-    queue_config_dict = get_queue_config_dict()
+    queue_config_dict = get_config_dict('Queue')
     # logger = get_logger(queue_config_dict["log_file"], "none")
     wait_seconds = int(queue_config_dict["wait_before_startup"])
     # logger.debug(f"Waiting for {wait_seconds} seconds before startup.")

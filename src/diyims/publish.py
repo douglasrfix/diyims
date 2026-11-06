@@ -5,11 +5,12 @@ def publish_main(call_stack: str, mode: str) -> None:
     from queue import Empty
     from time import sleep
 
+    #from rich import print
     from sqlalchemy.exc import NoResultFound
     from sqlmodel import Session, col, create_engine, select
 
     #from diyims.class_imports import SetSelfReturn
-    from diyims.config_utils import get_publish_config_dict
+    from diyims.config_utils import get_config_dict
     from diyims.general_utils import get_DTS, set_controls, set_self, shutdown_query
     from diyims.logger_utils import add_log
     from diyims.path_utils import get_path_dict
@@ -24,7 +25,7 @@ def publish_main(call_stack: str, mode: str) -> None:
             pass
 
     call_stack = call_stack + ":publish_main"
-    config_dict = get_publish_config_dict()
+    config_dict = get_config_dict('Publish')
 
     path_dict = get_path_dict()
     SetControlsReturn = set_controls(call_stack, config_dict)
@@ -71,12 +72,14 @@ def publish_main(call_stack: str, mode: str) -> None:
         )
 
         header_list = []
+        
         with Session(engine) as session:
             results = session.exec(statement)
             header_rows = results.all()
 
             for header in header_rows:
                 header_list.append(header)  # noqa: PERF402
+        #print(len(header_list))
         for header in header_list:
             
             header_CID = header.header_CID
@@ -108,7 +111,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                 call_stack=call_stack,
                 http_500_ignore=False,
             )
-            if SetControlsReturn.logging_enabled:
+            if SetControlsReturn.logging_enabled == 0:
                 stop_DTS = get_DTS()
                 start = datetime.fromisoformat(start_DTS)
                 stop = datetime.fromisoformat(stop_DTS)
@@ -157,7 +160,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                         session.commit()
                     except NoResultFound:
                         pass
-                if SetControlsReturn.debug_enabled:    
+                if SetControlsReturn.debug_enabled == 0:    
                     add_log(
                             process=call_stack,
                             peer_type="header debug",

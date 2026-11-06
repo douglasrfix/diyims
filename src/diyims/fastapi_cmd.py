@@ -1,8 +1,10 @@
 import os
-import typer
-from typing import Optional
-from typing_extensions import Annotated
 import subprocess
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
+
 # from diyims.general_utils import exec_fastapi
 
 

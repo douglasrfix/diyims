@@ -5,7 +5,7 @@ def publish_main(call_stack: str, mode: str) -> None:
     from queue import Empty
     from time import sleep
 
-    from rich import print
+    #from rich import print
     from sqlalchemy.exc import NoResultFound
     from sqlmodel import Session, col, create_engine, select
 

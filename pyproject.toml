@@ -1,6 +1,6 @@
 [project]
 name = "diyims"
-version = "0.0.0a252"
+version = "0.0.0a254"
 description = "DIY Independent Media Services"
 readme = "README.md"
 authors = [

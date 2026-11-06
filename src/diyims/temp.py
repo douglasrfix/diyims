@@ -1,5 +1,7 @@
 #from fastapi.encoders import jsonable_encoder
 #from rich import print
+import json
+from pathlib import Path
 
 #from sqlmodel import Session, col, create_engine, insert, select
 from sqlalchemy import create_engine, delete, insert
@@ -93,11 +95,36 @@ def test():
         session.execute(insert(Config), data["config_file"])
         session.commit()
     
-    
+def complete_publish_config_table(call_stack: str):
+    call_stack = call_stack + ":complete_publish_config_table"
+    path_dict = get_path_dict()
+    sqlite_file_name = path_dict["db_file"]
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+    file_name = 'config.tbl'
+    in_file = Path(path_dict["update_path"]).joinpath(file_name)
 
+    try:
+        with open(in_file, 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        print("Error: File not found.")
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON format.")   
+
+    stmt = delete(Config)
+    with Session(engine) as session:
+        session.execute(stmt)
+        session.commit()
+    
+    with Session(engine) as session:
+        session.execute(insert(Config), data["config_file"])
+        session.commit()
 
 if __name__ == "__main__":
     #freeze_support()
     #set_start_method("spawn")
 
-    test()
+    #test()
+    complete_publish_config_table('cmd')

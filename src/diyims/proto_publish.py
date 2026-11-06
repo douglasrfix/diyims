@@ -76,7 +76,7 @@ def cli_file_add(call_stack, cli_file_path):
 
 
 def meta_add(call_stack: str, **kwargs):
-    #def meta_add(call_stack: str, pin_name: str, reference_object_type: str, file_name: str, file_suffix: str, src_path: str):
+    
     url_dict = get_url_dict()
     self = set_self().self
     config_dict = get_config_dict('File_add')
@@ -193,109 +193,9 @@ def meta_add(call_stack: str, **kwargs):
         publish_wakeup_suppressed,
     )
 
-    
-
-    '''
-    path_dict = get_path_dict()
-    config_dict = get_config_dict('File_add')
-    sqlite_file_name = path_dict["db_file"]
-    sqlite_url = f"sqlite:///{sqlite_file_name}"
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
-    url_dict = get_url_dict()
-    self = set_self().self
-    
-    reference_object_CID = file_add(call_stack, src_path, pin_name)
-
-    
-
-    DTS = get_DTS()
-    
-    meta_dict = {}
-    meta_dict["version"] = "1"
-    meta_dict["reference_object_CID"] = reference_object_CID
-    meta_dict["reference_object_type"] = reference_object_type
-    meta_dict["peer_ID"] = self
-    meta_dict["insert_DTS"] = DTS
-    # meta_dict["object_CID"]  is not present in dictionary   
-    meta_dict["object_type"] = 'meta'   
-    meta_dict["reference_meta_data"]= {'file_name': file_name}
-    meta_dict["reference_tags"] = ''
-
-    proto_path = path_dict["temp_path"]
-    proto_file = path_dict["temp_file"]
-    proto_file_path = get_unique_file(proto_path, proto_file)
-
-    param = {
-        "cid-version": 1,
-        "only-hash": "false",
-        "pin": "true",
-        'pin-name': pin_name,
-    }
-    with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
-        json.dump(meta_dict, write_file, indent=4)
-
-    with open(proto_file_path, "rb") as f:
-        add_file = {"file": f}
-        _response, _status_code, response_dict = execute_request(
-            url_key="add",
-            url_dict=url_dict,
-            config_dict=config_dict,
-            file=add_file,
-            param=param,
-            call_stack=call_stack,
-            http_500_ignore=False,
-        )
-    try:
-        Path(proto_file_path).unlink()
-    except FileNotFoundError:
-        pass
-        
-    meta_dict["object_CID"] = response_dict["Hash"]
-
-    
-    new_meta = Object_Meta_Data(
-        version=meta_dict["version"],
-        reference_object_CID=meta_dict["reference_object_CID"],
-        reference_object_type=meta_dict["reference_object_type"],
-        peer_ID=meta_dict["peer_ID"],
-        insert_DTS=DTS,
-        object_CID=meta_dict["object_CID"],  
-        object_type=meta_dict["object_type"],
-        # prior meta cid is ignored for now
-        reference_meta_data=meta_dict["reference_meta_data"],
-        reference_tags='',    
-    )
-    
-    with Session(engine) as session:
-        session.add(new_meta)
-        session.commit()
-    
-    peer_ID = self
-    object_CID = meta_dict["object_CID"]
-    object_type = meta_dict["object_type"]
-
-    mode = object_type
-    processing_status = "publish-requested"
-    publish_wakeup_suppressed = False
-    #processing_status_DTS = DTS
-
-    _status_code, _header_CID = ipfs_header_add(
-        call_stack,
-        DTS,
-        object_CID,
-        object_type,
-        peer_ID,
-        config_dict,
-        mode, #TODO:  issue 19 fix name
-        processing_status,
-        #processing_status_DTS,
-        publish_wakeup_suppressed,
-    )
-    '''
 
 def file_add(call_stack, **kwargs):
-    #def file_add(call_stack, source_path, pin_name, unlink):
+    
     call_stack = call_stack + ":file_add"
     
     url_dict = get_url_dict()

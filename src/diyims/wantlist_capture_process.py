@@ -702,7 +702,7 @@ def filter_wantlist(
                             param = {
                                 "cid-version": 1,
                                 "only-hash": "false",
-                                "pin-name": "verify_peer_and_update",
+                                "pin-name": "diyims",
                             }
                             with open(
                                 proto_file_path, "w", encoding="utf-8", newline="\n"

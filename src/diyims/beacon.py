@@ -5,16 +5,16 @@ Beacon creates a unique CID that is used to generate an item in a nodes wantlist
 # "Beacon creates a temporary wantlist item to allow a remote peer the ability
 # to discover and access the local peer's communication and verification information.
 # """
-# from rich import print
+
 import json
 from datetime import datetime, timedelta
-from multiprocessing import Process, freeze_support, set_start_method
+from pathlib import Path
 from time import sleep
 
-from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, select
 
 from diyims.config_utils import get_config_dict
+from diyims.error_classes import CommunicationsError
 from diyims.general_utils import (
     get_DTS,
     get_shutdown_target,
@@ -25,7 +25,6 @@ from diyims.general_utils import (
 from diyims.logger_utils import add_log
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
-from diyims.satisfy import satisfy_main
 from diyims.sqlmodels import Beacon, Header_Table
 
 
@@ -42,13 +41,6 @@ def beacon_main(call_stack: str) -> None:
         str -- _description_
     """
 
-    if __name__ != "__main__":
-        freeze_support()
-        try:
-            set_start_method("spawn")
-        except RuntimeError:
-            pass
-
     call_stack = call_stack + ":beacon_main"
     config_dict = get_config_dict('Beacon')
     path_dict = get_path_dict()
@@ -58,14 +50,16 @@ def beacon_main(call_stack: str) -> None:
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
+        
+    clean_up(call_stack, engine, path_dict, config_dict, 'startup')
+    
     status_code = 200
-    # find the first lp entry in the header table.  This would be from the initial set up of the application
+    # find the first pl entry in the header table.  This would be from the initial set up of the application
     # the entry contains the cid of the peer record of the local provider
     # which is the root header for that host
     statement = (
         select(Header_Table)
         .where(Header_Table.peer_ID == SetSelfReturn.self)
-        #.where(Header_Table.object_type == "local_peer_entry")
         .order_by(col(Header_Table.insert_DTS).asc())
     )
     with Session(engine) as session:
@@ -102,11 +96,14 @@ def beacon_main(call_stack: str) -> None:
         )
 
     while target_DT > current_DT and interval < max_intervals and status_code == 200:
-        if shutdown_query(call_stack):  # exit while loop
+        if shutdown_query(call_stack):
             break
+        
+        clean_up(call_stack, engine, path_dict, config_dict, 'by_age')
+        
         for _ in range(int(config_dict["number_of_periods"])):
             if shutdown_query(call_stack):
-                break  # exit for loop
+                break
 
             status_code, beacon_CID = create_beacon_CID(
                 call_stack,
@@ -122,10 +119,8 @@ def beacon_main(call_stack: str) -> None:
                 break
 
             if status_code == 200:
-                satisfy_main_process = Process(target=satisfy_main, args=(call_stack,))
-                satisfy_main_process.start()
-
-                status_code = flash_beacon(  # flash waits on satisfy_main
+                
+                status_code = flash_beacon(
                     call_stack,
                     SetControlsReturn.logging_enabled,
                     SetControlsReturn.debug_enabled,
@@ -141,9 +136,17 @@ def beacon_main(call_stack: str) -> None:
                             peer_type="error",
                             msg=f"Beacon Panic from flash beacon with {status_code}.",
                         )
-                    break  # beacon will end and cleanup satisfy
+                    break
 
-                satisfy_main_process.join()  # wait for satisfy to end
+                else:
+                    if shutdown_query(call_stack):
+                        break
+                     
+                    satisfy_beacon(call_stack, 
+                                    SetControlsReturn.logging_enabled,
+                                    SetControlsReturn.debug_enabled,
+                                    path_dict,
+                                    engine,)
 
             else:
                 if SetControlsReturn.debug_enabled:
@@ -165,7 +168,6 @@ def beacon_main(call_stack: str) -> None:
         peer_type="status",
         msg=f"Beacon shutdown with {status_code}.",
     )
-    #return
 
 
 def create_beacon_CID(
@@ -202,7 +204,7 @@ def create_beacon_CID(
 
     satisfy_wait_seconds = int(
         config_dict["beacon_length_seconds"]
-    )  # This will be used to define the duration of the want_item on the want list.
+    )
     satisfy_timedelta = timedelta(seconds=satisfy_wait_seconds)
 
     want_item_dict = {}
@@ -210,10 +212,9 @@ def create_beacon_CID(
         peer_row_CID  # this is the first entry in the header table and points to a peer image
     )
     want_item_dict["DTS"] = get_DTS()  # the dts creates a unique cid
-    want_item_file = str(path_dict["want_item_file"])#This name is used in a parallel process which means two things;
-        #1) the name can't change and 2) there can only be a single instance of both processes active at any time.  
+    want_item_file = str(path_dict["want_item_file"])  
 
-    #with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+    #with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file: #TODO: #35 standardize encoding
     with open(want_item_file, "w", newline="\n") as write_file:
         json.dump(want_item_dict, write_file, indent=4)
 
@@ -228,21 +229,9 @@ def create_beacon_CID(
             http_500_ignore=False,
         )
 
-    ## unlink not required since the file will be reused in satisfy
 
     if status_code == 200:
         beacon_CID = response_dict["Hash"]
-
-        statement = select(Beacon).where(Beacon.status == "new")
-        with Session(engine) as session:
-            results = session.exec(statement)
-            try:
-                beacon = results.one()
-                one_available = True
-                beacon.status = "old"
-            except NoResultFound:
-                one_available = False
-
         want_item_dict_str = json.dumps(want_item_dict, indent=4)
         insert_DTS = get_DTS()
         insert_datetime = datetime.fromisoformat(insert_DTS)
@@ -256,8 +245,6 @@ def create_beacon_CID(
         )
 
         with Session(engine) as session:
-            if one_available:
-                session.add(beacon_entry)
             session.add(beacon_entry)
             session.commit()
         if debug_enabled:
@@ -311,31 +298,29 @@ def flash_beacon(
             peer_type="status",
             msg="Flash on.",
         )
-
-    if component_test:
-        sleep(int(config_dict["beacon_length_seconds"]))
-        status_code = 200
-
-    else:
-        _response, status_code, _response_dict = execute_request(  # wait for satisfy
-            url_key="get",
-            param={
-                "arg": beacon_CID,
-#                "timeout": "600s"
-            },
-            timeout=(
-                3.05,
-                310,
-            ),  # control time out to avoid retries should this be calculated???????
-            call_stack=call_stack,
-        )
-        if status_code != 200:  # noqa: SIM102
-            if debug_enabled:
-                add_log(
-                    process=call_stack,
-                    peer_type="Error",
-                    msg=f"Beacon flash panic, ipfs get failed with {status_code} for {beacon_CID}.",
-                )
+    
+    beacon_secs = str(config_dict["beacon_length_seconds"])
+    _response, status_code, _response_dict = execute_request(
+        url_key="get",
+        param={
+            "arg": beacon_CID,
+            "timeout": beacon_secs + "s" # this implements the beacon length in seconds
+        },
+        timeout=(
+            3.05,
+            310,
+        ),
+        call_stack=call_stack,
+    )
+    if status_code != 200:
+        if status_code == 500: # this catches the error from the time out which is expected 
+            status_code = 200
+        if debug_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="Error",
+                msg=f"Beacon flash panic, ipfs get failed with {status_code} for {beacon_CID}.",
+            )
 
     if debug_enabled:
         add_log(
@@ -346,17 +331,150 @@ def flash_beacon(
 
     return status_code
 
+def clean_up(
+    call_stack: str, engine, path_dict, config_dict, type,
+):
+    call_stack = call_stack + ":clean_up"
+    
+    hours_to_delay = config_dict["hours_to_delay"]
+    insert_DTS = get_DTS()
+    end_time = datetime.fromisoformat(insert_DTS) - timedelta(hours=int(hours_to_delay))
+
+    if type == 'by_age':
+        call_stack = call_stack + ":by_age"
+        statement = select(Beacon).where(Beacon.insert_DTS <= end_time.isoformat())
+    elif type == 'startup':
+        call_stack = call_stack + ":start"
+        statement = select(Beacon).where(Beacon.status == "new")
+
+    with Session(engine) as session:
+        results = session.exec(statement).all()
+
+        for beacon in results:
+            beacon_CID = beacon.beacon_CID
+            param = {
+                "arg": beacon_CID,
+            }
+            try:
+                _response, _status_code, _response_dict = execute_request(
+                    url_key="pin_remove",
+                    param=param,
+                    call_stack=call_stack,
+                    http_500_ignore=True,
+                )
+            except CommunicationsError as e:
+                
+                add_log(
+                    process=call_stack,
+                    peer_type="info",
+                    msg=f"pin remove failed with {e} for {beacon_CID}", #TODO: #34 Separate Comm Logging
+                )
+    
+            session.delete(beacon)
+            session.commit()
+
+            if type == 'startup':
+
+                try:
+                    want_item_file = str(path_dict["want_item_file"])
+                    Path(want_item_file).unlink()
+                except FileNotFoundError:
+                    pass
+
+def satisfy_beacon(
+    call_stack: str,
+    logging_enabled: bool,
+    debug_enabled: bool,
+    path_dict: dict,
+    engine,
+) -> str:
+    """
+    satisfy_beacon _summary_
+
+    _extended_summary_
+
+    Arguments:
+        call_stack {str} -- _description_
+        logging_enabled {bool} -- _description_
+        debug_enabled {bool} -- _description_
+        config_dict {dict} -- _description_
+        queues_enabled {bool} -- _description_
+        in_bound_wait {str} -- _description_
+        path_dict {dict} -- _description_
+
+    Returns:
+        str -- _description_
+    """
+    call_stack = call_stack + ":satisfy_beacon"
+    status_code = 200
+
+    
+    statement = select(Beacon).where(Beacon.status == "new")
+    with Session(engine) as session:
+        results = session.exec(statement)
+        beacon = results.one()
+
+        # this makes the item on the wantlist available for retrieval.
+        # the content points to the peer table entry for this peer.  
+        want_item_dict = json.loads(beacon.want_item_dict_str)
+        want_item_file = str(path_dict["want_item_file"])
+        # This file originated in the create beacon function and its name is fixed by configuration
+        with open(want_item_file, "w", encoding="utf-8", newline="\n") as write_file:
+            json.dump(want_item_dict, write_file, indent=4)
+
+        beacon.status = "old"
+        
+    with Session(engine) as session:
+        session.add(beacon)
+        session.commit()
+
+    with open(want_item_file, "rb") as f:
+        file = {"file": f}
+
+        param = {
+            "only-hash": "false",
+            "pin": "true",
+            "cid-version": 1,
+            "pin-name": "diyims",
+        }
+        _response, status_code, _response_dict = execute_request(
+            url_key="add",
+            param=param,
+            file=file,
+            call_stack=call_stack,
+            http_500_ignore=False,
+        )
+
+    try:
+        Path(want_item_file).unlink()
+    except FileNotFoundError:
+        pass
+
+    if status_code != 200:  # noqa: SIM102
+        if debug_enabled:
+            add_log(
+                process=call_stack,
+                peer_type="error",
+                msg=f"Satisfy ipfs add failed with {status_code}.",
+            )
+
+    if debug_enabled:
+        add_log(
+            process=call_stack,
+            peer_type="status",
+            msg=f"Satisfy {want_item_file}",
+        )
+    return status_code
+
+
 
 if __name__ == "__main__":
     import os
-    from multiprocessing import freeze_support, set_start_method
-
-    freeze_support()
-    set_start_method("spawn")
-
+    
     os.environ["DIYIMS_ROAMING"] = "Roaming"
     os.environ["COMPONENT_TEST"] = "0"
     os.environ["QUEUES_ENABLED"] = "0"
+    os.environ["LOGGING_ENABLED"] = "1"
 
     status_code = beacon_main(
         "__main__",

@@ -259,7 +259,7 @@ def init(call_stack):
         "cid-version": 1,
         "only-hash": "false",
         "pin": "true",
-        "pin-name": "init",
+        "pin-name": "diyims",
     }
     # First reuse
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
@@ -384,7 +384,7 @@ def init(call_stack):
         "cid-version": 1,
         "only-hash": "false",
         "pin": "true",
-        "pin-name": "update_telemetry",
+        "pin-name": "diyims",
     }
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(telemetry_dict, write_file, indent=4)
@@ -447,7 +447,7 @@ def import_car(call_stack: str):
         "pin-roots": "true",  # http status 500 if false but true does not pin if not in off-line mode ####name?
         "silent": "false",
         "stats": "false",
-        "allow-big-block": "false",
+        "allow-big-block": "false", #TODO: pin name
     }
 
     _response, _status_code, response_dict = execute_request(
@@ -476,7 +476,7 @@ def import_car(call_stack: str):
     )
 
     # import does not pin unless in offline mode so it must be done manually ###### name?
-    pin_add_params = {"arg": imported_CID, "pin-name": "init"}
+    pin_add_params = {"arg": imported_CID, "pin-name": "diyims"}
 
     _response, _status_code, response_dict = execute_request(
         url_key="pin_add",

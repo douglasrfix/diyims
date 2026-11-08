@@ -102,6 +102,12 @@ def execute_request(url_key: str, **kwargs):
         and not response_ok
     ):
         try:
+            if logging_enabled:
+                add_log(
+                    process=call_stack,
+                    peer_type=f"http_status {200}",
+                    msg=f"Start of {url_key} operation",
+                )
             with requests.post(
                 url=url_dict[url_key],
                 params=value_dict["param"],
@@ -152,7 +158,7 @@ def execute_request(url_key: str, **kwargs):
                     add_log(
                         process=call_stack,
                         peer_type=f"http_status {status_code}",
-                        msg=f"{url_key} ignored after failing with {e}",
+                        msg=f"{url_key} operation failing with {e}",
                     )
                 break
             else:

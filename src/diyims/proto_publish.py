@@ -34,7 +34,7 @@ def publish_config_table(call_stack: str):
                 data['config_file'] = jsonable_result    
     
     meta_add(call_stack,
-             pin_name = 'system_file_add',
+             pin_name = 'diyims',
              reference_object_type = 'system_file',
              data_dictionary = data,
              target_path = 'update_path',
@@ -55,14 +55,14 @@ def cli_file_add(call_stack, cli_file_path):
         source_path = (
             Path.cwd().joinpath("dist").joinpath(file_name)
         )
-        pin_name = 'system_file_add'
+        pin_name = 'diyims'
         reference_object_type = 'system_file'
         target_path = 'update_path'
     else:
         source_path = (
             Path.cwd().joinpath(file_name)
         )
-        pin_name = 'generic_file_add'
+        pin_name = 'diyims'
         reference_object_type = 'generic_file'
         target_path = 'generic_path'
 

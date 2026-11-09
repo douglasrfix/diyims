@@ -41,7 +41,7 @@ def test():
     {"section": "Request", "key": "request_retry_delay", "value": "10"},
     {"section": "Beacon", "key": "wait_time", "value": "30"},
     {"section": "Beacon", "key": "beacon_length_seconds", "value": "300"},
-    {"section": "Beacon", "key": "Hours_to_delay", "value": "1"},      #TODO: #36 add description column
+    {"section": "Beacon", "key": "hours_to_delay", "value": "1"},      #TODO: #36 add description column
     {"section": "Beacon", "key": "number_of_periods", "value": "5"},
     {"section": "Scheduler", "key": "reset_enable", "value": "1"},
     {"section": "Scheduler", "key": "metrics_enable", "value": "1"},

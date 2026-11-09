@@ -34,13 +34,14 @@ def test():
     {"section": "Common", "key": "debug_enabled", "value": "0"},
     {"section": "Common", "key": "connect_enabled", "value": "0"},
     {"section": "Common", "key": "component_test", "value": "0"},
+    {"section": "Common", "key": "read_timeout", "value": "120"},
     {"section": "Provider_Capture", "key": "capture_interval_delay", "value": "600"},
     {"section": "Request", "key": "stream", "value": "False"},
-    {"section": "Common", "key": "read_timeout", "value": "120"},
     {"section": "Request", "key": "request_retries", "value": "2"},
     {"section": "Request", "key": "request_retry_delay", "value": "10"},
     {"section": "Beacon", "key": "wait_time", "value": "30"},
     {"section": "Beacon", "key": "beacon_length_seconds", "value": "300"},
+    {"section": "Beacon", "key": "hours_to_delay", "value": "1"},      #TODO: #36 add description column
     {"section": "Beacon", "key": "number_of_periods", "value": "5"},
     {"section": "Scheduler", "key": "reset_enable", "value": "1"},
     {"section": "Scheduler", "key": "metrics_enable", "value": "1"},
@@ -82,8 +83,6 @@ def test():
     {"section": "Publish", "key": "wait_time", "value": "600"},
     {"section": "Metrics", "key": "wait_time", "value": "30"},
     {"section": "Peer_Monitor", "key": "wait_time", "value": "600"},
-    {"section": "Peer_Monitor", "key": "beacon_length_seconds", "value": "300"},
-    {"section": "Peer_Monitor", "key": "number_of_periods", "value": "5"},
     ]
     
     stmt = delete(Config)

@@ -304,7 +304,7 @@ def ipfs_header_add(#TODO: #31 add a parm for the config_dictionary in use
     proto_file = path_dict["header_file"]
     proto_file_path = get_unique_file(proto_path, proto_file)
 
-    param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": mode}
+    param = {"cid-version": 1, "only-hash": "false", "pin": "true", "pin-name": 'diyims'}
     with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:
         json.dump(header_dict, write_file, indent=4)
 

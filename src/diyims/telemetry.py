@@ -92,7 +92,7 @@ def select_local_peer_and_update_metrics(call_stack):
             "cid-version": 1,
             "only-hash": "false",
             "pin": "true",
-            "pin-name": "update_telemetry",
+            "pin-name": "diyims",
         }
         
         with open(proto_file_path, "w", encoding="utf-8", newline="\n") as write_file:

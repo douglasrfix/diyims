@@ -2,7 +2,8 @@ import ipaddress
 import json
 import os
 from datetime import datetime
-from multiprocessing import freeze_support, set_start_method
+
+#from multiprocessing import freeze_support, set_start_method
 from multiprocessing.managers import BaseManager
 from queue import Empty
 from time import sleep
@@ -39,12 +40,12 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
         str -- _description_
     """
 
-    if __name__ != "__main__":
-        freeze_support()
-        try:
-            set_start_method("spawn")
-        except RuntimeError:
-            pass
+    #if __name__ != "__main__":
+    #    freeze_support()
+    #    try:
+    #        set_start_method("spawn")
+    #    except RuntimeError:
+    #        pass
 
     call_stack = call_stack + ":provider_capture_main"
     config_dict = get_config_dict('Provider_Capture')
@@ -91,12 +92,12 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
             queue_server.register("get_wantlist_submit_queue")
             queue_server.register("get_provider_queue")
             queue_server.connect()
-            out_bound = (
+            wantlist_queue = (
                 queue_server.get_wantlist_submit_queue()
-            )  # TODO: process queue???
+            )
             in_bound = queue_server.get_provider_queue()
     else:
-        out_bound = None
+        wantlist_queue = None
         in_bound = None
 
     capture_interval = 0
@@ -164,7 +165,7 @@ def provider_capture_main(call_stack: str, peer_type: str) -> None:
 
         if released > 0:  # noqa: SIM102
             if SetControlsReturn.queues_enabled:
-                out_bound.put_nowait("wake up")
+                wantlist_queue.put_nowait("wake up")
                 if SetControlsReturn.debug_enabled:  # no sense in sending a message when a peer is release since they are single threaded by wantlist
                     add_log(
                         process=call_stack,
@@ -498,16 +499,16 @@ def decode_findprovs_structure(
                                 disabled=0,
                             )
                             added += 1
+                            released += 1 #always release in address free environment
                             add_required = True
 
-                    if add_required:  # TODO this should trigger a comm request add.
+                    if add_required:
                         with Session(engine) as session:
                             try:
                                 session.add(current_peer)
                                 session.commit()
                             except IntegrityError:
                                 pass
-
                 if address_available:
                     break  # break to next provider in responses list
 
@@ -839,8 +840,8 @@ def create_peer_address(
 
 
 if __name__ == "__main__":
-    freeze_support()
-    set_start_method("spawn")
+    #freeze_support()
+    #set_start_method("spawn")
 
     os.environ["DIYIMS_ROAMING"] = "Roaming"
     os.environ["COMPONENT_TEST"] = "0"

@@ -16,7 +16,6 @@ from diyims.security_utils import verify_peer_row_from_cid
 from diyims.sqlmodels import (
     Header_Table,
     Object_Meta_Data,
-    Peer_Address,
     Peer_Table,
     Peer_Telemetry,
 )
@@ -110,72 +109,9 @@ def peer_manager(
                 # if header.object type = remote peer the entry was created on the remote system via the peer manager process(this process)
             except NoResultFound:
                 peer_found = False
-        # If this condition is true, then the remote system has "discovered" the local system and created a valid peer table entry
-        # and published a provider peer entry
-        if remote_peer_row_dict["peer_ID"] == set_self_return.self:  # noqa: SIM102
-            if set_controls_return.connect_enabled: 
-                provider_peer_ID = header.peer_ID
-                # This checks for an active in use flag which can now be cleaned up since the discovery process is complete 
-                statement = (
-                    select(Peer_Address)
-                    .where(Peer_Address.peer_ID == provider_peer_ID)
-                    .where(Peer_Address.in_use == "1")
-                )
-
-                with Session(engine) as session:
-                    try:
-                        results = session.exec(statement).one()
-                        address = results
-                        peer_connected = True
-                    except NoResultFound:
-                        peer_connected = False
-
-                if peer_connected:
-                    provider_address = address.multiaddress
-
-                    param = {
-                        "arg": provider_peer_ID,
-                    }
-                    _response, status_code, _response_dict = execute_request(
-                        url_key="peering_remove",
-                        param=param,
-                        call_stack=call_stack,
-                    )
-
-                    if status_code == 200:
-                        peering_removed = True
-
-                    param = {
-                        "arg": provider_address,
-                    }
-
-                    _response, status_code, _response_dict = execute_request(
-                        url_key="dis_connect",
-                        param=param,
-                        call_stack=call_stack,
-                    )
-
-                    if status_code == 200:
-                        disconnected = True
-
-                    with Session(engine) as session:
-                        address.in_use = False
-                        if peering_removed:
-                            address.peering_remove_DTS = get_DTS()
-                        if disconnected:
-                            address.dis_connect_DTS = get_DTS()
-                        session.add(address)
-                        session.commit()
-                        session.refresh(address)
-
-                # add_log(
-                #    process=call_stack,
-                #    peer_type="Status",
-                #    msg=f"Disconnect point for peer {provider_peer_ID}",
-                # )
-
+                    
     else:
-        # do this after address handling
+        
         statement = (
             
             select(Header_Table).where(Header_Table.header_CID == header.object_CID)
@@ -545,13 +481,7 @@ def meta_manager(
     call_stack, set_self_return: SetSelfReturn, set_controls_return: SetControlsReturn, engine, config_dict, outbound, header,
 ):
     call_stack = call_stack + ":meta_manager"
-    msg = "Meta manager entered."
-    add_log(
-        process=call_stack,
-        peer_type="info",
-        msg=msg,
-    )
-
+    
     # header.object_CID = meta object CID 
     status_code, meta_dict = unpack_object_from_cid(call_stack, header.object_CID)
     reference_object_CID = meta_dict["reference_object_CID"]

@@ -7,7 +7,6 @@ from sqlmodel import Session, create_engine, or_, select
 from diyims.config_utils import get_config_dict
 from diyims.path_utils import get_path_dict
 from diyims.requests_utils import execute_request
-from diyims.sqlmodels import Beacon
 
 
 def clean_up(call_stack, roaming):
@@ -28,7 +27,7 @@ def clean_up(call_stack, roaming):
 
     # statement = select(Clean_Up)
     statement = select(Clean_Up).where(
-        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new") #TODO: deprecate this function
+        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new") #TODO: #39 deprecate this function
     )
     with Session(engine) as session:
         results = session.exec(statement).all()
@@ -55,29 +54,18 @@ def clean_up(call_stack, roaming):
             session.delete(clean_up)
             session.commit()
 
-    statement = select(Log).where(Log.DTS <= end_time.isoformat())
+    statement = select(Log).where(Log.DTS <= end_time.isoformat()) #TODO: #40 trim log function should be invoked at start up and this logic doesn't look right
     with Session(engine) as session:
         results = session.exec(statement).all()
         for log in results:
             session.delete(log)
         session.commit  # noqa: B018
 
-    statement = select(Beacon).where(Beacon.status == "new")
-    with Session(engine) as session:
-        results = session.exec(statement)
-        beacon_list = results.all()
-
-    for beacon in beacon_list:     
-        with Session(engine) as session:
-            session.delete(beacon)
-            session.commit()
-
-
     
     path = get_path_dict()
     folder_path = path["sign_path"]
 
-    if not folder_path.is_dir():
+    if not folder_path.is_dir(): # TODO: #38 put this in the sign function
         raise NotADirectoryError(f"{folder_path} is not a directory")
         
     for item in folder_path.iterdir():

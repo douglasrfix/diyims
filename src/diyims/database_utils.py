@@ -1,5 +1,3 @@
-from sqlite3 import SQLITE_NOTFOUND
-
 
 def sync_ipfs_agent_table():
     from sqlmodel import Session, create_engine, delete
@@ -43,14 +41,13 @@ def sync_ipfs_agent_table():
 def reset_peer_table_status(call_stack):
     # from diyims.config_utils import get_want_list_config_dict
     # from diyims.py_version_dep import get_sql_str
-    from sqlite3 import SQLITE_NOTFOUND
+    #from sqlite3 import SQLITE_NOTFOUND
 
-    from sqlalchemy.exc import NoResultFound
+    
     from sqlmodel import Session, create_engine, or_, select
 
-    from diyims.general_utils import get_DTS
     from diyims.path_utils import get_path_dict
-    from diyims.sqlmodels import Peer_Address, Peer_Table, Shutdown
+    from diyims.sqlmodels import Peer_Table, Shutdown
 
     # config_dict = get_want_list_config_dict()
     call_stack = call_stack + ":reset_peer_table_status"
@@ -95,171 +92,6 @@ def reset_peer_table_status(call_stack):
 
             session.add(row)
         session.commit()
-
-        """
-        Reconnect at startup before regular processing
-        1 Examine peer addresses for in use.
-        2 Examine peer table for processing status NCP
-
-        if an address is in use but the peer is NCP then the reverse connect is in effect
-
-        need a in use that is an interim value
-        """
-
-        statement = select(Peer_Address).where(
-            Peer_Address.in_use == 1
-        )  # TODO handle reconnect after restart for reverse connect
-        with Session(engine) as session:
-            results = session.exec(statement).all()
-            addresses = results
-
-        for address in addresses:
-            statement2 = select(Peer_Table).where(
-                Peer_Table.processing_status == "NCP"
-                and Peer_Table.peer_ID == address.peer_ID
-            )
-            with Session(engine) as session:
-                try:
-                    results = session.exec(statement2).one()
-                    address.in_use = False
-                    address.reset_DTS = get_DTS()
-                    address.connect_DTS = None
-                    address.peering_add_DTS = None
-                    with Session(engine) as session:
-                        session.add(address)
-                        session.commit()
-                    status_code, peer_connected = peer_connect(
-                        call_stack, address.peer_ID
-                    )
-
-                except NoResultFound:
-                    address.in_use = False
-                    address.reset_DTS = get_DTS()
-                    address.connect_DTS = None
-                    address.peering_add_DTS = None
-                    with Session(engine) as session:
-                        session.add(address)
-                        session.commit()
-    return
-
-
-def peer_connect(
-    call_stack: str,
-    peer_ID: str,
-    # SetControlsReturn: SetControlsReturn,
-) -> bool:
-    from diyims.path_utils import get_path_dict
-    from sqlmodel import create_engine, Session, select, col
-    from diyims.sqlmodels import Peer_Address
-    from sqlalchemy.exc import NoResultFound
-    from diyims.requests_utils import execute_request
-    from diyims.general_utils import get_DTS
-
-    call_stack = call_stack + ":peer_connect"
-    peer_connected = False
-    status_code = 200
-    path_dict = get_path_dict()
-    connect_path = path_dict["db_file"]
-    db_url = f"sqlite:///{connect_path}"
-
-    # engine = create_engine(db_url, echo=True)
-    engine = create_engine(db_url, echo=False, connect_args={"timeout": 120})
-
-    statement = (
-        select(Peer_Address)
-        .where(Peer_Address.peer_ID == peer_ID)
-        .where(Peer_Address.in_use == "1")
-    )
-
-    with Session(engine) as session:
-        try:
-            results = session.exec(statement).one()
-            peer_connected = True
-            status_code = 200
-            return status_code, peer_connected
-        except NoResultFound:
-        #except SQLITE_NOTFOUND:
-            peer_connected = False
-
-    if peer_connected:  # TODO: is this a good idea?
-        pass
-
-    else:
-        statement = (
-            select(Peer_Address)
-            .where(Peer_Address.peer_ID == peer_ID)
-            .where(Peer_Address.available == "1")
-            .order_by(col(Peer_Address.insert_DTS).desc())
-        )
-        with Session(engine) as session:
-            results = session.exec(statement).all()
-
-        for peer_address in results:
-            param = {"arg": peer_address.multiaddress}
-
-            response, status_code, response_dict = execute_request(
-                url_key="connect",
-                param=param,
-                call_stack=call_stack,
-            )
-            # if successfully connected update address used
-            if status_code == 200:
-                peer_connected = True
-                statement = select(Peer_Address).where(
-                    Peer_Address.address_string == peer_address.address_string
-                )
-                with Session(engine) as session:
-                    results = session.exec(statement)
-                    address = results.one()
-
-                    address.in_use = True
-                    address.connect_DTS = get_DTS()
-
-                    session.add(address)
-                    session.commit()
-
-                response, status_code, response_dict = execute_request(
-                    url_key="peering_add",
-                    param=param,
-                    call_stack=call_stack,
-                )
-
-                if status_code == 200:
-                    statement = select(Peer_Address).where(
-                        Peer_Address.address_string == peer_address.address_string
-                    )
-                    with Session(engine) as session:
-                        results = session.exec(statement)
-                        address = results.one()
-
-                        address.peering_add_DTS = get_DTS()
-
-                        session.add(address)
-                        session.commit()
-
-                else:
-                    status_code = 200
-                    # if SetControlsReturn.debug_enabled:
-                    #    add_log(
-                    #        process=call_stack,
-                    #        peer_type="status",
-                    #        msg=f"{peer_ID} peering add failed.",
-                    #    )
-            elif status_code == 500:
-                peer_connected = False
-            else:
-                peer_connected = False
-                # if SetControlsReturn.debug_enabled:
-                #    add_log(
-                #        process=call_stack,
-                #        peer_type="status",
-                #        msg=f"Peer connect failed for {peer_ID}.",
-                #    )
-
-            if peer_connected:
-                break  # don't need any more connections
-
-    return status_code, peer_connected
 
 
 def refresh_network_table_from_template():

@@ -111,7 +111,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                 call_stack=call_stack,
                 http_500_ignore=False,
             )
-            if SetControlsReturn.logging_enabled == 0:
+            if SetControlsReturn.logging_enabled == 1:
                 stop_DTS = get_DTS()
                 start = datetime.fromisoformat(start_DTS)
                 stop = datetime.fromisoformat(stop_DTS)
@@ -160,7 +160,7 @@ def publish_main(call_stack: str, mode: str) -> None:
                         session.commit()
                     except NoResultFound:
                         pass
-                if SetControlsReturn.debug_enabled == 0:    
+                if SetControlsReturn.debug_enabled == 1:    
                     add_log(
                             process=call_stack,
                             peer_type="header debug",

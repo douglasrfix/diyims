@@ -320,7 +320,7 @@ def get_shutdown_target(config_dict: dict) -> datetime:
     return target_DT
 
 
-def shutdown_cmd(call_stack):
+def shutdown_cmd(call_stack): #TODO: #41 issue message warning user of delay length
     from multiprocessing.managers import BaseManager
 
     from diyims.sqlmodels import Shutdown
@@ -365,7 +365,6 @@ def shutdown_cmd(call_stack):
         except ConnectionRefusedError:
             return
 
-        satisfy_queue = queue_server.get_satisfy_queue()
         provider_queue = queue_server.get_provider_queue()
         wantlist_process_queue = queue_server.get_wantlist_process_queue()
         wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
@@ -373,8 +372,6 @@ def shutdown_cmd(call_stack):
         publish_queue = queue_server.get_publish_queue()
         peer_maint_queue = queue_server.get_peer_maint_queue()
         
-        if bool(config_dict["beacon_enable"]):
-            satisfy_queue.put_nowait("0")
         if bool(config_dict["provider_enable"]):
             provider_queue.put_nowait("1")
         if bool(config_dict["wantlist_enable"]):

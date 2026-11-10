@@ -1,11 +1,9 @@
 
 from datetime import datetime
-from multiprocessing import freeze_support, set_start_method
 from multiprocessing.managers import BaseManager
 from queue import Empty
 from time import sleep
 
-#from rich import
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, col, create_engine, or_, select
 
@@ -40,12 +38,7 @@ def monitor_peer_publishing_main(call_stack: str) -> None:
      
 
     """
-    if __name__ != "__main__":
-        freeze_support()
-        try:
-            set_start_method("spawn")
-        except RuntimeError:
-            pass
+    
     call_stack = call_stack + ":monitor_peer_publishing"
     config_dict = get_config_dict('Peer_Monitor')
     set_controls_return = set_controls(call_stack, config_dict)
@@ -324,13 +317,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                 
             )
         elif header.object_type == "telemetry_entry":
-            msg = "Telemetry entry submitted ."
             
-            add_log(
-                process=call_stack,
-                peer_type="info",
-                msg=msg,
-            )
             telemetry_manager(
                 call_stack,
                 set_self_return,
@@ -362,12 +349,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
             #if status_code == 1:
             #    break
         elif header.object_type == "meta":
-            msg = "Meta entry submitted ."
-            add_log(
-                process=call_stack,
-                peer_type="info",
-                msg=msg,
-            )
+           
             _status_code = meta_manager(
                 call_stack,
                 set_self_return,
@@ -402,12 +384,14 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
                     #if status_code == 1:
                     
         else:
-            msg = f"{header.object_type} entry Ignored ."
-            add_log(
-                process=call_stack,
-                peer_type="info",
-                msg=msg,
-            )
+            if SetControlsReturn.debug_enabled:
+                        
+                msg = f"{header.object_type} entry Ignored ."
+                add_log(
+                    process=call_stack,
+                    peer_type="info",
+                    msg=msg,
+                )
             statement = (
                             select(Header_Table).where(Header_Table.header_CID == header.header_CID)
                         )
@@ -428,11 +412,7 @@ def process_inbound_events_for_peer(call_stack, set_self_return: SetSelfReturn,
 
 if __name__ == "__main__":
     import os
-    from multiprocessing import freeze_support, set_start_method
-
-    freeze_support()
-    set_start_method("spawn")
-
+   
     os.environ["COMPONENT_TEST"] = "0"
     os.environ["QUEUES_ENABLED"] = "0"
     monitor_peer_publishing_main("__main__")

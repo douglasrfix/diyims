@@ -1,23 +1,7 @@
-# import enum
 from typing import Any, Optional
 
-#from typing import Any, Dict, Optional
 from pydantic import ConfigDict
-
-#from sqlalchemy import JSON
-from sqlmodel import JSON, Column, Enum, Field, SQLModel, String
-
-
-class Address_Type(str, Enum):
-    IPV4 = "4"
-    IPV6 = "6"
-
-
-class Address_Source(str, Enum):
-    PROVIDER_PEER = "PP"
-    FIND_PEER = "FP"
-    BITSWAP_PEER = "BP"
-    SWARM_PEER = "SP"
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class IPFS_Agents(SQLModel, table=True):
@@ -71,9 +55,7 @@ class Header_Table(SQLModel, table=True):
     origin_insert_DTS: str
     prior_header_CID: str | None = None
     header_CID: str = Field(primary_key=True)
-    peer_ID: str = Field(primary_key=True
-        
-    )
+    peer_ID: str = Field(primary_key=True)
     processing_status: str
     processing_status_DTS: str | None = None
 
@@ -88,25 +70,6 @@ class Log(SQLModel, table=True):
 
 class Network_Table(SQLModel, table=True):
     network_name: str = Field(primary_key=True)
-
-
-class Peer_Address(SQLModel, table=True):
-    peer_ID: str = Field(primary_key=True)
-    multiaddress: str | None = None
-    insert_DTS: str
-    address_ignored: bool
-    ignored_reason: str | None = None
-    address_string: str = Field(primary_key=True)
-    address_type: str | None = None
-    address_source: str
-    address_global: bool
-    in_use: bool | None = False
-    connect_DTS: str | None = None
-    peering_add_DTS: str | None = None
-    dis_connect_DTS: str | None = None
-    peering_remove_DTS: str | None = None
-    reset_DTS: str | None = None
-    available: bool
 
 
 class Peer_Table(SQLModel, table=True):

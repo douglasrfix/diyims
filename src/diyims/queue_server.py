@@ -30,13 +30,11 @@ def queue_main(call_stack):
     provider_server_queue = Queue()
     bitswap_server_queue = Queue()
     swarm_server_queue = Queue()
-    satisfy_queue = Queue()
     publish_queue = Queue()
     peer_maint_queue = Queue()
     remote_monitor_queue = Queue()
     manager.register("get_remote_monitor_queue", callable=lambda: remote_monitor_queue)
     manager.register("get_provider_queue", callable=lambda: provider_queue)
-    manager.register("get_satisfy_queue", callable=lambda: satisfy_queue)
     manager.register("get_publish_queue", callable=lambda: publish_queue)
     manager.register("get_peer_maint_queue", callable=lambda: peer_maint_queue)
     manager.register(

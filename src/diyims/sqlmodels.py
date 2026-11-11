@@ -8,14 +8,6 @@ class IPFS_Agents(SQLModel, table=True):
     agent_id: str = Field(primary_key=True)
 
 
-class Clean_Up(SQLModel, table=True):
-    insert_DTS: str = Field(primary_key=True)
-    satisfy_target_DTS: str | None = None
-    status: str | None = None
-    want_item_file: str | None = None
-    beacon_CID: str | None = None
-
-
 class Beacon(SQLModel, table=True):
     insert_DTS: str = Field(primary_key=True)
     satisfy_target_DTS: str | None = None

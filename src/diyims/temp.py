@@ -49,7 +49,6 @@ def test():
     {"section": "Scheduler", "key": "provider_enable", "value": "1"},
     {"section": "Scheduler", "key": "wantlist_enable", "value": "1"},
     {"section": "Scheduler", "key": "publish_enable", "value": "1"},
-    {"section": "Scheduler", "key": "peer_maint_enable", "value": "0"},
     {"section": "Scheduler", "key": "remote_monitor_enable", "value": "1"},
     {"section": "Scheduler", "key": "worker_pool", "value": "9"},
     {"section": "Scheduler", "key": "shutdown_delay", "value": "0"},

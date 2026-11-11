@@ -429,7 +429,7 @@ wheels = [
 
 [[package]]
 name = "diyims"
-version = "0.0.0a261"
+version = "0.0.0a262"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },

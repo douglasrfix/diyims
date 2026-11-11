@@ -19,7 +19,6 @@ from diyims.general_utils import (
 )
 from diyims.logger_utils import add_log
 from diyims.monitor_peer_publishing import monitor_peer_publishing_main
-from diyims.peer_maintenance import peer_maintenance_main
 from diyims.provider_capture import provider_capture_main
 from diyims.publish import publish_main
 from diyims.queue_server import queue_main
@@ -175,19 +174,7 @@ def scheduler_main(call_stack, roaming):
             msg="Want List Capture startup.",
         )
 
-    if config_dict["peer_maint_enable"] == "1":
-        peer_table_maintenance_process = Process(
-            target=peer_maintenance_main,
-            args=(call_stack,),
-        )
-        sleep(int(config_dict["submit_delay"]))
-        peer_table_maintenance_process.start()
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Peer Maintenance startup.",
-        )
-
+    
     if config_dict["publish_enable"] == "1":
         publish_main_process = Process(
             target=publish_main,
@@ -239,13 +226,7 @@ def scheduler_main(call_stack, roaming):
             peer_type="status",
             msg="Want List Capture completed.",
         )
-    if config_dict["peer_maint_enable"] == "1":
-        peer_table_maintenance_process.join()
-        add_log(
-            process=call_stack,
-            peer_type="status",
-            msg="Peer Maintenance completed.",
-        )
+    
     if config_dict["publish_enable"] == "1":
         publish_main_process.join()
         add_log(

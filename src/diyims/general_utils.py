@@ -358,7 +358,7 @@ def shutdown_cmd(call_stack): #TODO: #41 issue message warning user of delay len
         queue_server.register("get_wantlist_process_queue")
         queue_server.register("get_remote_monitor_queue")
         queue_server.register("get_publish_queue")
-        queue_server.register("get_peer_maint_queue")
+    
 
         try:
             queue_server.connect()
@@ -370,7 +370,7 @@ def shutdown_cmd(call_stack): #TODO: #41 issue message warning user of delay len
         wantlist_submit_queue = queue_server.get_wantlist_submit_queue()
         remote_monitor_queue = queue_server.get_remote_monitor_queue()
         publish_queue = queue_server.get_publish_queue()
-        peer_maint_queue = queue_server.get_peer_maint_queue()
+        
         
         if bool(config_dict["provider_enable"]):
             provider_queue.put_nowait("1")
@@ -381,8 +381,7 @@ def shutdown_cmd(call_stack): #TODO: #41 issue message warning user of delay len
             remote_monitor_queue.put_nowait("3")
         if bool(config_dict["publish_enable"]):
             publish_queue.put_nowait("4")
-        if bool(config_dict["peer_maint_enable"]):#FIXME: bool
-            peer_maint_queue.put_nowait("5")
+        
 
     return
 

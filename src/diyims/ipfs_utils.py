@@ -11,6 +11,7 @@ def get_url_dict():
     url_dict["name_publish"] = "http://127.0.0.1:5001/api/v0/name/publish"
     url_dict["find_providers"] = "http://127.0.0.1:5001/api/v0/routing/findprovs"
     url_dict["provide"] = "http://127.0.0.1:5001/api/v0/routing/provide"
+    url_dict["provide_once"] = "http://127.0.0.1:5001/api/v0/provide/once"
     url_dict["find_peer"] = "http://127.0.0.1:5001/api/v0/routing/findpeer"
     url_dict["pin_list"] = "http://127.0.0.1:5001/api/v0/pin/ls"
     url_dict["pin_add"] = "http://127.0.0.1:5001/api/v0/pin/add"

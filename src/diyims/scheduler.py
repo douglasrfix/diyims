@@ -11,7 +11,12 @@ from diyims.error_classes import (
     IPFSIDDoesNotMatchPeerTableID,
     UnSupportedIPFSVersionError,
 )
-from diyims.general_utils import reset_shutdown, set_controls, verify_peerID
+from diyims.general_utils import (
+    reset_shutdown,
+    set_controls,
+    start_up_provide,
+    verify_peerID,
+)
 from diyims.logger_utils import add_log
 from diyims.monitor_peer_publishing import monitor_peer_publishing_main
 from diyims.peer_maintenance import peer_maintenance_main
@@ -62,10 +67,9 @@ def scheduler_main(call_stack, roaming):
             peer_type="status",
             msg="Queue Server startup.",
         )
-
-    
-
-    
+    start_up_provide_enabled = '1' # add this to config
+    if start_up_provide_enabled == '1':
+            start_up_provide(call_stack)
     if config_dict["reset_enable"] == "1":
         reset_peer_table_status_process = Process(
             target=reset_peer_table_status, args=(call_stack,)

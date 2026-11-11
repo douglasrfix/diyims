@@ -1,10 +1,10 @@
 import os
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
+#from pathlib import Path
 from dateutil.parser import parse
 from sqlalchemy.exc import NoResultFound
-from sqlmodel import Session, create_engine, or_, select
+from sqlmodel import Session, create_engine, select
 
 from diyims.class_imports import SetControlsReturn, SetSelfReturn
 from diyims.clean_up import clean_up
@@ -436,10 +436,10 @@ def reset_shutdown(call_stack: str) -> None:
     #return
 
 
-def clean_upO(call_stack, roaming):
-    from diyims.sqlmodels import Clean_Up, Log
+def start_up_provide(call_stack):
+    from diyims.sqlmodels import Log, Network_Table
 
-    call_stack = call_stack + ":clean_up"
+    call_stack = call_stack + ":start_up_provide"
     config_dict = get_config_dict('Clean_Up')
 
     hours_to_delay = config_dict["hours_to_delay"]
@@ -453,33 +453,22 @@ def clean_upO(call_stack, roaming):
     engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
 
     # statement = select(Clean_Up)
-    statement = select(Clean_Up).where(
-        or_(Clean_Up.insert_DTS <= end_time.isoformat(), Clean_Up.status == "new")
-    )
+    statement = select(Network_Table)
     with Session(engine) as session:
-        results = session.exec(statement).all()
+        results = session.exec(statement).one()
+        network_name = results.network_name
+        
+        param = {
+            "arg": network_name,
+            
+        }
 
-        for clean_up in results:
-            want_item_file = clean_up.want_item_file
-            beacon_CID = clean_up.beacon_CID
-
-            try:
-                Path(want_item_file).unlink()
-            except FileNotFoundError:
-                pass
-
-            param = {
-                "arg": beacon_CID,
-            }
-
-            _response, _status_code, _response_dict = execute_request(
-                url_key="pin_remove",
-                param=param,
-                call_stack=call_stack,
-            )
-            # TODO: 700
-            session.delete(clean_up)
-            session.commit()
+        _response, _status_code, _response_dict = execute_request(
+            url_key="provide_once",
+            param=param,
+            call_stack=call_stack,
+        )
+        
 
     statement = select(Log).where(Log.DTS <= end_time.isoformat())
     with Session(engine) as session:
@@ -493,6 +482,6 @@ def clean_upO(call_stack, roaming):
 
 if __name__ == "__main__":
     os.environ["DIYIMS_ROAMING"] = "Roaming"
-    os.environ["COMPONENT_TEST"] = "1"
+    os.environ["COMPONENT_TEST"] = ""
     os.environ["QUEUES_ENABLED"] = "0"
     clean_up("CMD", "Roaming")

@@ -94,15 +94,15 @@ def submitted_wantlist_process_for_peer(
             address=("127.0.0.1", q_server_port), authkey=b"abc"
         )  # TODO:config
         queue_server.register("get_wantlist_process_queue")
-        queue_server.register("get_peer_maint_queue")
+        
         queue_server.connect()
-        # peer_maint_queue = queue_server.get_peer_maint_queue()
+        
         if peer_type == "PP":
-            # queue_server.register("get_peer_maint_queue")
+        
             # queue_server.connect()
             in_bound = queue_server.get_wantlist_process_queue()
             # out_bound = None
-            # out_bound = queue_server.get_peer_maint_queue()
+        
             max_zero_sample_count = int(
                 want_list_config_dict["provider_zero_sample_count"]
             )

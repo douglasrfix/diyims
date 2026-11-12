@@ -66,8 +66,8 @@ def scheduler_main(call_stack, roaming):
             peer_type="status",
             msg="Queue Server startup.",
         )
-    start_up_provide_enabled = '1' # add this to config
-    if start_up_provide_enabled == '1':
+     
+    if config_dict["start_up_provide_enabled"] == '1':
             start_up_provide(call_stack)
     if config_dict["reset_enable"] == "1":
         reset_peer_table_status_process = Process(

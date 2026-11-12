@@ -125,3 +125,4 @@ class Config(SQLModel, table=True):
     section: str = Field(primary_key=True)
     key: str = Field(primary_key=True)
     value: str
+    comment: str | None
